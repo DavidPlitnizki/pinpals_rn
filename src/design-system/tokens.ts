@@ -22,6 +22,13 @@ export const Colors = {
   },
   white: '#FFFFFF',
   error: '#E53935',
+  warning: '#F5A623',
+  success: '#34C759',
+  background: '#FAF8F4',
+  text: {
+    primary: '#1C2B22',
+    secondary: '#8E8E93',
+  },
 };
 
 export const Spacing = {
@@ -42,15 +49,30 @@ export const Radii = {
   full: 9999,
 };
 
+export const Fonts = {
+  inter: {
+    regular: 'Inter_400Regular',
+    medium: 'Inter_500Medium',
+    semiBold: 'Inter_600SemiBold',
+    bold: 'Inter_700Bold',
+  },
+  nunito: {
+    regular: 'Nunito_400Regular',
+    semiBold: 'Nunito_600SemiBold',
+    bold: 'Nunito_700Bold',
+    extraBold: 'Nunito_800ExtraBold',
+  },
+};
+
 export const Typography = {
-  largeTitle: { fontSize: 34, fontWeight: '700' as const, letterSpacing: 0.37 },
-  title1: { fontSize: 28, fontWeight: '700' as const },
-  title2: { fontSize: 22, fontWeight: '700' as const },
-  title3: { fontSize: 20, fontWeight: '600' as const },
-  headline: { fontSize: 17, fontWeight: '600' as const },
-  body: { fontSize: 17, fontWeight: '400' as const },
-  callout: { fontSize: 16, fontWeight: '400' as const },
-  subheadline: { fontSize: 15, fontWeight: '400' as const },
-  footnote: { fontSize: 13, fontWeight: '400' as const },
-  caption: { fontSize: 12, fontWeight: '400' as const },
+  largeTitle: { fontSize: 34, fontFamily: Fonts.nunito.extraBold, letterSpacing: 0.37 },
+  title1: { fontSize: 28, fontFamily: Fonts.nunito.bold },
+  title2: { fontSize: 22, fontFamily: Fonts.nunito.bold },
+  title3: { fontSize: 20, fontFamily: Fonts.nunito.semiBold },
+  headline: { fontSize: 17, fontFamily: Fonts.inter.semiBold },
+  body: { fontSize: 17, fontFamily: Fonts.inter.regular },
+  callout: { fontSize: 16, fontFamily: Fonts.inter.regular },
+  subheadline: { fontSize: 15, fontFamily: Fonts.inter.regular },
+  footnote: { fontSize: 13, fontFamily: Fonts.inter.regular },
+  caption: { fontSize: 12, fontFamily: Fonts.inter.regular },
 };
