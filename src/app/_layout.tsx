@@ -1,9 +1,9 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
-import { useEffect } from 'react';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet, View } from 'react-native';
+import { Stack, useRouter, useSegments } from "expo-router";
+import { useEffect } from "react";
+import { StyleSheet, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { AuthProvider, useAuth } from "../contexts/AuthContext";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuth, isGuest, isLoading } = useAuth();
@@ -13,13 +13,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
+    const inAuthGroup = segments[0] === "(auth)";
     const canAccess = isAuth || isGuest;
 
     if (!canAccess && !inAuthGroup) {
-      router.replace('/(auth)/login');
+      router.replace("/(auth)/login");
     } else if (canAccess && inAuthGroup) {
-      router.replace('/(tabs)/map');
+      router.replace("/(tabs)/map");
     }
   }, [isAuth, isGuest, isLoading, segments]);
 
@@ -35,17 +35,20 @@ export default function RootLayout() {
         <AuthGate>
           <Stack
             screenOptions={{
-              headerStyle: { backgroundColor: '#FFFFFF' },
-              headerTintColor: '#4A7C59',
-              headerTitleStyle: { fontWeight: '600', color: '#1C2B22' },
+              headerStyle: { backgroundColor: "#FFFFFF" },
+              headerTintColor: "#4A7C59",
+              headerTitleStyle: { fontWeight: "600", color: "#1C2B22" },
             }}
           >
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="place/[id]" options={{ title: 'Place Details' }} />
+            <Stack.Screen
+              name="place/[id]"
+              options={{ title: "Place Details" }}
+            />
             <Stack.Screen
               name="create-meeting"
-              options={{ title: 'Create Meeting', presentation: 'modal' }}
+              options={{ title: "Create Meeting", presentation: "modal" }}
             />
           </Stack>
         </AuthGate>
@@ -60,6 +63,6 @@ const styles = StyleSheet.create({
   },
   loading: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
 });
