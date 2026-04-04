@@ -1,9 +1,12 @@
+import Mapbox from "@rnmapbox/maps";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
+
+Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? "");
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuth, isGuest, isLoading } = useAuth();

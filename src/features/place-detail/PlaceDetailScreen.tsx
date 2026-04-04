@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import { Camera, MapView, PointAnnotation } from "@rnmapbox/maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PinButton } from "../../design-system/components/PinButton";
@@ -62,21 +62,37 @@ export default function PlaceDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <MapView
           style={styles.mapSnapshot}
-          region={{
-            latitude: place.coordinates.latitude,
-            longitude: place.coordinates.longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }}
           scrollEnabled={false}
           zoomEnabled={false}
           rotateEnabled={false}
           pitchEnabled={false}
         >
-          <Marker
-            coordinate={place.coordinates}
-            pinColor={CATEGORY_COLORS[place.category]}
+          <Camera
+            centerCoordinate={[
+              place.coordinates.longitude,
+              place.coordinates.latitude,
+            ]}
+            zoomLevel={15}
+            animationDuration={0}
           />
+          <PointAnnotation
+            id={place.id}
+            coordinate={[
+              place.coordinates.longitude,
+              place.coordinates.latitude,
+            ]}
+          >
+            <View
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 10,
+                backgroundColor: CATEGORY_COLORS[place.category],
+                borderWidth: 2,
+                borderColor: "#fff",
+              }}
+            />
+          </PointAnnotation>
         </MapView>
 
         <View style={styles.content}>

@@ -1,28 +1,29 @@
+import { Camera } from "@rnmapbox/maps";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Animated } from "react-native";
-import MapView, { LongPressEvent, Region } from "react-native-maps";
 
 import { Coordinates } from "../../../models/types";
 import { usePlacesStore } from "../../../store/usePlacesStore";
 import { useProfileStore } from "../../../store/useProfileStore";
 import {
-  DEFAULT_REGION,
-  MIN_DELTA,
-  MAX_DELTA,
-  ZOOM_IN,
-  ZOOM_OUT,
+  DEFAULT_CENTER,
+  DEFAULT_ZOOM,
+  MIN_ZOOM,
+  MAX_ZOOM,
+  ZOOM_DELTA,
 } from "../constants";
 import { AddPlaceState } from "../types";
 
 export function useMapScreen() {
   const router = useRouter();
-  const mapRef = useRef<MapView>(null);
+  const cameraRef = useRef<Camera>(null);
   const { places, addPlace, deletePlace } = usePlacesStore();
   const { profile } = useProfileStore();
 
-  const currentRegion = useRef<Region>(DEFAULT_REGION);
+  const currentCenter = useRef<[number, number]>(DEFAULT_CENTER);
+  const currentZoom = useRef<number>(DEFAULT_ZOOM);
 
   const [locationGranted, setLocationGranted] = useState(false);
   const [gpsCoords, setGpsCoords] = useState<Coordinates | null>(null);
@@ -88,55 +89,46 @@ export function useMapScreen() {
 
   function applyLocation(latitude: number, longitude: number) {
     const coords = { latitude, longitude };
-    const newRegion: Region = {
-      ...coords,
-      latitudeDelta: 0.05,
-      longitudeDelta: 0.05,
-    };
     setGpsCoords(coords);
-    currentRegion.current = newRegion;
-    mapRef.current?.animateToRegion(newRegion, 800);
+    currentCenter.current = [longitude, latitude];
+    currentZoom.current = DEFAULT_ZOOM;
+    cameraRef.current?.setCamera({
+      centerCoordinate: [longitude, latitude],
+      zoomLevel: DEFAULT_ZOOM,
+      animationDuration: 800,
+    });
     showToast("Centred on your GPS location", true);
   }
 
   function handleZoomIn() {
-    const r = currentRegion.current;
-    const delta = Math.max(r.latitudeDelta * ZOOM_IN, MIN_DELTA);
-    const next: Region = { ...r, latitudeDelta: delta, longitudeDelta: delta };
-    mapRef.current?.animateToRegion(next, 250);
+    const zoom = Math.min(currentZoom.current + ZOOM_DELTA, MAX_ZOOM);
+    cameraRef.current?.setCamera({ zoomLevel: zoom, animationDuration: 250 });
   }
 
   function handleZoomOut() {
-    const r = currentRegion.current;
-    const delta = Math.min(r.latitudeDelta * ZOOM_OUT, MAX_DELTA);
-    const next: Region = { ...r, latitudeDelta: delta, longitudeDelta: delta };
-    mapRef.current?.animateToRegion(next, 250);
+    const zoom = Math.max(currentZoom.current - ZOOM_DELTA, MIN_ZOOM);
+    cameraRef.current?.setCamera({ zoomLevel: zoom, animationDuration: 250 });
   }
 
   function handleCenterGPS() {
     if (!gpsCoords) return;
-    const next: Region = {
-      ...gpsCoords,
-      latitudeDelta: currentRegion.current.latitudeDelta,
-      longitudeDelta: currentRegion.current.longitudeDelta,
-    };
-    mapRef.current?.animateToRegion(next, 600);
+    cameraRef.current?.setCamera({
+      centerCoordinate: [gpsCoords.longitude, gpsCoords.latitude],
+      zoomLevel: currentZoom.current,
+      animationDuration: 600,
+    });
   }
 
-  function handleLongPress(event: LongPressEvent) {
-    const { coordinate } = event.nativeEvent;
-    mapRef.current?.animateToRegion(
-      {
-        latitude: coordinate.latitude,
-        longitude: coordinate.longitude,
-        latitudeDelta: currentRegion.current.latitudeDelta,
-        longitudeDelta: currentRegion.current.longitudeDelta,
-      },
-      600,
-    );
+  function handleLongPress(feature: { geometry: { coordinates: [number, number] } }) {
+    const [longitude, latitude] = feature.geometry.coordinates;
+    cameraRef.current?.setCamera({
+      centerCoordinate: [longitude, latitude],
+      zoomLevel: currentZoom.current,
+      animationDuration: 600,
+    });
     addPlace({
       name: `Pin ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
-      coordinates: coordinate,
+      coordinates: { latitude, longitude },
       category: "nature",
       rating: 3,
       isFavorite: false,
@@ -145,8 +137,8 @@ export function useMapScreen() {
 
   function handleAddAtCurrentLocation() {
     const coords = gpsCoords ?? {
-      latitude: currentRegion.current.latitude,
-      longitude: currentRegion.current.longitude,
+      latitude: currentCenter.current[1],
+      longitude: currentCenter.current[0],
     };
     setAddPlaceState({
       name: "",
@@ -195,7 +187,7 @@ export function useMapScreen() {
   }
 
   return {
-    mapRef,
+    cameraRef,
     places,
     profile,
     locationGranted,
@@ -206,7 +198,8 @@ export function useMapScreen() {
     toastAnim,
     toastMsg,
     toastGPS,
-    currentRegion,
+    currentCenter,
+    currentZoom,
     handleZoomIn,
     handleZoomOut,
     handleCenterGPS,

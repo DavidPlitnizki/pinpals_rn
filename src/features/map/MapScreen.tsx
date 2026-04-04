@@ -1,30 +1,35 @@
+import { Camera, MapView, UserLocation } from "@rnmapbox/maps";
+import { useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import MapView from "react-native-maps";
 
-import { DEFAULT_REGION } from "./constants";
 import { AddPlaceModal } from "./components/AddPlaceModal";
+import { FriendsButton } from "./components/FriendsButton";
+import { FriendsSheet } from "./components/FriendsSheet";
 import { MapControls } from "./components/MapControls";
 import { MapMarkers } from "./components/MapMarkers";
 import { MapToast } from "./components/MapToast";
-import { ProfileButton } from "./components/ProfileButton";
-import { ProfileMenuSheet } from "./components/ProfileMenuSheet";
+import { SearchSheet } from "./components/SearchSheet";
+import { DEFAULT_CENTER, DEFAULT_ZOOM } from "./constants";
+import { AddPlaceState } from "./types";
+import { useFriendsSheet } from "./hooks/useFriendsSheet";
 import { useMapScreen } from "./hooks/useMapScreen";
+import { useSearchSheet } from "./hooks/useSearchSheet";
 
 export default function MapScreen() {
+  const router = useRouter();
   const {
-    mapRef,
+    cameraRef,
     places,
-    profile,
     locationGranted,
     gpsCoords,
     showAddModal,
-    showProfileMenu,
     addPlaceState,
     toastAnim,
     toastMsg,
     toastGPS,
-    currentRegion,
+    currentCenter,
+    currentZoom,
     handleZoomIn,
     handleZoomOut,
     handleCenterGPS,
@@ -34,23 +39,46 @@ export default function MapScreen() {
     handleSavePlace,
     handleMarkerPress,
     handleDeleteMarker,
-    setShowProfileMenu,
     setAddPlaceState,
   } = useMapScreen();
+
+  const search = useSearchSheet(places);
+  const friends = useFriendsSheet();
+
+  function onLongPress(feature: unknown) {
+    handleLongPress(feature as { geometry: { coordinates: [number, number] } });
+  }
+
+  function onCameraChanged(state: {
+    properties: { center: unknown; zoom: number };
+  }) {
+    currentCenter.current = state.properties.center as [number, number];
+    currentZoom.current = state.properties.zoom;
+  }
+
+  function onAddPlaceChange(update: Partial<AddPlaceState>) {
+    setAddPlaceState((s) => ({ ...s, ...update }));
+  }
+
+  function onSearchPlacePress(placeId: string) {
+    router.push({ pathname: "/place/[id]", params: { id: placeId } } as any);
+  }
 
   return (
     <View style={styles.container}>
       <MapView
-        ref={mapRef}
         style={styles.map}
-        initialRegion={DEFAULT_REGION}
-        showsUserLocation={locationGranted}
-        showsMyLocationButton={false}
-        onRegionChangeComplete={(r) => {
-          currentRegion.current = r;
-        }}
-        onLongPress={handleLongPress}
+        onLongPress={onLongPress}
+        onCameraChanged={onCameraChanged}
       >
+        <Camera
+          ref={cameraRef}
+          defaultSettings={{
+            centerCoordinate: DEFAULT_CENTER,
+            zoomLevel: DEFAULT_ZOOM,
+          }}
+        />
+        {locationGranted && <UserLocation visible />}
         <MapMarkers
           places={places}
           onMarkerPress={handleMarkerPress}
@@ -60,7 +88,7 @@ export default function MapScreen() {
 
       <MapToast toastAnim={toastAnim} toastMsg={toastMsg} toastGPS={toastGPS} />
 
-      <ProfileButton profile={profile} onPress={() => setShowProfileMenu(true)} />
+      <FriendsButton onPress={friends.open} hasUnread={friends.hasUnread} />
 
       <MapControls
         gpsCoords={gpsCoords}
@@ -68,21 +96,38 @@ export default function MapScreen() {
         onZoomOut={handleZoomOut}
         onCenterGPS={handleCenterGPS}
         onAdd={handleAddAtCurrentLocation}
-      />
-
-      <ProfileMenuSheet
-        visible={showProfileMenu}
-        onClose={() => setShowProfileMenu(false)}
-        profile={profile}
-        places={places}
+        onSearch={search.open}
       />
 
       <AddPlaceModal
         visible={showAddModal}
         state={addPlaceState}
-        onChange={(update) => setAddPlaceState((s) => ({ ...s, ...update }))}
+        onChange={onAddPlaceChange}
         onSave={handleSavePlace}
         onClose={handleCloseModal}
+      />
+
+      <FriendsSheet
+        visible={friends.visible}
+        query={friends.query}
+        filteredFriends={friends.filteredFriends}
+        filteredGroups={friends.filteredGroups}
+        recents={friends.recents}
+        onChangeQuery={friends.setQuery}
+        onClose={friends.close}
+      />
+
+      <SearchSheet
+        visible={search.visible}
+        query={search.query}
+        activeCategories={search.activeCategories}
+        specialFilters={search.specialFilters}
+        filteredPlaces={search.filteredPlaces}
+        onChangeQuery={search.setQuery}
+        onToggleCategory={search.toggleCategory}
+        onToggleSpecial={search.toggleSpecial}
+        onPlacePress={onSearchPlacePress}
+        onClose={search.close}
       />
     </View>
   );

@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,6 +12,7 @@ interface Props {
   onZoomOut: () => void;
   onCenterGPS: () => void;
   onAdd: () => void;
+  onSearch: () => void;
 }
 
 export function MapControls({
@@ -19,10 +21,14 @@ export function MapControls({
   onZoomOut,
   onCenterGPS,
   onAdd,
+  onSearch,
 }: Props) {
   return (
     <SafeAreaView style={styles.wrap} pointerEvents="box-none">
       <View style={styles.cluster}>
+        <TouchableOpacity style={styles.fab} onPress={onSearch}>
+          <Ionicons name="search" size={26} color={Colors.white} />
+        </TouchableOpacity>
         <View style={styles.controls}>
           <TouchableOpacity style={styles.controlBtn} onPress={onZoomIn}>
             <Text style={styles.controlIcon}>+</Text>

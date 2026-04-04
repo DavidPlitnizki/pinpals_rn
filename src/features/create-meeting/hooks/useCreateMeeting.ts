@@ -1,7 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert } from "react-native";
-import { MapPressEvent } from "react-native-maps";
 
 import { Coordinates } from "../../../models/types";
 import { useMeetingsStore } from "../../../store/useMeetingsStore";
@@ -31,8 +30,9 @@ export function useCreateMeeting() {
   const [tempHour, setTempHour] = useState(12);
   const [tempMinute, setTempMinute] = useState(0);
 
-  function handleMapPress(event: MapPressEvent) {
-    setCoordinates(event.nativeEvent.coordinate);
+  function handleMapPress(feature: { geometry: { coordinates: [number, number] } }) {
+    const [longitude, latitude] = feature.geometry.coordinates;
+    setCoordinates({ latitude, longitude });
   }
 
   function openDateModal() {
