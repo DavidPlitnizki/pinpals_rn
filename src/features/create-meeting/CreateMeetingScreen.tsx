@@ -1,6 +1,6 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import { Camera, MapView, PointAnnotation } from "@rnmapbox/maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PinButton } from "../../design-system/components/PinButton";
@@ -83,17 +83,27 @@ export default function CreateMeetingScreen() {
         <View style={styles.formGroup}>
           <Text style={styles.fieldLabel}>Location</Text>
           <Text style={styles.mapHint}>Tap on the map to set the meeting point</Text>
-          <MapView
-            style={styles.map}
-            initialRegion={{
-              latitude: coordinates.latitude,
-              longitude: coordinates.longitude,
-              latitudeDelta: 0.05,
-              longitudeDelta: 0.05,
-            }}
-            onPress={handleMapPress}
-          >
-            <Marker coordinate={coordinates} pinColor={Colors.brand.primary} />
+          <MapView style={styles.map} onPress={handleMapPress}>
+            <Camera
+              centerCoordinate={[coordinates.longitude, coordinates.latitude]}
+              zoomLevel={13}
+              animationDuration={0}
+            />
+            <PointAnnotation
+              id="meeting-location"
+              coordinate={[coordinates.longitude, coordinates.latitude]}
+            >
+              <View
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 10,
+                  backgroundColor: Colors.brand.primary,
+                  borderWidth: 2,
+                  borderColor: "#fff",
+                }}
+              />
+            </PointAnnotation>
           </MapView>
           <Text style={styles.coordsText}>
             {coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)}

@@ -1,6 +1,6 @@
-import React from "react";
+import { MarkerView, PointAnnotation } from "@rnmapbox/maps";
+import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Callout, Marker } from "react-native-maps";
 
 import { Colors, Spacing, Typography } from "../../../design-system/tokens";
 import { Place } from "../../../models/types";
@@ -13,42 +13,82 @@ interface Props {
 }
 
 export function MapMarkers({ places, onMarkerPress, onDeleteMarker }: Props) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedPlace = places.find((p) => p.id === selectedId);
+
   return (
     <>
       {places.map((place) => (
-        <Marker
+        <PointAnnotation
           key={place.id}
-          coordinate={place.coordinates}
-          pinColor={CATEGORY_COLORS[place.category]}
+          id={place.id}
+          coordinate={[place.coordinates.longitude, place.coordinates.latitude]}
+          onSelected={() => setSelectedId(place.id)}
+          onDeselected={() => setSelectedId(null)}
         >
-          <Callout tooltip={false}>
-            <View style={styles.callout}>
-              <TouchableOpacity onPress={() => onMarkerPress(place.id)}>
-                <Text style={styles.calloutName}>{place.name}</Text>
-                <Text style={styles.calloutCategory}>
-                  {CATEGORY_LABELS[place.category]}
-                </Text>
-                <Text style={styles.calloutRating}>
-                  {"★".repeat(place.rating)}
-                </Text>
-                <Text style={styles.calloutTap}>Tap for details →</Text>
-              </TouchableOpacity>
-              <View style={styles.calloutDivider} />
-              <TouchableOpacity
-                onPress={() => onDeleteMarker(place.id, place.name)}
-              >
-                <Text style={styles.calloutDelete}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </Callout>
-        </Marker>
+          <View
+            style={[
+              styles.pin,
+              { backgroundColor: CATEGORY_COLORS[place.category] },
+            ]}
+          />
+        </PointAnnotation>
       ))}
+
+      {selectedPlace && (
+        <MarkerView
+          coordinate={[
+            selectedPlace.coordinates.longitude,
+            selectedPlace.coordinates.latitude,
+          ]}
+          anchor={{ x: 0.5, y: 1.3 }}
+        >
+          <View style={styles.callout}>
+            <TouchableOpacity onPress={() => onMarkerPress(selectedPlace.id)}>
+              <Text style={styles.calloutName}>{selectedPlace.name}</Text>
+              <Text style={styles.calloutCategory}>
+                {CATEGORY_LABELS[selectedPlace.category]}
+              </Text>
+              <Text style={styles.calloutRating}>
+                {"★".repeat(selectedPlace.rating)}
+              </Text>
+              <Text style={styles.calloutTap}>Tap for details →</Text>
+            </TouchableOpacity>
+            <View style={styles.calloutDivider} />
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedId(null);
+                onDeleteMarker(selectedPlace.id, selectedPlace.name);
+              }}
+            >
+              <Text style={styles.calloutDelete}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </MarkerView>
+      )}
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  callout: { padding: Spacing.s8, minWidth: 150 },
+  pin: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.white,
+  },
+  callout: {
+    backgroundColor: Colors.white,
+    borderRadius: 8,
+    padding: Spacing.s8,
+    minWidth: 150,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   calloutName: {
     ...Typography.headline,
     color: Colors.neutral[900],

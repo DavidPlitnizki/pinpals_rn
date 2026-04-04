@@ -1,8 +1,8 @@
+import { Camera, MapView, UserLocation } from "@rnmapbox/maps";
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import MapView from "react-native-maps";
 
-import { DEFAULT_REGION } from "./constants";
+import { DEFAULT_CENTER, DEFAULT_ZOOM } from "./constants";
 import { AddPlaceModal } from "./components/AddPlaceModal";
 import { MapControls } from "./components/MapControls";
 import { MapMarkers } from "./components/MapMarkers";
@@ -13,7 +13,7 @@ import { useMapScreen } from "./hooks/useMapScreen";
 
 export default function MapScreen() {
   const {
-    mapRef,
+    cameraRef,
     places,
     profile,
     locationGranted,
@@ -24,7 +24,8 @@ export default function MapScreen() {
     toastAnim,
     toastMsg,
     toastGPS,
-    currentRegion,
+    currentCenter,
+    currentZoom,
     handleZoomIn,
     handleZoomOut,
     handleCenterGPS,
@@ -41,16 +42,21 @@ export default function MapScreen() {
   return (
     <View style={styles.container}>
       <MapView
-        ref={mapRef}
         style={styles.map}
-        initialRegion={DEFAULT_REGION}
-        showsUserLocation={locationGranted}
-        showsMyLocationButton={false}
-        onRegionChangeComplete={(r) => {
-          currentRegion.current = r;
-        }}
         onLongPress={handleLongPress}
+        onCameraChanged={(state) => {
+          currentCenter.current = state.properties.center as [number, number];
+          currentZoom.current = state.properties.zoom;
+        }}
       >
+        <Camera
+          ref={cameraRef}
+          defaultSettings={{
+            centerCoordinate: DEFAULT_CENTER,
+            zoomLevel: DEFAULT_ZOOM,
+          }}
+        />
+        {locationGranted && <UserLocation visible />}
         <MapMarkers
           places={places}
           onMarkerPress={handleMarkerPress}

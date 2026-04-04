@@ -1,15 +1,7 @@
-import { Region } from "react-native-maps";
-
 export { CATEGORY_COLORS, CATEGORIES, CATEGORY_LABELS } from "../../shared/constants";
 
-export const DEFAULT_REGION: Region = {
-  latitude: 40.785091,
-  longitude: -73.968285,
-  latitudeDelta: 0.05,
-  longitudeDelta: 0.05,
-};
-
-export const ZOOM_IN = 0.5;
-export const ZOOM_OUT = 2;
-export const MIN_DELTA = 0.0005;
-export const MAX_DELTA = 80;
+export const DEFAULT_CENTER: [number, number] = [-73.968285, 40.785091];
+export const DEFAULT_ZOOM = 13;
+export const ZOOM_DELTA = 1;
+export const MIN_ZOOM = 1;
+export const MAX_ZOOM = 20;
