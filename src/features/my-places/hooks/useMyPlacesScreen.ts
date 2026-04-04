@@ -2,12 +2,14 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert } from "react-native";
 
-import { useAppStore } from "../../../store/useAppStore";
+import { useMeetingsStore } from "../../../store/useMeetingsStore";
+import { usePlacesStore } from "../../../store/usePlacesStore";
 import { Tab } from "../types";
 
 export function useMyPlacesScreen() {
   const router = useRouter();
-  const { places, meetings, deletePlace } = useAppStore();
+  const { places, deletePlace } = usePlacesStore();
+  const { meetings } = useMeetingsStore();
   const [activeTab, setActiveTab] = useState<Tab>("all");
 
   const displayedPlaces =

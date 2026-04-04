@@ -2,10 +2,14 @@ import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import { Alert } from "react-native";
 
-import { useAppStore } from "../../../store/useAppStore";
+import { useMeetingsStore } from "../../../store/useMeetingsStore";
+import { usePlacesStore } from "../../../store/usePlacesStore";
+import { useProfileStore } from "../../../store/useProfileStore";
 
 export function useProfileScreen() {
-  const { profile, places, meetings, updateProfile } = useAppStore();
+  const { profile, updateProfile } = useProfileStore();
+  const { places } = usePlacesStore();
+  const { meetings } = useMeetingsStore();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile.name);
   const [bio, setBio] = useState(profile.bio ?? "");

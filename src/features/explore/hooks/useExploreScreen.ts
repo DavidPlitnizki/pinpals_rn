@@ -2,11 +2,11 @@ import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 
 import { PlaceCategory } from "../../../models/types";
-import { useAppStore } from "../../../store/useAppStore";
+import { usePlacesStore } from "../../../store/usePlacesStore";
 
 export function useExploreScreen() {
   const router = useRouter();
-  const { places } = useAppStore();
+  const { places } = usePlacesStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<PlaceCategory | "all">("all");
 

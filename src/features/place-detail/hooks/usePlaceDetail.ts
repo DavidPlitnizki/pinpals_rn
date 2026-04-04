@@ -3,13 +3,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert } from "react-native";
 
-import { useAppStore } from "../../../store/useAppStore";
+import { usePlacesStore } from "../../../store/usePlacesStore";
 
 export function usePlaceDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { places, notes, updatePlace, deletePlace, toggleFavorite, addNote, deleteNote } =
-    useAppStore();
+    usePlacesStore();
 
   const place = places.find((p) => p.id === id);
   const placeNotes = notes.filter((n) => n.placeId === id);

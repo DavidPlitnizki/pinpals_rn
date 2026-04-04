@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Place, PlaceNote, Meeting, UserProfile, PlaceCategory } from '../models/types';
+import { Place, PlaceNote } from '../models/types';
 
 const SAMPLE_PLACES: Place[] = [
   {
@@ -36,46 +36,29 @@ const SAMPLE_PLACES: Place[] = [
   },
 ];
 
-interface AppState {
+function generateId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+interface PlacesState {
   places: Place[];
   notes: PlaceNote[];
-  meetings: Meeting[];
-  profile: UserProfile;
 
-  // Place actions
   addPlace: (place: Omit<Place, 'id' | 'createdAt'>) => void;
   updatePlace: (id: string, updates: Partial<Place>) => void;
   deletePlace: (id: string) => void;
   toggleFavorite: (id: string) => void;
 
-  // Note actions
   addNote: (note: Omit<PlaceNote, 'id' | 'createdAt'>) => void;
   deleteNote: (id: string) => void;
   getNotesForPlace: (placeId: string) => PlaceNote[];
-
-  // Meeting actions
-  addMeeting: (meeting: Omit<Meeting, 'id' | 'createdAt'>) => void;
-  deleteMeeting: (id: string) => void;
-
-  // Profile actions
-  updateProfile: (updates: Partial<UserProfile>) => void;
 }
 
-function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
-
-export const useAppStore = create<AppState>()(
+export const usePlacesStore = create<PlacesState>()(
   persist(
     (set, get) => ({
       places: SAMPLE_PLACES,
       notes: [],
-      meetings: [],
-      profile: {
-        id: '1',
-        name: 'User',
-        bio: '',
-      },
 
       addPlace: (placeData) => {
         const place: Place = {
@@ -123,26 +106,9 @@ export const useAppStore = create<AppState>()(
       getNotesForPlace: (placeId) => {
         return get().notes.filter((n) => n.placeId === placeId);
       },
-
-      addMeeting: (meetingData) => {
-        const meeting: Meeting = {
-          ...meetingData,
-          id: generateId(),
-          createdAt: new Date().toISOString(),
-        };
-        set((state) => ({ meetings: [...state.meetings, meeting] }));
-      },
-
-      deleteMeeting: (id) => {
-        set((state) => ({ meetings: state.meetings.filter((m) => m.id !== id) }));
-      },
-
-      updateProfile: (updates) => {
-        set((state) => ({ profile: { ...state.profile, ...updates } }));
-      },
     }),
     {
-      name: 'pinpals-storage',
+      name: 'pinpals-places',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

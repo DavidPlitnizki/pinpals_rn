@@ -5,7 +5,8 @@ import { Alert, Animated } from "react-native";
 import MapView, { LongPressEvent, Region } from "react-native-maps";
 
 import { Coordinates } from "../../../models/types";
-import { useAppStore } from "../../../store/useAppStore";
+import { usePlacesStore } from "../../../store/usePlacesStore";
+import { useProfileStore } from "../../../store/useProfileStore";
 import {
   DEFAULT_REGION,
   MIN_DELTA,
@@ -18,7 +19,8 @@ import { AddPlaceState } from "../types";
 export function useMapScreen() {
   const router = useRouter();
   const mapRef = useRef<MapView>(null);
-  const { places, addPlace, deletePlace, profile } = useAppStore();
+  const { places, addPlace, deletePlace } = usePlacesStore();
+  const { profile } = useProfileStore();
 
   const currentRegion = useRef<Region>(DEFAULT_REGION);
 

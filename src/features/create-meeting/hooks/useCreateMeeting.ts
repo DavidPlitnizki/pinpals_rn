@@ -4,7 +4,7 @@ import { Alert } from "react-native";
 import { MapPressEvent } from "react-native-maps";
 
 import { Coordinates } from "../../../models/types";
-import { useAppStore } from "../../../store/useAppStore";
+import { useMeetingsStore } from "../../../store/useMeetingsStore";
 import { DEFAULT_COORDS } from "../constants";
 
 function getTomorrow(): Date {
@@ -16,7 +16,7 @@ function getTomorrow(): Date {
 
 export function useCreateMeeting() {
   const router = useRouter();
-  const { addMeeting } = useAppStore();
+  const { addMeeting } = useMeetingsStore();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
