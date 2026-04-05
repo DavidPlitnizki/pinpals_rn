@@ -2,6 +2,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import { Alert } from "react-native";
 
+import { useAuth } from "../../../contexts/AuthContext";
 import { useMeetingsStore } from "../../../store/useMeetingsStore";
 import { usePlacesStore } from "../../../store/usePlacesStore";
 import { useProfileStore } from "../../../store/useProfileStore";
@@ -10,6 +11,7 @@ export function useProfileScreen() {
   const { profile, updateProfile } = useProfileStore();
   const { places } = usePlacesStore();
   const { meetings } = useMeetingsStore();
+  const { logout, isGuest } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile.name);
   const [bio, setBio] = useState(profile.bio ?? "");
@@ -46,8 +48,29 @@ export function useProfileScreen() {
     setIsEditing(false);
   }
 
+  async function handleLogout() {
+    await logout();
+  }
+
+  function handleDeleteAccount() {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: async () => { await logout(); },
+        },
+      ],
+      { cancelable: true }
+    );
+  }
+
   return {
     profile,
+    isGuest,
     places,
     meetings,
     isEditing,
@@ -59,5 +82,7 @@ export function useProfileScreen() {
     handlePickAvatar,
     handleSave,
     handleCancelEdit,
+    handleLogout,
+    handleDeleteAccount,
   };
 }

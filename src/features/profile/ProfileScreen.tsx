@@ -1,4 +1,5 @@
 import Constants from "expo-constants";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import {
   Image,
@@ -13,13 +14,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PinButton } from "../../design-system/components/PinButton";
 import { PinCard } from "../../design-system/components/PinCard";
 import { PinTextField } from "../../design-system/components/PinTextField";
-import { Colors, Radii, Spacing, Typography } from "../../design-system/tokens";
+import { Colors, Spacing, Typography } from "../../design-system/tokens";
 import { getInitials } from "./utils/getInitials";
 import { useProfileScreen } from "./hooks/useProfileScreen";
 
 export default function ProfileScreen() {
   const {
     profile,
+    isGuest,
     places,
     meetings,
     isEditing,
@@ -31,45 +33,59 @@ export default function ProfileScreen() {
     handlePickAvatar,
     handleSave,
     handleCancelEdit,
+    handleLogout,
+    handleDeleteAccount,
   } = useProfileScreen();
 
   const appVersion = Constants.expoConfig?.version ?? "1.0.0";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Profile</Text>
-          {!isEditing ? (
-            <TouchableOpacity onPress={() => setIsEditing(true)}>
-              <Text style={styles.editLink}>Edit</Text>
-            </TouchableOpacity>
+      {/* Fixed header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Profile</Text>
+        {!isEditing ? (
+          <TouchableOpacity onPress={() => setIsEditing(true)}>
+            <Text style={styles.editLink}>Edit</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={handleCancelEdit}>
+            <Text style={styles.cancelLink}>Cancel</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Fixed avatar */}
+      <View style={styles.avatarSection}>
+        <TouchableOpacity
+          style={styles.avatarContainer}
+          onPress={isGuest ? undefined : handlePickAvatar}
+          activeOpacity={isGuest ? 1 : 0.7}
+        >
+          {isGuest ? (
+            <View style={styles.avatarPlaceholderGuest}>
+              <MaterialCommunityIcons name="incognito" size={48} color={Colors.neutral[400]} />
+            </View>
+          ) : profile.avatarUri ? (
+            <Image source={{ uri: profile.avatarUri }} style={styles.avatar} />
           ) : (
-            <TouchableOpacity onPress={handleCancelEdit}>
-              <Text style={styles.cancelLink}>Cancel</Text>
-            </TouchableOpacity>
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarInitials}>
+                {getInitials(profile.name)}
+              </Text>
+            </View>
           )}
-        </View>
+          {!isGuest && (
+            <View style={styles.avatarBadge}>
+              <Text style={styles.avatarBadgeText}>✏</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
 
+      {/* Scrollable content */}
+      <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          {/* Avatar */}
-          <View style={styles.avatarSection}>
-            <TouchableOpacity style={styles.avatarContainer} onPress={handlePickAvatar}>
-              {profile.avatarUri ? (
-                <Image source={{ uri: profile.avatarUri }} style={styles.avatar} />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarInitials}>
-                    {getInitials(profile.name)}
-                  </Text>
-                </View>
-              )}
-              <View style={styles.avatarBadge}>
-                <Text style={styles.avatarBadgeText}>✏</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
           {/* Profile Info */}
           <PinCard style={styles.profileCard}>
             {isEditing ? (
@@ -144,6 +160,19 @@ export default function ProfileScreen() {
               <Text style={styles.infoValue}>1 — Solo Features</Text>
             </View>
           </PinCard>
+
+          {/* Account Actions */}
+          <PinCard style={styles.accountCard}>
+            <TouchableOpacity style={styles.accountRow} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={20} color={Colors.neutral[700]} style={styles.accountIcon} />
+              <Text style={styles.accountRowText}>Log Out</Text>
+            </TouchableOpacity>
+            <View style={styles.accountDivider} />
+            <TouchableOpacity style={styles.accountRow} onPress={handleDeleteAccount}>
+              <Ionicons name="trash-outline" size={20} color={Colors.error} style={styles.accountIcon} />
+              <Text style={styles.accountRowTextDanger}>Delete Account</Text>
+            </TouchableOpacity>
+          </PinCard>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -163,8 +192,7 @@ const styles = StyleSheet.create({
   title: { ...Typography.largeTitle, color: Colors.neutral[900] },
   editLink: { ...Typography.body, color: Colors.brand.primary, fontWeight: "600" },
   cancelLink: { ...Typography.body, color: Colors.neutral[500] },
-  content: { padding: Spacing.s16, gap: Spacing.s16, paddingBottom: Spacing.s48 },
-  avatarSection: { alignItems: "center", marginBottom: Spacing.s8 },
+  avatarSection: { alignItems: "center", paddingBottom: Spacing.s16 },
   avatarContainer: { position: "relative" },
   avatar: { width: 96, height: 96, borderRadius: 48 },
   avatarPlaceholder: {
@@ -172,6 +200,14 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 48,
     backgroundColor: Colors.brand.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarPlaceholderGuest: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: Colors.neutral[200],
     alignItems: "center",
     justifyContent: "center",
   },
@@ -190,6 +226,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarBadgeText: { fontSize: 12 },
+  content: { padding: Spacing.s16, gap: Spacing.s16, paddingBottom: 100 },
   profileCard: { marginBottom: 0 },
   editForm: { gap: Spacing.s4 },
   fieldSpacing: { height: Spacing.s4 },
@@ -235,4 +272,10 @@ const styles = StyleSheet.create({
   },
   infoLabel: { ...Typography.subheadline, color: Colors.neutral[600] },
   infoValue: { ...Typography.subheadline, color: Colors.neutral[400] },
+  accountCard: { marginBottom: 0 },
+  accountRow: { flexDirection: "row", alignItems: "center", paddingVertical: Spacing.s12 },
+  accountIcon: { marginRight: Spacing.s12 },
+  accountDivider: { height: 1, backgroundColor: Colors.neutral[100] },
+  accountRowText: { ...Typography.body, color: Colors.neutral[700] },
+  accountRowTextDanger: { ...Typography.body, color: Colors.error },
 });
