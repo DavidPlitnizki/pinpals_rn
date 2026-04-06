@@ -8,12 +8,11 @@ import React, {
 
 import {
   AuthData,
-  checkAuth,
-  checkGuest,
   login as serviceLogin,
-  logout as serviceLogout,
   signUp as serviceSignUp,
-  skipAuth as serviceSkipAuth,
+  logout as serviceLogout,
+  loginAnonymously,
+  onAuthStateChanged,
 } from "../services/authService";
 
 interface AuthContextValue {
@@ -36,47 +35,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authData, setAuthData] = useState<AuthData | null>(null);
 
   useEffect(() => {
-    Promise.all([checkAuth(), checkGuest()]).then(([data, guest]) => {
-      setAuthData(data);
-      setIsAuth(data !== null);
-      setIsGuest(guest);
+    const unsubscribe = onAuthStateChanged((firebaseUser) => {
+      if (firebaseUser) {
+        setAuthData({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: firebaseUser.displayName,
+          isAnonymous: firebaseUser.isAnonymous,
+        });
+        setIsAuth(!firebaseUser.isAnonymous);
+        setIsGuest(firebaseUser.isAnonymous);
+      } else {
+        setAuthData(null);
+        setIsAuth(false);
+        setIsGuest(false);
+      }
       setIsLoading(false);
     });
+
+    return unsubscribe;
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     await serviceLogin(email, password);
-    const data = await checkAuth();
-    setAuthData(data);
-    setIsAuth(true);
-    setIsGuest(false);
   }, []);
 
   const signUp = useCallback(
     async (email: string, password: string, name: string) => {
       await serviceSignUp(email, password, name);
-      const data = await checkAuth();
-      setAuthData(data);
-      setIsAuth(true);
-      setIsGuest(false);
     },
     []
   );
 
   const logout = useCallback(async () => {
     await serviceLogout();
-    setAuthData(null);
-    setIsAuth(false);
-    setIsGuest(false);
   }, []);
 
   const skipAuth = useCallback(async () => {
-    await serviceSkipAuth();
-    setIsGuest(true);
+    await loginAnonymously();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuth, isGuest, isLoading, authData, login, signUp, logout, skipAuth }}>
+    <AuthContext.Provider
+      value={{
+        isAuth,
+        isGuest,
+        isLoading,
+        authData,
+        login,
+        signUp,
+        logout,
+        skipAuth,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

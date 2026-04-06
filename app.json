@@ -4,15 +4,17 @@
     "slug": "pinpals_rn",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/splash-icon.png",
     "scheme": "pinpalsrn",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.davidplit.pinpals-rn",
-      "newArchEnabled": true
+      "newArchEnabled": true,
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "newArchEnabled": true,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -49,15 +51,16 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#7A9887",
+          "backgroundColor": "#FAF8F4AA",
           "image": "./assets/images/splash-screen.png",
           "resizeMode": "cover",
-          "android": {
-            "image": "./assets/images/splash-screen.png",
-            "resizeMode": "cover"
-          }
+          "enableFullScreenImage_legacy": true
         }
-      ]
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "expo-build-properties",
+      "./plugins/withModularHeaders"
     ],
     "experiments": {
       "typedRoutes": true,

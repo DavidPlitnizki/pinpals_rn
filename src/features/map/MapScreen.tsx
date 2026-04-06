@@ -42,7 +42,7 @@ export default function MapScreen() {
     setAddPlaceState,
   } = useMapScreen();
 
-  const search = useSearchSheet(places);
+  const search = useSearchSheet(places, gpsCoords);
   const friends = useFriendsSheet();
 
   function onLongPress(feature: unknown) {
@@ -120,10 +120,13 @@ export default function MapScreen() {
       <SearchSheet
         visible={search.visible}
         query={search.query}
+        radiusM={search.radiusM}
+        maxRadiusM={search.maxRadiusM}
         activeCategories={search.activeCategories}
         specialFilters={search.specialFilters}
         filteredPlaces={search.filteredPlaces}
         onChangeQuery={search.setQuery}
+        onRadiusChange={search.setRadiusM}
         onToggleCategory={search.toggleCategory}
         onToggleSpecial={search.toggleSpecial}
         onPlacePress={onSearchPlacePress}

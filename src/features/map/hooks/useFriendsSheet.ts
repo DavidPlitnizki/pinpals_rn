@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 
+import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
+
 export interface Friend {
   id: string;
   name: string;
@@ -48,18 +50,19 @@ const MOCK_GROUPS: Group[] = [
 export function useFriendsSheet() {
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(query);
 
   const filteredFriends = useMemo(() => {
-    if (!query.trim()) return MOCK_FRIENDS;
-    const lower = query.toLowerCase();
+    if (!debouncedQuery.trim()) return MOCK_FRIENDS;
+    const lower = debouncedQuery.toLowerCase();
     return MOCK_FRIENDS.filter((f) => f.name.toLowerCase().includes(lower));
-  }, [query]);
+  }, [debouncedQuery]);
 
   const filteredGroups = useMemo(() => {
-    if (!query.trim()) return MOCK_GROUPS;
-    const lower = query.toLowerCase();
+    if (!debouncedQuery.trim()) return MOCK_GROUPS;
+    const lower = debouncedQuery.toLowerCase();
     return MOCK_GROUPS.filter((g) => g.name.toLowerCase().includes(lower));
-  }, [query]);
+  }, [debouncedQuery]);
 
   const hasUnread =
     MOCK_FRIENDS.some((f) => f.unread > 0) ||
