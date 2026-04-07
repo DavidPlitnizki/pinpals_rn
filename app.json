@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "pinpals_rn",
-    "slug": "pinpals_rn",
+    "name": "Pinpals",
+    "slug": "pinpals",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/splash-icon.png",
-    "scheme": "pinpalsrn",
+    "icon": "./assets/images/icon.png",
+    "scheme": "pinpals",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.davidplit.pinpals-rn",
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.davidplit.pinpals",
       "newArchEnabled": true,
       "googleServicesFile": "./GoogleService-Info.plist"
     },
@@ -23,7 +23,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.davidplit.pinpals_rn"
+      "package": "com.davidplit.pinpals"
     },
     "web": {
       "output": "static",
@@ -51,7 +51,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FAF8F4AA",
+          "backgroundColor": "#f8f4aa",
           "image": "./assets/images/splash-screen.png",
           "resizeMode": "cover",
           "enableFullScreenImage_legacy": true
