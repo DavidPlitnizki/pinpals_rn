@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "679174491874",
+    "project_id": "pinpals-6ea45",
+    "storage_bucket": "pinpals-6ea45.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:679174491874:android:8bb74214276559379518bb",
+        "android_client_info": {
+          "package_name": "com.dpstudio.pinpals"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "679174491874-6uejj4m5l22sht65iu2fthlrqq388i6f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCiVL-9FqrchjQsYeIAHbMUbk1k6OENLUc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "679174491874-6uejj4m5l22sht65iu2fthlrqq388i6f.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

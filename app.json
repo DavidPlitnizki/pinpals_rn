@@ -1,18 +1,20 @@
 {
   "expo": {
-    "name": "pinpals_rn",
-    "slug": "pinpals_rn",
+    "name": "Pinpals",
+    "slug": "pinpals",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "pinpalsrn",
+    "scheme": "pinpals",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.davidplit.pinpals-rn",
-      "newArchEnabled": true
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.davidplit.pinpals",
+      "newArchEnabled": true,
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "newArchEnabled": true,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -21,7 +23,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.davidplit.pinpals_rn"
+      "package": "com.davidplit.pinpals"
     },
     "web": {
       "output": "static",
@@ -49,13 +51,16 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "android": {
-            "image": "./assets/images/splash-icon.png",
-            "imageWidth": 76
-          }
+          "backgroundColor": "#f8f4aa",
+          "image": "./assets/images/splash-screen.png",
+          "resizeMode": "cover",
+          "enableFullScreenImage_legacy": true
         }
-      ]
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "expo-build-properties",
+      "./plugins/withModularHeaders"
     ],
     "experiments": {
       "typedRoutes": true,

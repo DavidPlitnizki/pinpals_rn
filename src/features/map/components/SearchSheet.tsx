@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import RNSlider from "@react-native-community/slider";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
@@ -15,6 +16,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { PinChip } from "../../../design-system/components/PinChip";
 import {
   Colors,
   Radii,
@@ -23,7 +25,7 @@ import {
 } from "../../../design-system/tokens";
 import { Place, PlaceCategory } from "../../../models/types";
 import { CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS } from "../constants";
-import { SpecialFilter } from "../hooks/useSearchSheet";
+import { formatRadius, SpecialFilter } from "../hooks/useSearchSheet";
 
 const SHEET_HEIGHT = Dimensions.get("window").height * 0.75;
 const ANIMATION_DURATION = 280;
@@ -31,10 +33,13 @@ const ANIMATION_DURATION = 280;
 interface Props {
   visible: boolean;
   query: string;
+  radiusM: number;
+  maxRadiusM: number;
   activeCategories: Set<PlaceCategory>;
   specialFilters: Set<SpecialFilter>;
   filteredPlaces: Place[];
   onChangeQuery: (q: string) => void;
+  onRadiusChange: (value: number) => void;
   onToggleCategory: (cat: PlaceCategory) => void;
   onToggleSpecial: (filter: SpecialFilter) => void;
   onPlacePress: (placeId: string) => void;
@@ -44,10 +49,13 @@ interface Props {
 export function SearchSheet({
   visible,
   query,
+  radiusM,
+  maxRadiusM,
   activeCategories,
   specialFilters,
   filteredPlaces,
   onChangeQuery,
+  onRadiusChange,
   onToggleCategory,
   onToggleSpecial,
   onPlacePress,
@@ -168,89 +176,46 @@ export function SearchSheet({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chipsRow}
           >
-            {CATEGORIES.map((cat) => {
-              const active = activeCategories.has(cat);
-              return (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: active
-                        ? CATEGORY_COLORS[cat]
-                        : Colors.neutral[50],
-                      borderColor: CATEGORY_COLORS[cat],
-                    },
-                  ]}
-                  onPress={() => onToggleCategory(cat)}
-                  activeOpacity={0.75}
-                >
-                  <Text
-                    style={[
-                      styles.chipLabel,
-                      { color: active ? Colors.white : CATEGORY_COLORS[cat] },
-                    ]}
-                  >
-                    {CATEGORY_LABELS[cat]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-
-            <TouchableOpacity
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: specialFilters.has("mine")
-                    ? Colors.brand.primary
-                    : Colors.neutral[50],
-                  borderColor: Colors.brand.primary,
-                },
-              ]}
+            <PinChip
+              label="Mine"
+              color={Colors.brand.primary}
+              selected={specialFilters.has("mine")}
               onPress={() => onToggleSpecial("mine")}
-              activeOpacity={0.75}
-            >
-              <Text
-                style={[
-                  styles.chipLabel,
-                  {
-                    color: specialFilters.has("mine")
-                      ? Colors.white
-                      : Colors.brand.primary,
-                  },
-                ]}
-              >
-                Mine
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: specialFilters.has("favorites")
-                    ? Colors.warning
-                    : Colors.neutral[50],
-                  borderColor: Colors.warning,
-                },
-              ]}
+            />
+            <PinChip
+              label="⭐ Want to visit"
+              color={Colors.warning}
+              selected={specialFilters.has("favorites")}
               onPress={() => onToggleSpecial("favorites")}
-              activeOpacity={0.75}
-            >
-              <Text
-                style={[
-                  styles.chipLabel,
-                  {
-                    color: specialFilters.has("favorites")
-                      ? Colors.white
-                      : Colors.warning,
-                  },
-                ]}
-              >
-                ⭐ Want to visit
-              </Text>
-            </TouchableOpacity>
+            />
+            {CATEGORIES.map((cat) => (
+              <PinChip
+                key={cat}
+                label={CATEGORY_LABELS[cat]}
+                color={CATEGORY_COLORS[cat]}
+                selected={activeCategories.has(cat)}
+                onPress={() => onToggleCategory(cat)}
+              />
+            ))}
           </ScrollView>
+
+          {/* Radius slider */}
+          <View style={styles.sliderRow}>
+            <Text style={styles.sliderLabel}>
+              Radius: {formatRadius(radiusM)}
+            </Text>
+            <RNSlider
+              style={styles.sliderHost}
+              value={radiusM}
+              minimumValue={100}
+              maximumValue={maxRadiusM}
+              step={100}
+              onValueChange={onRadiusChange}
+              minimumTrackTintColor={Colors.brand.primary}
+              maximumTrackTintColor={Colors.neutral[200]}
+              thumbTintColor={Colors.brand.primary}
+            />
+          </View>
 
           {/* Results */}
           <FlatList
@@ -332,19 +297,19 @@ const styles = StyleSheet.create({
   chipsRow: {
     paddingHorizontal: Spacing.s16,
     gap: Spacing.s8,
-    paddingBottom: Spacing.s12,
+    paddingBottom: Spacing.s4,
   },
-  chip: {
-    borderWidth: 1.5,
-    borderRadius: Radii.full,
+  sliderRow: {
     paddingHorizontal: Spacing.s16,
-    paddingVertical: Spacing.s4,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingBottom: Spacing.s8,
   },
-  chipLabel: {
+  sliderLabel: {
     ...Typography.subheadline,
-    fontWeight: "600",
+    color: Colors.neutral[700],
+    marginBottom: Spacing.s4,
+  },
+  sliderHost: {
+    height: 32,
   },
   list: {
     paddingHorizontal: Spacing.s16,

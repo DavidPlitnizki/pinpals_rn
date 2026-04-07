@@ -1,5 +1,6 @@
-import React from 'react';
+import React from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -7,15 +8,15 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { PinButton } from '../../design-system/components/PinButton';
-import { PinTextField } from '../../design-system/components/PinTextField';
-import { Colors, Spacing, Typography } from '../../design-system/tokens';
-import { AuthDivider } from './components/AuthDivider';
-import { SocialButtons } from './components/SocialButtons';
-import { useLoginScreen } from './hooks/useLoginScreen';
+import { PinButton } from "../../design-system/components/PinButton";
+import { PinTextField } from "../../design-system/components/PinTextField";
+import { Colors, Spacing, Typography } from "../../design-system/tokens";
+import { AuthDivider } from "./components/AuthDivider";
+import { SocialButtons } from "./components/SocialButtons";
+import { useLoginScreen } from "./hooks/useLoginScreen";
 
 export default function LoginScreen() {
   const {
@@ -34,10 +35,10 @@ export default function LoginScreen() {
   } = useLoginScreen();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -46,7 +47,14 @@ export default function LoginScreen() {
         >
           {/* Logo */}
           <View style={styles.logoSection}>
-            <Text style={styles.logo}>Pinpals</Text>
+            <View style={styles.logoRow}>
+              <Image
+                source={require("../../../assets/images/pinpals-logo.png")}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.logoTitle}>Pinpals</Text>
+            </View>
             <Text style={styles.tagline}>Your places, your memories</Text>
           </View>
 
@@ -71,7 +79,10 @@ export default function LoginScreen() {
               autoComplete="password"
             />
 
-            <TouchableOpacity style={styles.forgotRow} onPress={goToResetPassword}>
+            <TouchableOpacity
+              style={styles.forgotRow}
+              onPress={goToResetPassword}
+            >
               <Text style={styles.forgotText}>Forgot password?</Text>
             </TouchableOpacity>
 
@@ -129,13 +140,23 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.s32,
   },
   logoSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: Spacing.s48,
   },
-  logo: {
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing.s8,
+    gap: Spacing.s12,
+  },
+  logoImage: {
+    width: 72,
+    height: 72,
+    marginInlineStart: -12,
+  },
+  logoTitle: {
     ...Typography.largeTitle,
     color: Colors.brand.primary,
-    marginBottom: Spacing.s8,
   },
   tagline: {
     ...Typography.subheadline,
@@ -146,14 +167,14 @@ const styles = StyleSheet.create({
   },
   fieldGap: { height: Spacing.s16 },
   forgotRow: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     marginTop: Spacing.s8,
     marginBottom: Spacing.s4,
   },
   forgotText: {
     ...Typography.footnote,
     color: Colors.brand.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   errorText: {
     ...Typography.footnote,
@@ -168,9 +189,9 @@ const styles = StyleSheet.create({
     marginTop: Spacing.s4,
   },
   signUpRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: Spacing.s24,
   },
   signUpPrompt: {
@@ -180,6 +201,6 @@ const styles = StyleSheet.create({
   signUpLink: {
     ...Typography.subheadline,
     color: Colors.brand.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

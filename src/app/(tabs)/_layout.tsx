@@ -3,7 +3,11 @@ import { Colors } from '../../design-system/tokens';
 
 export default function TabLayout() {
   return (
-    <NativeTabs tintColor={Colors.brand.primary}>
+    <NativeTabs
+      tintColor={Colors.brand.primary}
+      backgroundColor={Colors.white}
+      disableTransparentOnScrollEdge
+    >
       <NativeTabs.Trigger name="map">
         <NativeTabs.Trigger.Icon sf="map" />
         <NativeTabs.Trigger.Label>Map</NativeTabs.Trigger.Label>

@@ -12,7 +12,7 @@ interface PinChipProps {
 export function PinChip({ label, color, selected = false, onPress }: PinChipProps) {
   const bgColor = selected ? (color || Colors.brand.primary) : 'transparent';
   const borderColor = color || Colors.brand.primary;
-  const textColor = selected ? Colors.white : (color || Colors.brand.primary);
+  const textColor = selected ? Colors.white : Colors.neutral[900];
 
   const containerStyle: ViewStyle = {
     backgroundColor: bgColor,
@@ -22,6 +22,11 @@ export function PinChip({ label, color, selected = false, onPress }: PinChipProp
     paddingHorizontal: Spacing.s12,
     paddingVertical: Spacing.s4,
     alignSelf: 'flex-start',
+    shadowColor: Colors.neutral[900],
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   };
 
   if (onPress) {

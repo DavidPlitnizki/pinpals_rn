@@ -1,5 +1,6 @@
 import Mapbox from "@rnmapbox/maps";
 import { Stack, useRouter, useSegments } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -7,6 +8,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? "");
+SplashScreen.preventAutoHideAsync();
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuth, isGuest, isLoading } = useAuth();
@@ -15,6 +17,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isLoading) return;
+
+    SplashScreen.setOptions({ duration: 400, fade: true });
+    SplashScreen.hideAsync();
 
     const inAuthGroup = segments[0] === "(auth)";
     const canAccess = isAuth || isGuest;
