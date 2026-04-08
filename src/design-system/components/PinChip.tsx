@@ -1,6 +1,6 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Colors, Spacing, Radii, Typography } from '../tokens';
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, ViewStyle } from "react-native";
+import { Colors, Radii, Spacing, Typography } from "../tokens";
 
 interface PinChipProps {
   label: string;
@@ -9,8 +9,13 @@ interface PinChipProps {
   onPress?: () => void;
 }
 
-export function PinChip({ label, color, selected = false, onPress }: PinChipProps) {
-  const bgColor = selected ? (color || Colors.brand.primary) : 'transparent';
+export function PinChip({
+  label,
+  color,
+  selected = false,
+  onPress,
+}: PinChipProps) {
+  const bgColor = selected ? color || Colors.brand.primary : "transparent";
   const borderColor = color || Colors.brand.primary;
   const textColor = selected ? Colors.white : Colors.neutral[900];
 
@@ -19,9 +24,11 @@ export function PinChip({ label, color, selected = false, onPress }: PinChipProp
     borderColor: borderColor,
     borderWidth: 1.5,
     borderRadius: Radii.full,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: 32,
     paddingHorizontal: Spacing.s12,
-    paddingVertical: Spacing.s4,
-    alignSelf: 'flex-start',
     shadowColor: Colors.neutral[900],
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -31,7 +38,11 @@ export function PinChip({ label, color, selected = false, onPress }: PinChipProp
 
   if (onPress) {
     return (
-      <TouchableOpacity style={containerStyle} onPress={onPress} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={containerStyle}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
         <Text style={[styles.label, { color: textColor }]}>{label}</Text>
       </TouchableOpacity>
     );
@@ -47,6 +58,6 @@ export function PinChip({ label, color, selected = false, onPress }: PinChipProp
 const styles = StyleSheet.create({
   label: {
     ...Typography.caption,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

@@ -6,9 +6,13 @@ import { PinChip } from "../../design-system/components/PinChip";
 import { PinTextField } from "../../design-system/components/PinTextField";
 import { Colors, Spacing, Typography } from "../../design-system/tokens";
 import { Place } from "../../models/types";
-import { ALL_CATEGORIES, ALL_CATEGORY_LABELS, CATEGORY_COLORS } from "./constants";
 import { EmptyState } from "./components/EmptyState";
 import { PlaceCard } from "./components/PlaceCard";
+import {
+  ALL_CATEGORIES,
+  ALL_CATEGORY_LABELS,
+  CATEGORY_COLORS,
+} from "./constants";
 import { useExploreScreen } from "./hooks/useExploreScreen";
 
 export default function ExploreScreen() {
@@ -22,7 +26,7 @@ export default function ExploreScreen() {
   } = useExploreScreen();
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Explore</Text>
       </View>
@@ -45,11 +49,7 @@ export default function ExploreScreen() {
           <PinChip
             key={cat}
             label={ALL_CATEGORY_LABELS[cat]}
-            color={
-              cat === "all"
-                ? Colors.brand.primary
-                : CATEGORY_COLORS[cat]
-            }
+            color={cat === "all" ? Colors.brand.primary : CATEGORY_COLORS[cat]}
             selected={selectedCategory === cat}
             onPress={() => setSelectedCategory(cat)}
           />
@@ -74,15 +74,17 @@ export default function ExploreScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.neutral[50] },
+  container: {
+    backgroundColor: Colors.neutral[50],
+  },
   header: {
-    paddingHorizontal: Spacing.s20,
+    paddingHorizontal: Spacing.s16,
     paddingTop: Spacing.s8,
     paddingBottom: Spacing.s4,
   },
   title: { ...Typography.largeTitle, color: Colors.neutral[900] },
   searchContainer: {
-    paddingHorizontal: Spacing.s20,
+    paddingHorizontal: Spacing.s16,
     paddingBottom: Spacing.s8,
   },
   filterScroll: { maxHeight: 50 },
@@ -92,5 +94,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.s20,
     paddingVertical: Spacing.s8,
   },
-  listContent: { padding: Spacing.s16, gap: Spacing.s12 },
+  listContent: {
+    padding: Spacing.s16,
+    gap: Spacing.s12,
+  },
 });

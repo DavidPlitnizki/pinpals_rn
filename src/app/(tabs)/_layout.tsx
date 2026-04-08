@@ -1,13 +1,9 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { Colors } from '../../design-system/tokens';
+import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { Colors } from "../../design-system/tokens";
 
 export default function TabLayout() {
   return (
-    <NativeTabs
-      tintColor={Colors.brand.primary}
-      backgroundColor={Colors.white}
-      disableTransparentOnScrollEdge
-    >
+    <NativeTabs tintColor={Colors.brand.primary}>
       <NativeTabs.Trigger name="map">
         <NativeTabs.Trigger.Icon sf="map" />
         <NativeTabs.Trigger.Label>Map</NativeTabs.Trigger.Label>
