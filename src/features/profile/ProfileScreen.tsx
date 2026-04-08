@@ -1,5 +1,5 @@
-import Constants from "expo-constants";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import Constants from "expo-constants";
 import React from "react";
 import {
   Image,
@@ -15,8 +15,8 @@ import { PinButton } from "../../design-system/components/PinButton";
 import { PinCard } from "../../design-system/components/PinCard";
 import { PinTextField } from "../../design-system/components/PinTextField";
 import { Colors, Spacing, Typography } from "../../design-system/tokens";
-import { getInitials } from "./utils/getInitials";
 import { useProfileScreen } from "./hooks/useProfileScreen";
+import { getInitials } from "./utils/getInitials";
 
 export default function ProfileScreen() {
   const {
@@ -40,7 +40,7 @@ export default function ProfileScreen() {
   const appVersion = Constants.expoConfig?.version ?? "1.0.0";
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       {/* Fixed header */}
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
@@ -64,7 +64,11 @@ export default function ProfileScreen() {
         >
           {isGuest ? (
             <View style={styles.avatarPlaceholderGuest}>
-              <MaterialCommunityIcons name="incognito" size={48} color={Colors.neutral[400]} />
+              <MaterialCommunityIcons
+                name="incognito"
+                size={48}
+                color={Colors.neutral[400]}
+              />
             </View>
           ) : profile.avatarUri ? (
             <Image source={{ uri: profile.avatarUri }} style={styles.avatar} />
@@ -105,7 +109,11 @@ export default function ProfileScreen() {
                   multiline
                 />
                 <View style={styles.fieldSpacing} />
-                <PinButton title="Save Changes" onPress={handleSave} fullWidth />
+                <PinButton
+                  title="Save Changes"
+                  onPress={handleSave}
+                  fullWidth
+                />
               </View>
             ) : (
               <View>
@@ -164,12 +172,25 @@ export default function ProfileScreen() {
           {/* Account Actions */}
           <PinCard style={styles.accountCard}>
             <TouchableOpacity style={styles.accountRow} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={20} color={Colors.neutral[700]} style={styles.accountIcon} />
+              <Ionicons
+                name="log-out-outline"
+                size={20}
+                color={Colors.neutral[700]}
+                style={styles.accountIcon}
+              />
               <Text style={styles.accountRowText}>Log Out</Text>
             </TouchableOpacity>
             <View style={styles.accountDivider} />
-            <TouchableOpacity style={styles.accountRow} onPress={handleDeleteAccount}>
-              <Ionicons name="trash-outline" size={20} color={Colors.error} style={styles.accountIcon} />
+            <TouchableOpacity
+              style={styles.accountRow}
+              onPress={handleDeleteAccount}
+            >
+              <Ionicons
+                name="trash-outline"
+                size={20}
+                color={Colors.error}
+                style={styles.accountIcon}
+              />
               <Text style={styles.accountRowTextDanger}>Delete Account</Text>
             </TouchableOpacity>
           </PinCard>
@@ -190,7 +211,11 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.s16,
   },
   title: { ...Typography.largeTitle, color: Colors.neutral[900] },
-  editLink: { ...Typography.body, color: Colors.brand.primary, fontWeight: "600" },
+  editLink: {
+    ...Typography.body,
+    color: Colors.brand.primary,
+    fontWeight: "600",
+  },
   cancelLink: { ...Typography.body, color: Colors.neutral[500] },
   avatarSection: { alignItems: "center", paddingBottom: Spacing.s16 },
   avatarContainer: { position: "relative" },
@@ -235,8 +260,16 @@ const styles = StyleSheet.create({
     color: Colors.neutral[900],
     marginBottom: Spacing.s4,
   },
-  profileBio: { ...Typography.body, color: Colors.neutral[600], lineHeight: 22 },
-  placeholderBio: { ...Typography.body, color: Colors.neutral[400], fontStyle: "italic" },
+  profileBio: {
+    ...Typography.body,
+    color: Colors.neutral[600],
+    lineHeight: 22,
+  },
+  placeholderBio: {
+    ...Typography.body,
+    color: Colors.neutral[400],
+    fontStyle: "italic",
+  },
   statsCard: { marginBottom: 0 },
   statsTitle: {
     ...Typography.headline,
@@ -273,7 +306,11 @@ const styles = StyleSheet.create({
   infoLabel: { ...Typography.subheadline, color: Colors.neutral[600] },
   infoValue: { ...Typography.subheadline, color: Colors.neutral[400] },
   accountCard: { marginBottom: 0 },
-  accountRow: { flexDirection: "row", alignItems: "center", paddingVertical: Spacing.s12 },
+  accountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: Spacing.s12,
+  },
   accountIcon: { marginRight: Spacing.s12 },
   accountDivider: { height: 1, backgroundColor: Colors.neutral[100] },
   accountRowText: { ...Typography.body, color: Colors.neutral[700] },

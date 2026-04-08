@@ -22,7 +22,7 @@ export default function MyPlacesScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.header}>
           <Text style={styles.title}>My Places</Text>
         </View>

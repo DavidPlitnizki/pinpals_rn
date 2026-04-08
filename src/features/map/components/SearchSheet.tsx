@@ -175,6 +175,7 @@ export function SearchSheet({
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chipsRow}
+            style={styles.chipsScroll}
           >
             <PinChip
               label="Mine"
@@ -224,7 +225,11 @@ export function SearchSheet({
             renderItem={renderPlace}
             ItemSeparatorComponent={Separator}
             ListEmptyComponent={EmptyState}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[
+              styles.list,
+              filteredPlaces.length === 0 && styles.listEmpty,
+            ]}
+            style={styles.listContainer}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           />
@@ -257,7 +262,7 @@ const styles = StyleSheet.create({
   },
   sheet: {
     height: SHEET_HEIGHT,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background,
     borderTopLeftRadius: Radii.lg,
     borderTopRightRadius: Radii.lg,
     overflow: "hidden",
@@ -283,6 +288,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.s12,
     paddingVertical: Spacing.s8,
     gap: Spacing.s8,
+    borderColor: Colors.brand.primary,
+    borderWidth: 1,
   },
   inputIcon: {
     fontSize: 18,
@@ -294,10 +301,13 @@ const styles = StyleSheet.create({
     color: Colors.neutral[900],
     paddingVertical: 0,
   },
+  chipsScroll: {
+    flexGrow: 0,
+  },
   chipsRow: {
     paddingHorizontal: Spacing.s16,
     gap: Spacing.s8,
-    paddingBottom: Spacing.s4,
+    paddingBottom: Spacing.s8,
   },
   sliderRow: {
     paddingHorizontal: Spacing.s16,
@@ -348,8 +358,15 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.neutral[100],
   },
+  listContainer: {
+    flex: 1,
+  },
+  listEmpty: {
+    flexGrow: 1,
+  },
   empty: {
-    paddingVertical: Spacing.s32,
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
   },
   emptyText: {
