@@ -1,6 +1,12 @@
-import React from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Camera, MapView, PointAnnotation } from "@rnmapbox/maps";
+import React from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PinButton } from "../../design-system/components/PinButton";
@@ -82,8 +88,22 @@ export default function CreateMeetingScreen() {
 
         <View style={styles.formGroup}>
           <Text style={styles.fieldLabel}>Location</Text>
-          <Text style={styles.mapHint}>Tap on the map to set the meeting point</Text>
-          <MapView style={styles.map} onPress={handleMapPress}>
+          <Text style={styles.mapHint}>
+            Tap on the map to set the meeting point
+          </Text>
+          <MapView
+            style={styles.map}
+            onPress={(feature: any) =>
+              handleMapPress({
+                geometry: {
+                  coordinates: [
+                    feature.geometry.coordinates[0],
+                    feature.geometry.coordinates[1],
+                  ] as [number, number],
+                },
+              })
+            }
+          >
             <Camera
               centerCoordinate={[coordinates.longitude, coordinates.latitude]}
               zoomLevel={13}
@@ -106,12 +126,18 @@ export default function CreateMeetingScreen() {
             </PointAnnotation>
           </MapView>
           <Text style={styles.coordsText}>
-            {coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)}
+            {coordinates.latitude.toFixed(4)},{" "}
+            {coordinates.longitude.toFixed(4)}
           </Text>
         </View>
 
         <View style={styles.saveButton}>
-          <PinButton title="Create Meeting" onPress={handleSave} fullWidth size="lg" />
+          <PinButton
+            title="Create Meeting"
+            onPress={handleSave}
+            fullWidth
+            size="lg"
+          />
         </View>
       </ScrollView>
 

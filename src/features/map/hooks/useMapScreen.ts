@@ -68,7 +68,6 @@ export function useMapScreen() {
       setLocationGranted(true);
 
       const last = await Location.getLastKnownPositionAsync({});
-      console.log("last location", last);
       if (last) {
         applyLocation(last.coords.latitude, last.coords.longitude);
       }
@@ -96,7 +95,6 @@ export function useMapScreen() {
   }
 
   function handleCenterGPS() {
-    console.log("gpsCoords", gpsCoords);
     if (!gpsCoords) return;
     cameraRef.current?.setCamera({
       centerCoordinate: [gpsCoords.longitude, gpsCoords.latitude],
