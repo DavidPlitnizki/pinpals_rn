@@ -7,9 +7,9 @@ import { Colors, Radii, Spacing, Typography } from "../../design-system/tokens";
 import { Meeting, Place } from "../../models/types";
 import { MeetingCard } from "./components/MeetingCard";
 import { PlaceRow } from "./components/PlaceRow";
-import { useMyPlacesScreen } from "./hooks/useMyPlacesScreen";
+import { useRemembranceScreen } from "./hooks/useRemembranceScreen";
 
-export default function MyPlacesScreen() {
+export default function RemembranceScreen() {
   const {
     places,
     displayedPlaces,
@@ -18,13 +18,13 @@ export default function MyPlacesScreen() {
     setActiveTab,
     handlePlacePress,
     handleDeletePlace,
-  } = useMyPlacesScreen();
+  } = useRemembranceScreen();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.header}>
-          <Text style={styles.title}>My Places</Text>
+          <Text style={styles.title}>Remembrance</Text>
         </View>
 
         <View style={styles.tabs}>

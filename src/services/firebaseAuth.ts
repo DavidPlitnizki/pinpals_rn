@@ -1,4 +1,15 @@
-import auth, { FirebaseAuthTypes } from "@react-native-firebase/auth";
+import {
+  getAuth,
+  onAuthStateChanged as _onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  reload,
+  sendPasswordResetEmail,
+  signInAnonymously,
+  signOut,
+  FirebaseAuthTypes,
+} from "@react-native-firebase/auth";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,7 +56,11 @@ export async function login(
   password: string
 ): Promise<AuthData> {
   try {
-    const credential = await auth().signInWithEmailAndPassword(email, password);
+    const credential = await signInWithEmailAndPassword(
+      getAuth(),
+      email,
+      password
+    );
     return userToAuthData(credential.user);
   } catch (error) {
     throw new Error(mapFirebaseError(error));
@@ -58,13 +73,14 @@ export async function signUp(
   name: string
 ): Promise<AuthData> {
   try {
-    const credential = await auth().createUserWithEmailAndPassword(
+    const credential = await createUserWithEmailAndPassword(
+      getAuth(),
       email,
       password
     );
-    await credential.user.updateProfile({ displayName: name });
-    await auth().currentUser?.reload();
-    return userToAuthData(auth().currentUser!);
+    await updateProfile(credential.user, { displayName: name });
+    await reload(credential.user);
+    return userToAuthData(credential.user);
   } catch (error) {
     throw new Error(mapFirebaseError(error));
   }
@@ -73,20 +89,20 @@ export async function signUp(
 // ── Password Reset ───────────────────────────────────────────────────────────
 
 export async function sendPasswordReset(email: string): Promise<void> {
-  await auth().sendPasswordResetEmail(email);
+  await sendPasswordResetEmail(getAuth(), email);
 }
 
 // ── Anonymous (Guest) ────────────────────────────────────────────────────────
 
 export async function loginAnonymously(): Promise<AuthData> {
-  const credential = await auth().signInAnonymously();
+  const credential = await signInAnonymously(getAuth());
   return userToAuthData(credential.user);
 }
 
 // ── Logout ───────────────────────────────────────────────────────────────────
 
 export async function logout(): Promise<void> {
-  await auth().signOut();
+  await signOut(getAuth());
 }
 
 // ── Auth State ───────────────────────────────────────────────────────────────
@@ -94,9 +110,9 @@ export async function logout(): Promise<void> {
 export function onAuthStateChanged(
   callback: (user: FirebaseAuthTypes.User | null) => void
 ): () => void {
-  return auth().onAuthStateChanged(callback);
+  return _onAuthStateChanged(getAuth(), callback);
 }
 
 export function getCurrentUser(): FirebaseAuthTypes.User | null {
-  return auth().currentUser;
+  return getAuth().currentUser;
 }

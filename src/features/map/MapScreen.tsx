@@ -11,10 +11,10 @@ import { MapMarkers } from "./components/MapMarkers";
 import { MapToast } from "./components/MapToast";
 import { SearchSheet } from "./components/SearchSheet";
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from "./constants";
-import { AddPlaceState } from "./types";
 import { useFriendsSheet } from "./hooks/useFriendsSheet";
 import { useMapScreen } from "./hooks/useMapScreen";
 import { useSearchSheet } from "./hooks/useSearchSheet";
+import { AddPlaceState } from "./types";
 
 export default function MapScreen() {
   const router = useRouter();
@@ -30,8 +30,6 @@ export default function MapScreen() {
     toastGPS,
     currentCenter,
     currentZoom,
-    handleZoomIn,
-    handleZoomOut,
     handleCenterGPS,
     handleLongPress,
     handleAddAtCurrentLocation,
@@ -92,8 +90,6 @@ export default function MapScreen() {
 
       <MapControls
         gpsCoords={gpsCoords}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
         onCenterGPS={handleCenterGPS}
         onAdd={handleAddAtCurrentLocation}
         onSearch={search.open}
