@@ -226,23 +226,27 @@ Features/Ask/
 
 ---
 
-### PHASE 1A — Фундамент памяти (2-3 недели)
+### PHASE 1A — Фундамент памяти ✅ ЗАВЕРШЕНО
 *Цель: переосмыслить PlaceNote в Memory, обновить карту*
 
 **Модели:**
-- [ ] Добавить `MemoryMood` enum
-- [ ] Расширить `PlaceNote` → добавить mood, companions, colorTag
-- [ ] Расширить `Place` → добавить tags, visitCount, lastVisited, isFavorite
+- [x] Добавить `MemoryMood` enum (calm, happy, nostalgic, excited, peaceful, melancholic, adventurous) + `MOOD_CONFIG` с emoji/цветами
+- [x] Расширить `PlaceNote` → добавить mood, companions, colorTag, photoUris (multiple)
+- [x] Расширить `Place` → добавить tags, visitCount, lastVisited (isFavorite уже был)
+- [x] Обновить Zustand store: addTagToPlace, removeTagFromPlace, recordVisit, getLatestMoodForPlace
+- [x] Миграция AsyncStorage v2→v3 с дефолтными значениями
+- [x] MeetingStatus enum + proposedPlaceIds + participants в Meeting модели
 
 **Экраны:**
-- [ ] **Create Memory** — новый step-by-step экран (замена простой заметки)
-- [ ] **Place Detail** — переделать в timeline воспоминаний с mood colors
-- [ ] **Map** — пины окрашены по настроению последнего воспоминания
+- [x] **Create Memory** — step-by-step (Фото→Настроение→С кем→Заметка→Дата), роут `/create-memory`
+- [x] **Place Detail** — timeline воспоминаний, hero-фото, mood overlay, inline теги, кнопки "Добавить воспоминание" / "Предложить встречу здесь"
+- [x] **Map** — пины окрашены по mood последнего воспоминания, fallback на цвет категории
 
 **Компоненты:**
-- [ ] `MoodPicker` — горизонтальный скролл с emoji+цвет
-- [ ] `MemoryCard` — карточка воспоминания с фото, mood, companions
-- [ ] `CompanionChip` — имя человека в виде тега
+- [x] `MoodPicker` — горизонтальный скролл с emoji+цвет (`src/design-system/components/MoodPicker.tsx`)
+- [x] `MemoryCard` — карточка воспоминания с фото, mood, companions (`src/design-system/components/MemoryCard.tsx`)
+- [x] `CompanionInput` — ввод компаньонов chips с удалением (`src/design-system/components/CompanionInput.tsx`)
+- [x] `TagInput` — ввод тегов с автодополнением (`src/design-system/components/TagInput.tsx`)
 
 ---
 
