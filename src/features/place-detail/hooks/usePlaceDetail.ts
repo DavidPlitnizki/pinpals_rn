@@ -8,21 +8,31 @@ import { usePlacesStore } from "../../../store/usePlacesStore";
 export function usePlaceDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { places, notes, updatePlace, deletePlace, toggleFavorite, addNote, deleteNote } =
-    usePlacesStore();
+  const {
+    places,
+    notes,
+    updatePlace,
+    deletePlace,
+    toggleFavorite,
+    addNote,
+    deleteNote,
+    addTagToPlace,
+    removeTagFromPlace,
+    getLatestMoodForPlace,
+  } = usePlacesStore();
 
   const place = places.find((p) => p.id === id);
-  const placeNotes = notes.filter((n) => n.placeId === id);
+  const placeNotes = notes
+    .filter((n) => n.placeId === id)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const latestMood = id ? getLatestMoodForPlace(id) : undefined;
 
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [description, setDescription] = useState(place?.description ?? "");
   const [showAddNote, setShowAddNote] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [notePhotoUri, setNotePhotoUri] = useState<string | undefined>();
-
-  function handleRatingChange(rating: number) {
-    updatePlace(place!.id, { rating });
-  }
 
   function handleSaveDescription() {
     updatePlace(place!.id, { description: description.trim() || undefined });
@@ -35,12 +45,12 @@ export function usePlaceDetail() {
 
   function handleDeletePlace() {
     Alert.alert(
-      "Delete Place",
-      `Are you sure you want to delete "${place!.name}"?`,
+      "Удалить место",
+      `Удалить "${place!.name}"?`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "Отмена", style: "cancel" },
         {
-          text: "Delete",
+          text: "Удалить",
           style: "destructive",
           onPress: () => {
             deletePlace(place!.id);
@@ -54,11 +64,11 @@ export function usePlaceDetail() {
   async function handlePickPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission needed", "Please allow access to your photo library.");
+      Alert.alert("Нужно разрешение", "Разрешите доступ к галерее.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       quality: 0.8,
     });
@@ -69,13 +79,14 @@ export function usePlaceDetail() {
 
   function handleSaveNote() {
     if (!noteText.trim()) {
-      Alert.alert("Note required", "Please enter some text for your note.");
+      Alert.alert("Текст обязателен", "Введите текст заметки.");
       return;
     }
     addNote({
       placeId: place!.id,
       text: noteText.trim(),
       photoUri: notePhotoUri,
+      companions: [],
     });
     setNoteText("");
     setNotePhotoUri(undefined);
@@ -83,9 +94,9 @@ export function usePlaceDetail() {
   }
 
   function handleDeleteNote(noteId: string) {
-    Alert.alert("Delete Note", "Are you sure you want to delete this note?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteNote(noteId) },
+    Alert.alert("Удалить заметку", "Удалить это воспоминание?", [
+      { text: "Отмена", style: "cancel" },
+      { text: "Удалить", style: "destructive", onPress: () => deleteNote(noteId) },
     ]);
   }
 
@@ -95,9 +106,26 @@ export function usePlaceDetail() {
     setNotePhotoUri(undefined);
   }
 
+  function handleAddMemory() {
+    router.push({ pathname: "/create-memory", params: { placeId: place!.id } } as any);
+  }
+
+  function handleCreateMeetingHere() {
+    router.push({ pathname: "/create-meeting", params: { placeId: place!.id } } as any);
+  }
+
+  function handleAddTag(tag: string) {
+    if (place) addTagToPlace(place.id, tag);
+  }
+
+  function handleRemoveTag(tag: string) {
+    if (place) removeTagFromPlace(place.id, tag);
+  }
+
   return {
     place,
     placeNotes,
+    latestMood,
     isEditingDescription,
     setIsEditingDescription,
     description,
@@ -108,7 +136,6 @@ export function usePlaceDetail() {
     setNoteText,
     notePhotoUri,
     setNotePhotoUri,
-    handleRatingChange,
     handleSaveDescription,
     handleToggleFavorite,
     handleDeletePlace,
@@ -116,6 +143,10 @@ export function usePlaceDetail() {
     handleSaveNote,
     handleDeleteNote,
     handleCloseAddNote,
+    handleAddMemory,
+    handleCreateMeetingHere,
+    handleAddTag,
+    handleRemoveTag,
     router,
   };
 }

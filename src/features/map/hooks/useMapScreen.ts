@@ -7,13 +7,7 @@ import { Alert, Animated } from "react-native";
 import { Coordinates } from "../../../models/types";
 import { usePlacesStore } from "../../../store/usePlacesStore";
 import { useProfileStore } from "../../../store/useProfileStore";
-import {
-  DEFAULT_CENTER,
-  DEFAULT_ZOOM,
-  MIN_ZOOM,
-  MAX_ZOOM,
-  ZOOM_DELTA,
-} from "../constants";
+import { DEFAULT_CENTER, DEFAULT_ZOOM } from "../constants";
 import { AddPlaceState } from "../types";
 
 export function useMapScreen() {
@@ -100,16 +94,6 @@ export function useMapScreen() {
     showToast("Centred on your GPS location", true);
   }
 
-  function handleZoomIn() {
-    const zoom = Math.min(currentZoom.current + ZOOM_DELTA, MAX_ZOOM);
-    cameraRef.current?.setCamera({ zoomLevel: zoom, animationDuration: 250 });
-  }
-
-  function handleZoomOut() {
-    const zoom = Math.max(currentZoom.current - ZOOM_DELTA, MIN_ZOOM);
-    cameraRef.current?.setCamera({ zoomLevel: zoom, animationDuration: 250 });
-  }
-
   function handleCenterGPS() {
     if (!gpsCoords) return;
     cameraRef.current?.setCamera({
@@ -119,7 +103,9 @@ export function useMapScreen() {
     });
   }
 
-  function handleLongPress(feature: { geometry: { coordinates: [number, number] } }) {
+  function handleLongPress(feature: {
+    geometry: { coordinates: [number, number] };
+  }) {
     const [longitude, latitude] = feature.geometry.coordinates;
     cameraRef.current?.setCamera({
       centerCoordinate: [longitude, latitude],
@@ -200,8 +186,6 @@ export function useMapScreen() {
     toastGPS,
     currentCenter,
     currentZoom,
-    handleZoomIn,
-    handleZoomOut,
     handleCenterGPS,
     handleLongPress,
     handleAddAtCurrentLocation,

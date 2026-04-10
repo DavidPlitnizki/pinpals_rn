@@ -3,7 +3,8 @@ import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { Colors, Spacing, Typography } from "../../../design-system/tokens";
-import { Place } from "../../../models/types";
+import { Place, MOOD_CONFIG } from "../../../models/types";
+import { usePlacesStore } from "../../../store/usePlacesStore";
 import { CATEGORY_COLORS, CATEGORY_LABELS } from "../constants";
 
 interface Props {
@@ -15,6 +16,13 @@ interface Props {
 export function MapMarkers({ places, onMarkerPress, onDeleteMarker }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedPlace = places.find((p) => p.id === selectedId);
+  const getLatestMoodForPlace = usePlacesStore((s) => s.getLatestMoodForPlace);
+
+  function getPinColor(place: Place): string {
+    const mood = getLatestMoodForPlace(place.id);
+    if (mood) return MOOD_CONFIG[mood].color;
+    return CATEGORY_COLORS[place.category];
+  }
 
   return (
     <>
@@ -29,7 +37,7 @@ export function MapMarkers({ places, onMarkerPress, onDeleteMarker }: Props) {
           <View
             style={[
               styles.pin,
-              { backgroundColor: CATEGORY_COLORS[place.category] },
+              { backgroundColor: getPinColor(place) },
             ]}
           />
         </PointAnnotation>
@@ -49,10 +57,19 @@ export function MapMarkers({ places, onMarkerPress, onDeleteMarker }: Props) {
               <Text style={styles.calloutCategory}>
                 {CATEGORY_LABELS[selectedPlace.category]}
               </Text>
-              <Text style={styles.calloutRating}>
-                {"★".repeat(selectedPlace.rating)}
-              </Text>
-              <Text style={styles.calloutTap}>Tap for details →</Text>
+              {(() => {
+                const mood = getLatestMoodForPlace(selectedPlace.id);
+                if (mood) {
+                  const cfg = MOOD_CONFIG[mood];
+                  return (
+                    <Text style={styles.calloutMood}>
+                      {cfg.emoji} {cfg.label}
+                    </Text>
+                  );
+                }
+                return null;
+              })()}
+              <Text style={styles.calloutTap}>Подробнее →</Text>
             </TouchableOpacity>
             <View style={styles.calloutDivider} />
             <TouchableOpacity
@@ -99,7 +116,11 @@ const styles = StyleSheet.create({
     color: Colors.neutral[500],
     textTransform: "capitalize",
   },
-  calloutRating: { fontSize: 14, color: "#F5A623", marginTop: 2 },
+  calloutMood: {
+    ...Typography.caption,
+    color: Colors.neutral[600],
+    marginTop: 2,
+  },
   calloutTap: {
     ...Typography.caption,
     color: Colors.brand.primary,

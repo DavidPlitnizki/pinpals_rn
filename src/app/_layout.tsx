@@ -58,6 +58,10 @@ export default function RootLayout() {
               name="create-meeting"
               options={{ title: "Create Meeting", presentation: "modal" }}
             />
+            <Stack.Screen
+              name="create-memory"
+              options={{ title: "Новое воспоминание", presentation: "modal", headerShown: false }}
+            />
           </Stack>
         </AuthGate>
       </AuthProvider>

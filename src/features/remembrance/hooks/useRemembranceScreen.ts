@@ -6,7 +6,7 @@ import { useMeetingsStore } from "../../../store/useMeetingsStore";
 import { usePlacesStore } from "../../../store/usePlacesStore";
 import { Tab } from "../types";
 
-export function useMyPlacesScreen() {
+export function useRemembranceScreen() {
   const router = useRouter();
   const { places, deletePlace } = usePlacesStore();
   const { meetings } = useMeetingsStore();

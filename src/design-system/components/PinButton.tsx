@@ -1,8 +1,15 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
+import {
+  Pressable,
+  Text,
+  StyleSheet,
+  ViewStyle,
+  ActivityIndicator,
+  View,
+} from 'react-native';
 import { Colors, Spacing, Radii, Typography } from '../tokens';
 
-type Variant = 'primary' | 'secondary' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
 interface PinButtonProps {
@@ -13,6 +20,8 @@ interface PinButtonProps {
   disabled?: boolean;
   fullWidth?: boolean;
   loading?: boolean;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
 export function PinButton({
@@ -23,34 +32,53 @@ export function PinButton({
   disabled = false,
   fullWidth = false,
   loading = false,
+  leftIcon,
+  rightIcon,
 }: PinButtonProps) {
-  const containerStyle: ViewStyle[] = [
-    styles.base,
-    styles[`variant_${variant}`],
-    styles[`size_${size}`],
-    fullWidth && styles.fullWidth,
-    (disabled || loading) && styles.disabled,
-  ].filter(Boolean) as ViewStyle[];
+  const isDisabled = disabled || loading;
 
-  const textStyle = [
-    styles.text,
-    styles[`textVariant_${variant}`],
-    styles[`textSize_${size}`],
-  ];
+  const getTextColor = () => {
+    if (variant === 'primary' || variant === 'danger') return Colors.white;
+    return variant === 'secondary' ? Colors.brand.primary : Colors.brand.primary;
+  };
+
+  const getActivityColor = () => {
+    if (variant === 'primary' || variant === 'danger') return Colors.white;
+    return Colors.brand.primary;
+  };
 
   return (
-    <TouchableOpacity
-      style={containerStyle}
+    <Pressable
+      style={({ pressed }) => [
+        styles.base,
+        styles[`variant_${variant}`],
+        styles[`size_${size}`],
+        fullWidth && styles.fullWidth,
+        isDisabled && styles.disabled,
+        pressed && !isDisabled && styles[`pressed_${variant}`],
+      ]}
       onPress={onPress}
-      disabled={disabled || loading}
-      activeOpacity={0.75}
+      disabled={isDisabled}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? Colors.white : Colors.brand.primary} />
+        <ActivityIndicator color={getActivityColor()} />
       ) : (
-        <Text style={textStyle}>{title}</Text>
+        <View style={styles.content}>
+          {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
+          <Text
+            style={[
+              styles.text,
+              styles[`textVariant_${variant}`],
+              styles[`textSize_${size}`],
+              { color: getTextColor() },
+            ]}
+          >
+            {title}
+          </Text>
+          {rightIcon && <View style={styles.iconRight}>{rightIcon}</View>}
+        </View>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -64,7 +92,18 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   disabled: {
-    opacity: 0.5,
+    opacity: 0.45,
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconLeft: {
+    marginRight: Spacing.s8,
+  },
+  iconRight: {
+    marginLeft: Spacing.s8,
   },
 
   // Variants
@@ -78,6 +117,23 @@ const styles = StyleSheet.create({
   },
   variant_ghost: {
     backgroundColor: 'transparent',
+  },
+  variant_danger: {
+    backgroundColor: Colors.error,
+  },
+
+  // Pressed states
+  pressed_primary: {
+    backgroundColor: Colors.brand.dark,
+  },
+  pressed_secondary: {
+    backgroundColor: Colors.brand.light,
+  },
+  pressed_ghost: {
+    backgroundColor: Colors.neutral[50],
+  },
+  pressed_danger: {
+    backgroundColor: '#C62828',
   },
 
   // Sizes
@@ -99,25 +155,22 @@ const styles = StyleSheet.create({
     ...Typography.headline,
   },
 
-  // Text variants
-  textVariant_primary: {
-    color: Colors.white,
-  },
-  textVariant_secondary: {
-    color: Colors.brand.primary,
-  },
-  textVariant_ghost: {
-    color: Colors.brand.primary,
-  },
+  // Text variants (color handled inline)
+  textVariant_primary: {},
+  textVariant_secondary: {},
+  textVariant_ghost: {},
+  textVariant_danger: {},
 
   // Text sizes
   textSize_sm: {
-    fontSize: 14,
+    ...Typography.footnote,
+    fontFamily: Typography.headline.fontFamily,
   },
   textSize_md: {
-    fontSize: 16,
+    ...Typography.callout,
+    fontFamily: Typography.headline.fontFamily,
   },
   textSize_lg: {
-    fontSize: 17,
+    ...Typography.headline,
   },
 });
