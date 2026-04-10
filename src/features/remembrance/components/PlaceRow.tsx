@@ -1,13 +1,13 @@
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Swipeable } from "react-native-gesture-handler";
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 
-import { PinCard } from "../../../design-system/components/PinCard";
-import { PinChip } from "../../../design-system/components/PinChip";
-import { PinRatingView } from "../../../design-system/components/PinRatingView";
-import { Colors, Radii, Spacing, Typography } from "../../../design-system/tokens";
-import { Place } from "../../../models/types";
-import { CATEGORY_COLORS, CATEGORY_LABELS } from "../../../shared/constants";
+import { PinCard } from '../../../design-system/components/PinCard';
+import { PinChip } from '../../../design-system/components/PinChip';
+import { PinRatingView } from '../../../design-system/components/PinRatingView';
+import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { Place } from '../../../models/types';
+import { CATEGORY_COLORS, CATEGORY_LABELS } from '../../../shared/constants';
 
 interface Props {
   place: Place;
@@ -46,9 +46,7 @@ export function PlaceRow({ place, onPress, onDelete }: Props) {
                 />
                 <PinRatingView rating={place.rating} size={12} />
               </View>
-              <Text style={styles.date}>
-                {new Date(place.createdAt).toLocaleDateString()}
-              </Text>
+              <Text style={styles.date}>{new Date(place.createdAt).toLocaleDateString()}</Text>
             </View>
             <Text style={styles.chevron}>›</Text>
           </View>
@@ -60,19 +58,19 @@ export function PlaceRow({ place, onPress, onDelete }: Props) {
 
 const styles = StyleSheet.create({
   card: { marginBottom: 0 },
-  row: { flexDirection: "row", alignItems: "center" },
+  row: { flexDirection: 'row', alignItems: 'center' },
   info: { flex: 1 },
   titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.s4,
     marginBottom: Spacing.s4,
   },
   name: { ...Typography.headline, color: Colors.neutral[900], flex: 1 },
   heart: { fontSize: 14, color: Colors.accent.primary },
   meta: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.s8,
     marginBottom: Spacing.s4,
   },
@@ -80,11 +78,11 @@ const styles = StyleSheet.create({
   chevron: { fontSize: 22, color: Colors.neutral[300], marginLeft: Spacing.s8 },
   deleteAction: {
     backgroundColor: Colors.error,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     width: 80,
     borderRadius: Radii.md,
     marginLeft: Spacing.s8,
   },
-  deleteActionText: { color: Colors.white, fontWeight: "600", fontSize: 14 },
+  deleteActionText: { color: Colors.white, fontWeight: '600', fontSize: 14 },
 });

@@ -1,9 +1,9 @@
-import { Ionicons } from "@expo/vector-icons";
-import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Colors, Spacing } from "../../../design-system/tokens";
+import { Colors, Spacing } from '../../../design-system/tokens';
 
 interface Props {
   hasUnread: boolean;
@@ -23,7 +23,7 @@ export function FriendsButton({ hasUnread, onPress }: Props) {
 
 const styles = StyleSheet.create({
   wrap: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     right: 0,
     paddingTop: Spacing.s16,
@@ -34,16 +34,16 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: Colors.brand.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 4,
   },
   badge: {
-    position: "absolute",
+    position: 'absolute',
     top: 2,
     right: 2,
     width: 8,

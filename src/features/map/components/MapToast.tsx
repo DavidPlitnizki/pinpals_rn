@@ -1,7 +1,7 @@
-import React from "react";
-import { Animated, StyleSheet, Text } from "react-native";
+import React from 'react';
+import { Animated, StyleSheet, Text } from 'react-native';
 
-import { Colors, Radii, Spacing, Typography } from "../../../design-system/tokens";
+import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 
 interface Props {
   toastAnim: Animated.Value;
@@ -31,13 +31,13 @@ export function MapToast({ toastAnim, toastMsg, toastGPS }: Props) {
 
 const styles = StyleSheet.create({
   toast: {
-    position: "absolute",
+    position: 'absolute',
     top: 60,
-    alignSelf: "center",
+    alignSelf: 'center',
     paddingHorizontal: Spacing.s16,
     paddingVertical: Spacing.s8,
     borderRadius: Radii.full,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
@@ -45,5 +45,5 @@ const styles = StyleSheet.create({
   },
   toastGPS: { backgroundColor: Colors.brand.primary },
   toastDefault: { backgroundColor: Colors.neutral[700] },
-  toastText: { ...Typography.footnote, color: Colors.white, fontWeight: "600" },
+  toastText: { ...Typography.footnote, color: Colors.white, fontWeight: '600' },
 });

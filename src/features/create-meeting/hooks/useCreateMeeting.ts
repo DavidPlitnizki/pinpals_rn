@@ -1,10 +1,10 @@
-import { useRouter } from "expo-router";
-import { useState } from "react";
-import { Alert } from "react-native";
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Alert } from 'react-native';
 
-import { Coordinates } from "../../../models/types";
-import { useMeetingsStore } from "../../../store/useMeetingsStore";
-import { DEFAULT_COORDS } from "../constants";
+import { Coordinates } from '../../../models/types';
+import { useMeetingsStore } from '../../../store/useMeetingsStore';
+import { DEFAULT_COORDS } from '../constants';
 
 function getTomorrow(): Date {
   const d = new Date();
@@ -17,8 +17,8 @@ export function useCreateMeeting() {
   const router = useRouter();
   const { addMeeting } = useMeetingsStore();
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [date, setDate] = useState(getTomorrow());
   const [showDateModal, setShowDateModal] = useState(false);
   const [coordinates, setCoordinates] = useState<Coordinates>(DEFAULT_COORDS);
@@ -55,7 +55,7 @@ export function useCreateMeeting() {
 
   function handleSave() {
     if (!title.trim()) {
-      Alert.alert("Title required", "Please enter a title for the meeting.");
+      Alert.alert('Title required', 'Please enter a title for the meeting.');
       return;
     }
     addMeeting({

@@ -1,7 +1,7 @@
-import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Colors, Radii, Spacing, Typography } from "../tokens";
-import { PlaceNote, MOOD_CONFIG } from "../../models/types";
+import React from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Colors, Radii, Spacing, Typography } from '../tokens';
+import { PlaceNote, MOOD_CONFIG } from '../../models/types';
 
 interface MemoryCardProps {
   note: PlaceNote;
@@ -19,17 +19,13 @@ export function MemoryCard({ note, onPress }: MemoryCardProps) {
         moodConfig && { borderLeftColor: moodConfig.color, borderLeftWidth: 3 },
       ]}
     >
-      {photoUri && (
-        <Image source={{ uri: photoUri }} style={styles.photo} />
-      )}
+      {photoUri && <Image source={{ uri: photoUri }} style={styles.photo} />}
 
       <View style={styles.body}>
         {moodConfig && (
           <View style={styles.moodRow}>
             <Text style={styles.moodEmoji}>{moodConfig.emoji}</Text>
-            <Text style={[styles.moodLabel, { color: moodConfig.color }]}>
-              {moodConfig.label}
-            </Text>
+            <Text style={[styles.moodLabel, { color: moodConfig.color }]}>{moodConfig.label}</Text>
           </View>
         )}
 
@@ -43,16 +39,16 @@ export function MemoryCard({ note, onPress }: MemoryCardProps) {
           <View style={styles.companionsRow}>
             <Text style={styles.companionsIcon}>👥</Text>
             <Text style={styles.companionsText} numberOfLines={1}>
-              {note.companions.join(", ")}
+              {note.companions.join(', ')}
             </Text>
           </View>
         )}
 
         <Text style={styles.date}>
-          {new Date(note.createdAt).toLocaleDateString("ru-RU", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
+          {new Date(note.createdAt).toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
           })}
         </Text>
       </View>
@@ -74,7 +70,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.white,
     borderRadius: Radii.md,
-    overflow: "hidden",
+    overflow: 'hidden',
     shadowColor: Colors.neutral[900],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -82,7 +78,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   photo: {
-    width: "100%",
+    width: '100%',
     height: 160,
   },
   body: {
@@ -90,8 +86,8 @@ const styles = StyleSheet.create({
     gap: Spacing.s8,
   },
   moodRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.s4,
   },
   moodEmoji: {
@@ -99,15 +95,15 @@ const styles = StyleSheet.create({
   },
   moodLabel: {
     ...Typography.caption,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   text: {
     ...Typography.body,
     color: Colors.text.primary,
   },
   companionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.s4,
   },
   companionsIcon: {

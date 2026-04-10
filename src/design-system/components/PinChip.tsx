@@ -1,6 +1,6 @@
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from "react-native";
-import { Colors, Radii, Spacing, Typography } from "../tokens";
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { Colors, Radii, Spacing, Typography } from '../tokens';
 
 interface PinChipProps {
   label: string;
@@ -10,14 +10,8 @@ interface PinChipProps {
   leftIcon?: React.ReactNode;
 }
 
-export function PinChip({
-  label,
-  color,
-  selected = false,
-  onPress,
-  leftIcon,
-}: PinChipProps) {
-  const bgColor = selected ? color || Colors.brand.primary : "transparent";
+export function PinChip({ label, color, selected = false, onPress, leftIcon }: PinChipProps) {
+  const bgColor = selected ? color || Colors.brand.primary : 'transparent';
   const borderColor = color || Colors.brand.primary;
   const textColor = selected ? Colors.white : Colors.neutral[900];
 
@@ -26,9 +20,9 @@ export function PinChip({
     borderColor: borderColor,
     borderWidth: 1.5,
     borderRadius: Radii.full,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     height: 32,
     paddingHorizontal: Spacing.s12,
     shadowColor: Colors.neutral[900],
@@ -47,11 +41,7 @@ export function PinChip({
 
   if (onPress) {
     return (
-      <TouchableOpacity
-        style={containerStyle}
-        onPress={onPress}
-        activeOpacity={0.7}
-      >
+      <TouchableOpacity style={containerStyle} onPress={onPress} activeOpacity={0.7}>
         {content}
       </TouchableOpacity>
     );
@@ -64,7 +54,7 @@ export function PinChip({
 const styles = StyleSheet.create({
   label: {
     ...Typography.caption,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   iconLeft: {
     marginRight: Spacing.s4,

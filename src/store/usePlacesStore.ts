@@ -21,7 +21,7 @@ const SAMPLE_PLACES: Place[] = [
     id: 'sample-2',
     name: 'Blue Bottle Coffee',
     description: 'Specialty coffee shop with great pour-overs.',
-    coordinates: { latitude: 40.7220, longitude: -73.9985 },
+    coordinates: { latitude: 40.722, longitude: -73.9985 },
     category: 'coffee',
     rating: 4,
     createdAt: new Date('2024-02-10').toISOString(),
@@ -44,7 +44,7 @@ const SAMPLE_PLACES: Place[] = [
   },
   {
     id: 'sample-4',
-    name: 'Joe\'s Pizza',
+    name: "Joe's Pizza",
     description: 'Classic New York slice since 1975.',
     coordinates: { latitude: 40.7306, longitude: -74.0021 },
     category: 'food',
@@ -161,9 +161,7 @@ export const usePlacesStore = create<PlacesState>()(
 
       toggleFavorite: (id) => {
         set((state) => ({
-          places: state.places.map((p) =>
-            p.id === id ? { ...p, isFavorite: !p.isFavorite } : p
-          ),
+          places: state.places.map((p) => (p.id === id ? { ...p, isFavorite: !p.isFavorite } : p)),
         }));
       },
 
@@ -182,8 +180,12 @@ export const usePlacesStore = create<PlacesState>()(
           set((state) => ({
             places: state.places.map((p) =>
               p.id === noteData.placeId
-                ? { ...p, visitCount: (p.visitCount || 0) + 1, lastVisited: new Date().toISOString() }
-                : p
+                ? {
+                    ...p,
+                    visitCount: (p.visitCount || 0) + 1,
+                    lastVisited: new Date().toISOString(),
+                  }
+                : p,
             ),
           }));
         }
@@ -202,7 +204,7 @@ export const usePlacesStore = create<PlacesState>()(
           places: state.places.map((p) =>
             p.id === placeId && !(p.tags || []).includes(tag)
               ? { ...p, tags: [...(p.tags || []), tag] }
-              : p
+              : p,
           ),
         }));
       },
@@ -210,7 +212,7 @@ export const usePlacesStore = create<PlacesState>()(
       removeTagFromPlace: (placeId, tag) => {
         set((state) => ({
           places: state.places.map((p) =>
-            p.id === placeId ? { ...p, tags: (p.tags || []).filter((t) => t !== tag) } : p
+            p.id === placeId ? { ...p, tags: (p.tags || []).filter((t) => t !== tag) } : p,
           ),
         }));
       },
@@ -220,14 +222,14 @@ export const usePlacesStore = create<PlacesState>()(
           places: state.places.map((p) =>
             p.id === placeId
               ? { ...p, visitCount: (p.visitCount || 0) + 1, lastVisited: new Date().toISOString() }
-              : p
+              : p,
           ),
         }));
       },
 
       getLatestMoodForPlace: (placeId) => {
-        const notes = get().notes
-          .filter((n) => n.placeId === placeId && n.mood)
+        const notes = get()
+          .notes.filter((n) => n.placeId === placeId && n.mood)
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         return notes[0]?.mood;
       },
@@ -253,6 +255,6 @@ export const usePlacesStore = create<PlacesState>()(
         }
         return state;
       },
-    }
-  )
+    },
+  ),
 );

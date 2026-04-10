@@ -1,9 +1,9 @@
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { PinCard } from "../../../design-system/components/PinCard";
-import { Colors, Radii, Spacing, Typography } from "../../../design-system/tokens";
-import { Meeting } from "../../../models/types";
+import { PinCard } from '../../../design-system/components/PinCard';
+import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { Meeting } from '../../../models/types';
 
 interface Props {
   meeting: Meeting;
@@ -16,9 +16,7 @@ export function MeetingCard({ meeting }: Props) {
       <View style={styles.row}>
         <View style={styles.dateBox}>
           <Text style={styles.day}>{date.getDate()}</Text>
-          <Text style={styles.month}>
-            {date.toLocaleString("default", { month: "short" })}
-          </Text>
+          <Text style={styles.month}>{date.toLocaleString('default', { month: 'short' })}</Text>
         </View>
         <View style={styles.info}>
           <Text style={styles.title} numberOfLines={1}>
@@ -30,7 +28,7 @@ export function MeetingCard({ meeting }: Props) {
             </Text>
           ) : null}
           <Text style={styles.time}>
-            {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
         </View>
       </View>
@@ -40,20 +38,20 @@ export function MeetingCard({ meeting }: Props) {
 
 const styles = StyleSheet.create({
   card: { marginBottom: Spacing.s8 },
-  row: { flexDirection: "row", alignItems: "center", gap: Spacing.s12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.s12 },
   dateBox: {
     width: 48,
     height: 48,
     borderRadius: Radii.sm,
     backgroundColor: Colors.brand.light,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   day: { ...Typography.headline, color: Colors.brand.dark, lineHeight: 20 },
   month: {
     ...Typography.caption,
     color: Colors.brand.primary,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
   info: { flex: 1 },
   title: { ...Typography.headline, color: Colors.neutral[900], marginBottom: 2 },

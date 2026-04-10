@@ -99,10 +99,7 @@ export default function SignUpScreen() {
           <View style={styles.social}>
             <AuthDivider />
             <View style={styles.socialButtons}>
-              <SocialButtons
-                onGooglePress={handleGooglePress}
-                onApplePress={handleApplePress}
-              />
+              <SocialButtons onGooglePress={handleGooglePress} onApplePress={handleApplePress} />
             </View>
           </View>
 

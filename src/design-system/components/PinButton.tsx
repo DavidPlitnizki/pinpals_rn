@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  Pressable,
-  Text,
-  StyleSheet,
-  ViewStyle,
-  ActivityIndicator,
-  View,
-} from 'react-native';
+import { Pressable, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
 import { Colors, Spacing, Radii, Typography } from '../tokens';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';

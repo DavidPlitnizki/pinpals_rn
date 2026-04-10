@@ -1,10 +1,10 @@
-import React from "react";
-import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React from 'react';
+import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PinButton } from "../../../design-system/components/PinButton";
-import { PinTextField } from "../../../design-system/components/PinTextField";
-import { Colors, Radii, Spacing, Typography } from "../../../design-system/tokens";
+import { PinButton } from '../../../design-system/components/PinButton';
+import { PinTextField } from '../../../design-system/components/PinTextField';
+import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 
 interface Props {
   visible: boolean;
@@ -34,7 +34,7 @@ export function AddNoteModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <Text style={styles.title}>Add Note</Text>
           <TouchableOpacity onPress={onClose}>
@@ -64,12 +64,7 @@ export function AddNoteModal({
                 </TouchableOpacity>
               </View>
             ) : (
-              <PinButton
-                title="Add Photo"
-                onPress={onPickPhoto}
-                variant="secondary"
-                fullWidth
-              />
+              <PinButton title="Add Photo" onPress={onPickPhoto} variant="secondary" fullWidth />
             )}
           </View>
 
@@ -83,9 +78,9 @@ export function AddNoteModal({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.neutral[50] },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: Spacing.s20,
     paddingVertical: Spacing.s16,
     borderBottomWidth: 1,
@@ -97,11 +92,11 @@ const styles = StyleSheet.create({
   content: { flex: 1, padding: Spacing.s20 },
   photoSection: { marginVertical: Spacing.s16 },
   previewPhoto: {
-    width: "100%",
+    width: '100%',
     height: 200,
     borderRadius: Radii.md,
     marginBottom: Spacing.s8,
   },
-  removePhotoBtn: { alignItems: "center", marginBottom: Spacing.s8 },
+  removePhotoBtn: { alignItems: 'center', marginBottom: Spacing.s8 },
   removePhotoText: { ...Typography.subheadline, color: Colors.error },
 });

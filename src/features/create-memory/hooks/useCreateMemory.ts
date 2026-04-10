@@ -1,10 +1,10 @@
-import * as ImagePicker from "expo-image-picker";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { Alert } from "react-native";
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
+import { Alert } from 'react-native';
 
-import { MemoryMood } from "../../../models/types";
-import { usePlacesStore } from "../../../store/usePlacesStore";
+import { MemoryMood } from '../../../models/types';
+import { usePlacesStore } from '../../../store/usePlacesStore';
 
 export function useCreateMemory() {
   const router = useRouter();
@@ -20,7 +20,7 @@ export function useCreateMemory() {
   const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [mood, setMood] = useState<MemoryMood | undefined>(undefined);
   const [companions, setCompanions] = useState<string[]>([]);
-  const [text, setText] = useState("");
+  const [text, setText] = useState('');
   const [date, setDate] = useState(new Date());
 
   function nextStep() {
@@ -34,7 +34,7 @@ export function useCreateMemory() {
 
   async function pickPhotos() {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ['images'],
       allowsMultipleSelection: true,
       selectionLimit: 5 - photoUris.length,
       quality: 0.8,
@@ -62,7 +62,7 @@ export function useCreateMemory() {
 
   function handleSave() {
     if (!placeId) {
-      Alert.alert("Error", "No place selected.");
+      Alert.alert('Error', 'No place selected.');
       return;
     }
 
@@ -82,12 +82,18 @@ export function useCreateMemory() {
 
   const canGoNext = (() => {
     switch (step) {
-      case 0: return true; // photos optional
-      case 1: return !!mood; // mood required
-      case 2: return true; // companions optional
-      case 3: return true; // text optional
-      case 4: return true; // date always valid
-      default: return true;
+      case 0:
+        return true; // photos optional
+      case 1:
+        return !!mood; // mood required
+      case 2:
+        return true; // companions optional
+      case 3:
+        return true; // text optional
+      case 4:
+        return true; // date always valid
+      default:
+        return true;
     }
   })();
 

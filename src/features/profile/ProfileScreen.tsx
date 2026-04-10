@@ -1,22 +1,15 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import Constants from "expo-constants";
-import React from "react";
-import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import React from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PinButton } from "../../design-system/components/PinButton";
-import { PinCard } from "../../design-system/components/PinCard";
-import { PinTextField } from "../../design-system/components/PinTextField";
-import { Colors, Spacing, Typography } from "../../design-system/tokens";
-import { useProfileScreen } from "./hooks/useProfileScreen";
-import { getInitials } from "./utils/getInitials";
+import { PinButton } from '../../design-system/components/PinButton';
+import { PinCard } from '../../design-system/components/PinCard';
+import { PinTextField } from '../../design-system/components/PinTextField';
+import { Colors, Spacing, Typography } from '../../design-system/tokens';
+import { useProfileScreen } from './hooks/useProfileScreen';
+import { getInitials } from './utils/getInitials';
 
 export default function ProfileScreen() {
   const {
@@ -37,10 +30,10 @@ export default function ProfileScreen() {
     handleDeleteAccount,
   } = useProfileScreen();
 
-  const appVersion = Constants.expoConfig?.version ?? "1.0.0";
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Fixed header */}
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
@@ -64,19 +57,13 @@ export default function ProfileScreen() {
         >
           {isGuest ? (
             <View style={styles.avatarPlaceholderGuest}>
-              <MaterialCommunityIcons
-                name="incognito"
-                size={48}
-                color={Colors.neutral[400]}
-              />
+              <MaterialCommunityIcons name="incognito" size={48} color={Colors.neutral[400]} />
             </View>
           ) : profile.avatarUri ? (
             <Image source={{ uri: profile.avatarUri }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitials}>
-                {getInitials(profile.name)}
-              </Text>
+              <Text style={styles.avatarInitials}>{getInitials(profile.name)}</Text>
             </View>
           )}
           {!isGuest && (
@@ -109,11 +96,7 @@ export default function ProfileScreen() {
                   multiline
                 />
                 <View style={styles.fieldSpacing} />
-                <PinButton
-                  title="Save Changes"
-                  onPress={handleSave}
-                  fullWidth
-                />
+                <PinButton title="Save Changes" onPress={handleSave} fullWidth />
               </View>
             ) : (
               <View>
@@ -121,9 +104,7 @@ export default function ProfileScreen() {
                 {profile.bio ? (
                   <Text style={styles.profileBio}>{profile.bio}</Text>
                 ) : (
-                  <Text style={styles.placeholderBio}>
-                    No bio yet. Tap Edit to add one.
-                  </Text>
+                  <Text style={styles.placeholderBio}>No bio yet. Tap Edit to add one.</Text>
                 )}
               </View>
             )}
@@ -139,9 +120,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>
-                  {places.filter((p) => p.isFavorite).length}
-                </Text>
+                <Text style={styles.statNumber}>{places.filter((p) => p.isFavorite).length}</Text>
                 <Text style={styles.statLabel}>Favorites</Text>
               </View>
               <View style={styles.statDivider} />
@@ -181,10 +160,7 @@ export default function ProfileScreen() {
               <Text style={styles.accountRowText}>Log Out</Text>
             </TouchableOpacity>
             <View style={styles.accountDivider} />
-            <TouchableOpacity
-              style={styles.accountRow}
-              onPress={handleDeleteAccount}
-            >
+            <TouchableOpacity style={styles.accountRow} onPress={handleDeleteAccount}>
               <Ionicons
                 name="trash-outline"
                 size={20}
@@ -203,9 +179,9 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.neutral[50] },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: Spacing.s20,
     paddingTop: Spacing.s8,
     paddingBottom: Spacing.s16,
@@ -214,31 +190,31 @@ const styles = StyleSheet.create({
   editLink: {
     ...Typography.body,
     color: Colors.brand.primary,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   cancelLink: { ...Typography.body, color: Colors.neutral[500] },
-  avatarSection: { alignItems: "center", paddingBottom: Spacing.s16 },
-  avatarContainer: { position: "relative" },
+  avatarSection: { alignItems: 'center', paddingBottom: Spacing.s16 },
+  avatarContainer: { position: 'relative' },
   avatar: { width: 96, height: 96, borderRadius: 48 },
   avatarPlaceholder: {
     width: 96,
     height: 96,
     borderRadius: 48,
     backgroundColor: Colors.brand.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarPlaceholderGuest: {
     width: 96,
     height: 96,
     borderRadius: 48,
     backgroundColor: Colors.neutral[200],
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  avatarInitials: { fontSize: 36, fontWeight: "700", color: Colors.white },
+  avatarInitials: { fontSize: 36, fontWeight: '700', color: Colors.white },
   avatarBadge: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 0,
     right: 0,
     width: 28,
@@ -247,8 +223,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderWidth: 2,
     borderColor: Colors.neutral[100],
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarBadgeText: { fontSize: 12 },
   content: { padding: Spacing.s16, gap: Spacing.s16, paddingBottom: 100 },
@@ -268,7 +244,7 @@ const styles = StyleSheet.create({
   placeholderBio: {
     ...Typography.body,
     color: Colors.neutral[400],
-    fontStyle: "italic",
+    fontStyle: 'italic',
   },
   statsCard: { marginBottom: 0 },
   statsTitle: {
@@ -276,8 +252,8 @@ const styles = StyleSheet.create({
     color: Colors.neutral[700],
     marginBottom: Spacing.s16,
   },
-  statsRow: { flexDirection: "row", alignItems: "center" },
-  statItem: { flex: 1, alignItems: "center" },
+  statsRow: { flexDirection: 'row', alignItems: 'center' },
+  statItem: { flex: 1, alignItems: 'center' },
   statNumber: {
     ...Typography.title1,
     color: Colors.brand.primary,
@@ -286,7 +262,7 @@ const styles = StyleSheet.create({
   statLabel: {
     ...Typography.caption,
     color: Colors.neutral[500],
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   statDivider: { width: 1, height: 40, backgroundColor: Colors.neutral[100] },
@@ -297,8 +273,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.s12,
   },
   infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingVertical: Spacing.s8,
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutral[50],
@@ -307,8 +283,8 @@ const styles = StyleSheet.create({
   infoValue: { ...Typography.subheadline, color: Colors.neutral[400] },
   accountCard: { marginBottom: 0 },
   accountRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: Spacing.s12,
   },
   accountIcon: { marginRight: Spacing.s12 },

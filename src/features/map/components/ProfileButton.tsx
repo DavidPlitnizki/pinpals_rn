@@ -1,10 +1,10 @@
-import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Colors, Spacing, Typography } from "../../../design-system/tokens";
-import { UserProfile } from "../../../models/types";
-import { getInitials } from "../utils/getInitials";
+import { Colors, Spacing, Typography } from '../../../design-system/tokens';
+import { UserProfile } from '../../../models/types';
+import { getInitials } from '../utils/getInitials';
 
 interface Props {
   profile: UserProfile;
@@ -27,7 +27,7 @@ export function ProfileButton({ profile, onPress }: Props) {
 
 const styles = StyleSheet.create({
   wrap: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     right: 0,
     paddingTop: Spacing.s16,
@@ -38,19 +38,19 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: Colors.brand.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 4,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   avatar: { width: 44, height: 44 },
   initials: {
     ...Typography.subheadline,
     color: Colors.white,
-    fontWeight: "700",
+    fontWeight: '700',
   },
 });

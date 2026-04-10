@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState } from 'react';
 
-import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
-import { Coordinates, Place, PlaceCategory } from "../../../models/types";
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { Coordinates, Place, PlaceCategory } from '../../../models/types';
 
-export type SpecialFilter = "mine" | "favorites";
+export type SpecialFilter = 'mine' | 'favorites';
 
 const DEFAULT_RADIUS_M = 50000;
 const MAX_RADIUS_M = 50000;
@@ -14,9 +14,7 @@ function haversineMeters(a: Coordinates, b: Coordinates): number {
   const dLon = toRad(b.longitude - a.longitude);
   const sin2 =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.latitude)) *
-      Math.cos(toRad(b.latitude)) *
-      Math.sin(dLon / 2) ** 2;
+    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.sin(dLon / 2) ** 2;
   return 6371000 * 2 * Math.atan2(Math.sqrt(sin2), Math.sqrt(1 - sin2));
 }
 
@@ -28,20 +26,13 @@ export function formatRadius(meters: number): string {
   return `${meters} m`;
 }
 
-export function useSearchSheet(
-  places: Place[],
-  userLocation: Coordinates | null,
-) {
+export function useSearchSheet(places: Place[], userLocation: Coordinates | null) {
   const [visible, setVisible] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query);
   const [radiusM, setRadiusM] = useState(DEFAULT_RADIUS_M);
-  const [activeCategories, setActiveCategories] = useState<Set<PlaceCategory>>(
-    new Set(),
-  );
-  const [specialFilters, setSpecialFilters] = useState<Set<SpecialFilter>>(
-    new Set(),
-  );
+  const [activeCategories, setActiveCategories] = useState<Set<PlaceCategory>>(new Set());
+  const [specialFilters, setSpecialFilters] = useState<Set<SpecialFilter>>(new Set());
 
   function open() {
     setVisible(true);
@@ -71,17 +62,10 @@ export function useSearchSheet(
 
   const filteredPlaces = useMemo(() => {
     return places.filter((place) => {
-      if (
-        debouncedQuery.trim() &&
-        !place.name.toLowerCase().includes(debouncedQuery.toLowerCase())
-      )
+      if (debouncedQuery.trim() && !place.name.toLowerCase().includes(debouncedQuery.toLowerCase()))
         return false;
-      if (
-        activeCategories.size > 0 &&
-        !activeCategories.has(place.category)
-      )
-        return false;
-      if (specialFilters.has("favorites") && !place.isFavorite) return false;
+      if (activeCategories.size > 0 && !activeCategories.has(place.category)) return false;
+      if (specialFilters.has('favorites') && !place.isFavorite) return false;
       if (
         userLocation &&
         radiusM < MAX_RADIUS_M &&

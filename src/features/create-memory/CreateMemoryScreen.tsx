@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   Image,
   ScrollView,
@@ -6,17 +6,17 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CompanionInput } from "../../design-system/components/CompanionInput";
-import { MoodPicker } from "../../design-system/components/MoodPicker";
-import { PinButton } from "../../design-system/components/PinButton";
-import { Colors, Radii, Spacing, Typography } from "../../design-system/tokens";
-import { useCreateMemory } from "./hooks/useCreateMemory";
+import { CompanionInput } from '../../design-system/components/CompanionInput';
+import { MoodPicker } from '../../design-system/components/MoodPicker';
+import { PinButton } from '../../design-system/components/PinButton';
+import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
+import { useCreateMemory } from './hooks/useCreateMemory';
 
-const STEP_TITLES = ["Photo", "Mood", "Companions", "Note", "Date"];
+const STEP_TITLES = ['Photo', 'Mood', 'Companions', 'Note', 'Date'];
 
 export default function CreateMemoryScreen() {
   const {
@@ -44,18 +44,18 @@ export default function CreateMemoryScreen() {
 
   if (!place) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <Text style={styles.errorText}>Место не найдено</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={prevStep}>
-          <Text style={styles.backBtn}>{step === 0 ? "Отмена" : "Назад"}</Text>
+          <Text style={styles.backBtn}>{step === 0 ? 'Отмена' : 'Назад'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{place.name}</Text>
         <View style={styles.backBtnPlaceholder} />
@@ -64,10 +64,7 @@ export default function CreateMemoryScreen() {
       {/* Progress */}
       <View style={styles.progress}>
         {Array.from({ length: totalSteps }).map((_, i) => (
-          <View
-            key={i}
-            style={[styles.progressDot, i <= step && styles.progressDotActive]}
-          />
+          <View key={i} style={[styles.progressDot, i <= step && styles.progressDotActive]} />
         ))}
       </View>
 
@@ -80,19 +77,11 @@ export default function CreateMemoryScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {step === 0 && (
-          <PhotoStep
-            photoUris={photoUris}
-            onPick={pickPhotos}
-            onRemove={removePhoto}
-          />
+          <PhotoStep photoUris={photoUris} onPick={pickPhotos} onRemove={removePhoto} />
         )}
         {step === 1 && <MoodStep mood={mood} onSelect={setMood} />}
         {step === 2 && (
-          <CompanionStep
-            companions={companions}
-            onAdd={addCompanion}
-            onRemove={removeCompanion}
-          />
+          <CompanionStep companions={companions} onAdd={addCompanion} onRemove={removeCompanion} />
         )}
         {step === 3 && <NoteStep text={text} onChangeText={setText} />}
         {step === 4 && <DateStep date={date} onChangeDate={setDate} />}
@@ -101,18 +90,9 @@ export default function CreateMemoryScreen() {
       {/* Bottom buttons */}
       <View style={styles.footer}>
         {isLastStep ? (
-          <PinButton
-            title="Сохранить воспоминание"
-            onPress={handleSave}
-            fullWidth
-          />
+          <PinButton title="Сохранить воспоминание" onPress={handleSave} fullWidth />
         ) : (
-          <PinButton
-            title="Далее"
-            onPress={nextStep}
-            disabled={!canGoNext}
-            fullWidth
-          />
+          <PinButton title="Далее" onPress={nextStep} disabled={!canGoNext} fullWidth />
         )}
       </View>
     </SafeAreaView>
@@ -137,10 +117,7 @@ function PhotoStep({
         {photoUris.map((uri) => (
           <View key={uri} style={styles.photoItem}>
             <Image source={{ uri }} style={styles.photoThumb} />
-            <TouchableOpacity
-              style={styles.photoRemove}
-              onPress={() => onRemove(uri)}
-            >
+            <TouchableOpacity style={styles.photoRemove} onPress={() => onRemove(uri)}>
               <Text style={styles.photoRemoveText}>✕</Text>
             </TouchableOpacity>
           </View>
@@ -160,8 +137,8 @@ function MoodStep({
   mood,
   onSelect,
 }: {
-  mood: ReturnType<typeof useCreateMemory>["mood"];
-  onSelect: ReturnType<typeof useCreateMemory>["setMood"];
+  mood: ReturnType<typeof useCreateMemory>['mood'];
+  onSelect: ReturnType<typeof useCreateMemory>['setMood'];
 }) {
   return (
     <View style={styles.stepContent}>
@@ -193,13 +170,7 @@ function CompanionStep({
   );
 }
 
-function NoteStep({
-  text,
-  onChangeText,
-}: {
-  text: string;
-  onChangeText: (t: string) => void;
-}) {
+function NoteStep({ text, onChangeText }: { text: string; onChangeText: (t: string) => void }) {
   return (
     <View style={styles.stepContent}>
       <Text style={styles.stepHint}>Добавь заметку (необязательно)</Text>
@@ -216,13 +187,7 @@ function NoteStep({
   );
 }
 
-function DateStep({
-  date,
-  onChangeDate,
-}: {
-  date: Date;
-  onChangeDate: (d: Date) => void;
-}) {
+function DateStep({ date, onChangeDate }: { date: Date; onChangeDate: (d: Date) => void }) {
   const isToday = date.toDateString() === new Date().toDateString();
 
   return (
@@ -233,12 +198,7 @@ function DateStep({
           style={[styles.dateOption, isToday && styles.dateOptionActive]}
           onPress={() => onChangeDate(new Date())}
         >
-          <Text
-            style={[
-              styles.dateOptionText,
-              isToday && styles.dateOptionTextActive,
-            ]}
-          >
+          <Text style={[styles.dateOptionText, isToday && styles.dateOptionTextActive]}>
             Сегодня
           </Text>
         </TouchableOpacity>
@@ -250,21 +210,16 @@ function DateStep({
             onChangeDate(yesterday);
           }}
         >
-          <Text
-            style={[
-              styles.dateOptionText,
-              !isToday && styles.dateOptionTextActive,
-            ]}
-          >
+          <Text style={[styles.dateOptionText, !isToday && styles.dateOptionTextActive]}>
             Вчера
           </Text>
         </TouchableOpacity>
       </View>
       <Text style={styles.dateDisplay}>
-        {date.toLocaleDateString("ru-RU", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
+        {date.toLocaleDateString('ru-RU', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
         })}
       </Text>
     </View>
@@ -277,16 +232,16 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: Spacing.s16,
     paddingVertical: Spacing.s12,
   },
   backBtn: {
     ...Typography.body,
     color: Colors.brand.primary,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   backBtnPlaceholder: {
     width: 60,
@@ -296,8 +251,8 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   progress: {
-    flexDirection: "row",
-    justifyContent: "center",
+    flexDirection: 'row',
+    justifyContent: 'center',
     gap: Spacing.s8,
     paddingVertical: Spacing.s8,
   },
@@ -313,7 +268,7 @@ const styles = StyleSheet.create({
   stepTitle: {
     ...Typography.title2,
     color: Colors.text.primary,
-    textAlign: "center",
+    textAlign: 'center',
     marginBottom: Spacing.s16,
   },
   content: {
@@ -329,7 +284,7 @@ const styles = StyleSheet.create({
   stepHint: {
     ...Typography.body,
     color: Colors.text.secondary,
-    textAlign: "center",
+    textAlign: 'center',
   },
   footer: {
     paddingHorizontal: Spacing.s16,
@@ -340,18 +295,18 @@ const styles = StyleSheet.create({
   errorText: {
     ...Typography.body,
     color: Colors.error,
-    textAlign: "center",
+    textAlign: 'center',
     marginTop: Spacing.s48,
   },
 
   // Photo step
   photoGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.s12,
   },
   photoItem: {
-    position: "relative",
+    position: 'relative',
   },
   photoThumb: {
     width: 100,
@@ -359,30 +314,30 @@ const styles = StyleSheet.create({
     borderRadius: Radii.md,
   },
   photoRemove: {
-    position: "absolute",
+    position: 'absolute',
     top: -6,
     right: -6,
     width: 24,
     height: 24,
     borderRadius: 12,
     backgroundColor: Colors.error,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   photoRemoveText: {
     color: Colors.white,
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   photoAdd: {
     width: 100,
     height: 100,
     borderRadius: Radii.md,
     borderWidth: 2,
-    borderStyle: "dashed",
+    borderStyle: 'dashed',
     borderColor: Colors.neutral[300],
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     gap: Spacing.s4,
   },
   photoAddIcon: {
@@ -406,9 +361,9 @@ const styles = StyleSheet.create({
 
   // Date step
   dateOptions: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: Spacing.s12,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   dateOption: {
     paddingHorizontal: Spacing.s24,
@@ -423,7 +378,7 @@ const styles = StyleSheet.create({
   },
   dateOptionText: {
     ...Typography.body,
-    fontWeight: "600",
+    fontWeight: '600',
     color: Colors.text.primary,
   },
   dateOptionTextActive: {
@@ -432,6 +387,6 @@ const styles = StyleSheet.create({
   dateDisplay: {
     ...Typography.title3,
     color: Colors.text.primary,
-    textAlign: "center",
+    textAlign: 'center',
   },
 });

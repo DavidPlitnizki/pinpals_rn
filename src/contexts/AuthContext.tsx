@@ -1,10 +1,4 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 import {
   AuthData,
@@ -13,7 +7,7 @@ import {
   logout as serviceLogout,
   loginAnonymously,
   onAuthStateChanged,
-} from "../services/authService";
+} from '../services/authService';
 
 interface AuthContextValue {
   isAuth: boolean;
@@ -60,12 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await serviceLogin(email, password);
   }, []);
 
-  const signUp = useCallback(
-    async (email: string, password: string, name: string) => {
-      await serviceSignUp(email, password, name);
-    },
-    []
-  );
+  const signUp = useCallback(async (email: string, password: string, name: string) => {
+    await serviceSignUp(email, password, name);
+  }, []);
 
   const logout = useCallback(async () => {
     await serviceLogout();
@@ -95,6 +86,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
+  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
   return ctx;
 }

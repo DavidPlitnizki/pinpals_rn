@@ -1,19 +1,13 @@
-import { Camera, MapView, PointAnnotation } from "@rnmapbox/maps";
-import React from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Camera, MapView, PointAnnotation } from '@rnmapbox/maps';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PinButton } from "../../design-system/components/PinButton";
-import { PinTextField } from "../../design-system/components/PinTextField";
-import { Colors, Radii, Spacing, Typography } from "../../design-system/tokens";
-import { DatePickerModal } from "./components/DatePickerModal";
-import { useCreateMeeting } from "./hooks/useCreateMeeting";
+import { PinButton } from '../../design-system/components/PinButton';
+import { PinTextField } from '../../design-system/components/PinTextField';
+import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
+import { DatePickerModal } from './components/DatePickerModal';
+import { useCreateMeeting } from './hooks/useCreateMeeting';
 
 export default function CreateMeetingScreen() {
   const {
@@ -43,7 +37,7 @@ export default function CreateMeetingScreen() {
   } = useCreateMeeting();
 
   return (
-    <SafeAreaView style={styles.container} edges={["bottom"]}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -75,12 +69,12 @@ export default function CreateMeetingScreen() {
             <Text style={styles.dateButtonIcon}>📅</Text>
             <Text style={styles.dateButtonText}>
               {date.toLocaleString([], {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
               })}
             </Text>
           </TouchableOpacity>
@@ -88,9 +82,7 @@ export default function CreateMeetingScreen() {
 
         <View style={styles.formGroup}>
           <Text style={styles.fieldLabel}>Location</Text>
-          <Text style={styles.mapHint}>
-            Tap on the map to set the meeting point
-          </Text>
+          <Text style={styles.mapHint}>Tap on the map to set the meeting point</Text>
           <MapView
             style={styles.map}
             onPress={(feature: any) =>
@@ -120,24 +112,18 @@ export default function CreateMeetingScreen() {
                   borderRadius: 10,
                   backgroundColor: Colors.brand.primary,
                   borderWidth: 2,
-                  borderColor: "#fff",
+                  borderColor: '#fff',
                 }}
               />
             </PointAnnotation>
           </MapView>
           <Text style={styles.coordsText}>
-            {coordinates.latitude.toFixed(4)},{" "}
-            {coordinates.longitude.toFixed(4)}
+            {coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)}
           </Text>
         </View>
 
         <View style={styles.saveButton}>
-          <PinButton
-            title="Create Meeting"
-            onPress={handleSave}
-            fullWidth
-            size="lg"
-          />
+          <PinButton title="Create Meeting" onPress={handleSave} fullWidth size="lg" />
         </View>
       </ScrollView>
 
@@ -170,11 +156,11 @@ const styles = StyleSheet.create({
     ...Typography.subheadline,
     color: Colors.neutral[700],
     marginBottom: Spacing.s8,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   dateButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.s12,
     borderWidth: 1.5,
     borderColor: Colors.neutral[200],
@@ -190,11 +176,11 @@ const styles = StyleSheet.create({
     color: Colors.neutral[400],
     marginBottom: Spacing.s8,
   },
-  map: { height: 220, borderRadius: Radii.md, overflow: "hidden" },
+  map: { height: 220, borderRadius: Radii.md, overflow: 'hidden' },
   coordsText: {
     ...Typography.caption,
     color: Colors.neutral[400],
-    textAlign: "center",
+    textAlign: 'center',
     marginTop: Spacing.s4,
   },
   saveButton: { marginTop: Spacing.s8 },

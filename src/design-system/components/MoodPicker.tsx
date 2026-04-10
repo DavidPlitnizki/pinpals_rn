@@ -1,17 +1,7 @@
-import React from "react";
-import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { Colors, Radii, Spacing, Typography } from "../tokens";
-import {
-  MemoryMood,
-  MEMORY_MOODS,
-  MOOD_CONFIG,
-} from "../../models/types";
+import React from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Colors, Radii, Spacing, Typography } from '../tokens';
+import { MemoryMood, MEMORY_MOODS, MOOD_CONFIG } from '../../models/types';
 
 interface MoodPickerProps {
   selected?: MemoryMood;
@@ -43,10 +33,7 @@ export function MoodPicker({ selected, onSelect }: MoodPickerProps) {
           >
             <Text style={styles.emoji}>{config.emoji}</Text>
             <Text
-              style={[
-                styles.label,
-                { color: isSelected ? Colors.white : Colors.text.primary },
-              ]}
+              style={[styles.label, { color: isSelected ? Colors.white : Colors.text.primary }]}
             >
               {config.label}
             </Text>
@@ -63,7 +50,7 @@ const styles = StyleSheet.create({
     gap: Spacing.s8,
   },
   item: {
-    alignItems: "center",
+    alignItems: 'center',
     paddingVertical: Spacing.s12,
     paddingHorizontal: Spacing.s16,
     borderRadius: Radii.lg,
@@ -76,6 +63,6 @@ const styles = StyleSheet.create({
   },
   label: {
     ...Typography.caption,
-    fontWeight: "600",
+    fontWeight: '600',
   },
 });

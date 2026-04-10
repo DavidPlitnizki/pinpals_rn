@@ -1,5 +1,5 @@
-import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useRef } from "react";
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useRef } from 'react';
 import {
   Alert,
   Animated,
@@ -12,15 +12,15 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Colors, Radii, Spacing, Typography } from "../../../design-system/tokens";
-import { useProfileStore } from "../../../store/useProfileStore";
-import { Friend, Group, Recent } from "../hooks/useFriendsSheet";
-import { getInitials } from "../utils/getInitials";
+import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { useProfileStore } from '../../../store/useProfileStore';
+import { Friend, Group, Recent } from '../hooks/useFriendsSheet';
+import { getInitials } from '../utils/getInitials';
 
-const SHEET_HEIGHT = Dimensions.get("window").height * 0.75;
+const SHEET_HEIGHT = Dimensions.get('window').height * 0.75;
 const ANIMATION_DURATION = 280;
 
 interface Props {
@@ -62,6 +62,7 @@ export function FriendsSheet({
         }),
       ]).start();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   function handleClose() {
@@ -80,15 +81,15 @@ export function FriendsSheet({
   }
 
   function handleFriendPress(friend: Friend) {
-    Alert.alert(friend.name, "Open chat (Phase 2)");
+    Alert.alert(friend.name, 'Open chat (Phase 2)');
   }
 
   function handleGroupPress(group: Group) {
-    Alert.alert(group.name, "Open group chat (Phase 2)");
+    Alert.alert(group.name, 'Open group chat (Phase 2)');
   }
 
   function handleInvitePress() {
-    Alert.alert("Add friends / Create chat", "Coming in Phase 2");
+    Alert.alert('Add friends / Create chat', 'Coming in Phase 2');
   }
 
   return (
@@ -130,12 +131,13 @@ export function FriendsSheet({
             />
           </View>
 
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {/* Add friends / Create chat — first */}
-            <TouchableOpacity style={styles.inviteRow} onPress={handleInvitePress} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.inviteRow}
+              onPress={handleInvitePress}
+              activeOpacity={0.7}
+            >
               <View style={styles.inviteIcon}>
                 <Ionicons name="person-add" size={18} color={Colors.brand.primary} />
               </View>
@@ -158,7 +160,9 @@ export function FriendsSheet({
                     {getInitials(profile.name)}
                   </Text>
                 </View>
-                <Text style={styles.recentName} numberOfLines={1}>You</Text>
+                <Text style={styles.recentName} numberOfLines={1}>
+                  You
+                </Text>
               </TouchableOpacity>
 
               {recents.map((item) => (
@@ -167,20 +171,28 @@ export function FriendsSheet({
                   style={styles.recentItem}
                   activeOpacity={0.75}
                   onPress={() =>
-                    Alert.alert(item.name, `Open ${item.type === "group" ? "group chat" : "chat"} (Phase 2)`)
+                    Alert.alert(
+                      item.name,
+                      `Open ${item.type === 'group' ? 'group chat' : 'chat'} (Phase 2)`,
+                    )
                   }
                 >
-                  <View style={[
-                    styles.recentAvatar,
-                    item.type === "group" ? styles.groupAvatar : undefined,
-                  ]}>
-                    {item.type === "group"
-                      ? <Ionicons name="people" size={16} color={Colors.accent.primary} />
-                      : <Text style={styles.recentAvatarText}>{getInitials(item.name)}</Text>
-                    }
+                  <View
+                    style={[
+                      styles.recentAvatar,
+                      item.type === 'group' ? styles.groupAvatar : undefined,
+                    ]}
+                  >
+                    {item.type === 'group' ? (
+                      <Ionicons name="people" size={16} color={Colors.accent.primary} />
+                    ) : (
+                      <Text style={styles.recentAvatarText}>{getInitials(item.name)}</Text>
+                    )}
                     {item.unread > 0 && <View style={styles.recentBadge} />}
                   </View>
-                  <Text style={styles.recentName} numberOfLines={1}>{item.name}</Text>
+                  <Text style={styles.recentName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -203,7 +215,7 @@ export function FriendsSheet({
                     <Text style={styles.rowName}>{group.name}</Text>
                     <Text style={styles.rowMeta} numberOfLines={1}>
                       {group.membersCount} members
-                      {group.lastMessage ? `  ·  ${group.lastMessage}` : ""}
+                      {group.lastMessage ? `  ·  ${group.lastMessage}` : ''}
                     </Text>
                   </View>
                   {group.unread > 0 && (
@@ -234,7 +246,9 @@ export function FriendsSheet({
                   <View style={styles.rowInfo}>
                     <Text style={styles.rowName}>{friend.name}</Text>
                     {friend.lastMessage ? (
-                      <Text style={styles.rowMeta} numberOfLines={1}>{friend.lastMessage}</Text>
+                      <Text style={styles.rowMeta} numberOfLines={1}>
+                        {friend.lastMessage}
+                      </Text>
                     ) : null}
                   </View>
                   {friend.unread > 0 && (
@@ -257,21 +271,21 @@ export function FriendsSheet({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: "flex-end",
+    justifyContent: 'flex-end',
   },
   backdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   sheet: {
     height: SHEET_HEIGHT,
     backgroundColor: Colors.white,
     borderTopLeftRadius: Radii.lg,
     borderTopRightRadius: Radii.lg,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   handleRow: {
-    alignItems: "center",
+    alignItems: 'center',
     paddingTop: Spacing.s12,
     paddingBottom: Spacing.s8,
   },
@@ -282,8 +296,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral[200],
   },
   inputWrap: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: Spacing.s16,
     marginBottom: Spacing.s12,
     backgroundColor: Colors.neutral[50],
@@ -299,8 +313,8 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   inviteRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: Spacing.s12,
     paddingHorizontal: Spacing.s16,
     gap: Spacing.s12,
@@ -310,13 +324,13 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     backgroundColor: Colors.brand.light,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   inviteLabel: {
     ...Typography.callout,
     color: Colors.brand.primary,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   divider: {
     height: 1,
@@ -326,8 +340,8 @@ const styles = StyleSheet.create({
   sectionLabel: {
     ...Typography.footnote,
     color: Colors.neutral[500],
-    fontWeight: "600",
-    textTransform: "uppercase",
+    fontWeight: '600',
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginHorizontal: Spacing.s16,
     marginBottom: Spacing.s8,
@@ -344,7 +358,7 @@ const styles = StyleSheet.create({
     gap: Spacing.s16,
   },
   recentItem: {
-    alignItems: "center",
+    alignItems: 'center',
     gap: Spacing.s4,
     width: 56,
   },
@@ -353,16 +367,16 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: Colors.brand.light,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   recentAvatarText: {
     ...Typography.subheadline,
     color: Colors.brand.primary,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   recentBadge: {
-    position: "absolute",
+    position: 'absolute',
     top: 2,
     right: 2,
     width: 10,
@@ -375,15 +389,15 @@ const styles = StyleSheet.create({
   recentName: {
     ...Typography.caption,
     color: Colors.neutral[700],
-    textAlign: "center",
+    textAlign: 'center',
   },
   avatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
     backgroundColor: Colors.brand.light,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
   },
   groupAvatar: {
@@ -392,11 +406,11 @@ const styles = StyleSheet.create({
   avatarText: {
     ...Typography.footnote,
     color: Colors.brand.primary,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   row: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: Spacing.s12,
     paddingHorizontal: Spacing.s16,
     gap: Spacing.s12,
@@ -407,7 +421,7 @@ const styles = StyleSheet.create({
   rowName: {
     ...Typography.callout,
     color: Colors.neutral[900],
-    fontWeight: "600",
+    fontWeight: '600',
     marginBottom: 2,
   },
   rowMeta: {
@@ -419,14 +433,14 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     backgroundColor: Colors.error,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 5,
   },
   unreadText: {
     ...Typography.caption,
     color: Colors.white,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   separator: {
     height: 1,
