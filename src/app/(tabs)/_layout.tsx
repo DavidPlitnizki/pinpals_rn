@@ -1,6 +1,6 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
-import { Colors } from "../../design-system/tokens";
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
+import { Colors } from '../../design-system/tokens';
 
 export default function TabLayout() {
   return (
@@ -14,7 +14,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="map"
         options={{
-          title: "Map",
+          title: 'Map',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="map-outline" size={size} color={color} />
           ),
@@ -23,7 +23,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="remembrance"
         options={{
-          title: "Remembrance",
+          title: 'Remembrance',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="bookmark-outline" size={size} color={color} />
           ),
@@ -32,7 +32,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),

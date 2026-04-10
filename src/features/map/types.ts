@@ -1,4 +1,4 @@
-import { Coordinates, PlaceCategory } from "../../models/types";
+import { Coordinates, PlaceCategory } from '../../models/types';
 
 export interface AddPlaceState {
   name: string;

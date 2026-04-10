@@ -65,7 +65,12 @@ export const Fonts = {
 };
 
 export const Typography = {
-  largeTitle: { fontSize: 34, lineHeight: 41, fontFamily: Fonts.nunito.extraBold, letterSpacing: 0.37 },
+  largeTitle: {
+    fontSize: 34,
+    lineHeight: 41,
+    fontFamily: Fonts.nunito.extraBold,
+    letterSpacing: 0.37,
+  },
   title1: { fontSize: 28, lineHeight: 34, fontFamily: Fonts.nunito.bold },
   title2: { fontSize: 22, lineHeight: 28, fontFamily: Fonts.nunito.bold },
   title3: { fontSize: 20, lineHeight: 25, fontFamily: Fonts.nunito.semiBold },

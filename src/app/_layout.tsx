@@ -1,13 +1,13 @@
-import Mapbox from "@rnmapbox/maps";
-import { Stack, useRouter, useSegments } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Mapbox from '@rnmapbox/maps';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { AuthProvider, useAuth } from "../contexts/AuthContext";
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
-Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? "");
+Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '');
 SplashScreen.preventAutoHideAsync();
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -21,14 +21,15 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     SplashScreen.setOptions({ duration: 400, fade: true });
     SplashScreen.hideAsync();
 
-    const inAuthGroup = segments[0] === "(auth)";
+    const inAuthGroup = segments[0] === '(auth)';
     const canAccess = isAuth || isGuest;
 
     if (!canAccess && !inAuthGroup) {
-      router.replace("/(auth)/login");
+      router.replace('/(auth)/login');
     } else if (canAccess && inAuthGroup) {
-      router.replace("/(tabs)/map");
+      router.replace('/(tabs)/map');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuth, isGuest, isLoading, segments]);
 
   if (isLoading) return <View style={styles.loading} />;
@@ -43,24 +44,21 @@ export default function RootLayout() {
         <AuthGate>
           <Stack
             screenOptions={{
-              headerStyle: { backgroundColor: "#FFFFFF" },
-              headerTintColor: "#4A7C59",
-              headerTitleStyle: { fontWeight: "600", color: "#1C2B22" },
+              headerStyle: { backgroundColor: '#FFFFFF' },
+              headerTintColor: '#4A7C59',
+              headerTitleStyle: { fontWeight: '600', color: '#1C2B22' },
             }}
           >
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="place/[id]"
-              options={{ title: "Place Details" }}
-            />
+            <Stack.Screen name="place/[id]" options={{ title: 'Place Details' }} />
             <Stack.Screen
               name="create-meeting"
-              options={{ title: "Create Meeting", presentation: "modal" }}
+              options={{ title: 'Create Meeting', presentation: 'modal' }}
             />
             <Stack.Screen
               name="create-memory"
-              options={{ title: "Новое воспоминание", presentation: "modal", headerShown: false }}
+              options={{ title: 'Новое воспоминание', presentation: 'modal', headerShown: false }}
             />
           </Stack>
         </AuthGate>
@@ -75,6 +73,6 @@ const styles = StyleSheet.create({
   },
   loading: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
   },
 });

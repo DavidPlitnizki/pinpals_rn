@@ -1,8 +1,4 @@
-export {
-  CATEGORIES,
-  CATEGORY_COLORS,
-  CATEGORY_LABELS,
-} from "../../shared/constants";
+export { CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS } from '../../shared/constants';
 
 export const DEFAULT_CENTER: [number, number] = [0, 0];
 export const DEFAULT_ZOOM = 13;

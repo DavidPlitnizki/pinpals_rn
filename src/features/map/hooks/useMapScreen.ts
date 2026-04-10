@@ -1,14 +1,14 @@
-import { Camera } from "@rnmapbox/maps";
-import * as Location from "expo-location";
-import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { Alert, Animated } from "react-native";
+import { Camera } from '@rnmapbox/maps';
+import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Animated } from 'react-native';
 
-import { Coordinates } from "../../../models/types";
-import { usePlacesStore } from "../../../store/usePlacesStore";
-import { useProfileStore } from "../../../store/useProfileStore";
-import { DEFAULT_CENTER, DEFAULT_ZOOM } from "../constants";
-import { AddPlaceState } from "../types";
+import { Coordinates } from '../../../models/types';
+import { usePlacesStore } from '../../../store/usePlacesStore';
+import { useProfileStore } from '../../../store/useProfileStore';
+import { DEFAULT_CENTER, DEFAULT_ZOOM } from '../constants';
+import { AddPlaceState } from '../types';
 
 export function useMapScreen() {
   const router = useRouter();
@@ -24,19 +24,20 @@ export function useMapScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [addPlaceState, setAddPlaceState] = useState<AddPlaceState>({
-    name: "",
-    category: "nature",
+    name: '',
+    category: 'nature',
     rating: 3,
-    description: "",
+    description: '',
     coordinates: null,
   });
 
   const toastAnim = useRef(new Animated.Value(0)).current;
-  const [toastMsg, setToastMsg] = useState("");
+  const [toastMsg, setToastMsg] = useState('');
   const [toastGPS, setToastGPS] = useState(false);
 
   useEffect(() => {
     requestLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function showToast(msg: string, isGPS: boolean) {
@@ -60,8 +61,8 @@ export function useMapScreen() {
   async function requestLocation() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        showToast("Location permission denied", false);
+      if (status !== 'granted') {
+        showToast('Location permission denied', false);
         return;
       }
 
@@ -77,7 +78,7 @@ export function useMapScreen() {
       });
       applyLocation(loc.coords.latitude, loc.coords.longitude);
     } catch {
-      showToast("Could not get location", false);
+      showToast('Could not get location', false);
     }
   }
 
@@ -91,7 +92,7 @@ export function useMapScreen() {
       zoomLevel: DEFAULT_ZOOM,
       animationDuration: 800,
     });
-    showToast("Centred on your GPS location", true);
+    showToast('Centred on your GPS location', true);
   }
 
   function handleCenterGPS() {
@@ -103,9 +104,7 @@ export function useMapScreen() {
     });
   }
 
-  function handleLongPress(feature: {
-    geometry: { coordinates: [number, number] };
-  }) {
+  function handleLongPress(feature: { geometry: { coordinates: [number, number] } }) {
     const [longitude, latitude] = feature.geometry.coordinates;
     cameraRef.current?.setCamera({
       centerCoordinate: [longitude, latitude],
@@ -113,9 +112,9 @@ export function useMapScreen() {
       animationDuration: 600,
     });
     addPlace({
-      name: `Pin ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+      name: `Pin ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
       coordinates: { latitude, longitude },
-      category: "nature",
+      category: 'nature',
       rating: 3,
       isFavorite: false,
     });
@@ -127,10 +126,10 @@ export function useMapScreen() {
       longitude: currentCenter.current[0],
     };
     setAddPlaceState({
-      name: "",
-      category: "nature",
+      name: '',
+      category: 'nature',
       rating: 3,
-      description: "",
+      description: '',
       coordinates: coords,
     });
     setShowAddModal(true);
@@ -142,7 +141,7 @@ export function useMapScreen() {
 
   function handleSavePlace() {
     if (!addPlaceState.name.trim()) {
-      Alert.alert("Name required", "Please enter a name for this place.");
+      Alert.alert('Name required', 'Please enter a name for this place.');
       return;
     }
     if (!addPlaceState.coordinates) return;
@@ -158,15 +157,15 @@ export function useMapScreen() {
   }
 
   function handleMarkerPress(placeId: string) {
-    router.push({ pathname: "/place/[id]", params: { id: placeId } } as any);
+    router.push({ pathname: '/place/[id]', params: { id: placeId } } as any);
   }
 
   function handleDeleteMarker(placeId: string, placeName: string) {
-    Alert.alert("Delete place", `Remove "${placeName}"?`, [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert('Delete place', `Remove "${placeName}"?`, [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: "Delete",
-        style: "destructive",
+        text: 'Delete',
+        style: 'destructive',
         onPress: () => deletePlace(placeId),
       },
     ]);

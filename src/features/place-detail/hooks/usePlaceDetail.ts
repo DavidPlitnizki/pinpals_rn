@@ -1,9 +1,9 @@
-import * as ImagePicker from "expo-image-picker";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
-import { Alert } from "react-native";
+import * as ImagePicker from 'expo-image-picker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Alert } from 'react-native';
 
-import { usePlacesStore } from "../../../store/usePlacesStore";
+import { usePlacesStore } from '../../../store/usePlacesStore';
 
 export function usePlaceDetail() {
   const router = useRouter();
@@ -29,9 +29,9 @@ export function usePlaceDetail() {
   const latestMood = id ? getLatestMoodForPlace(id) : undefined;
 
   const [isEditingDescription, setIsEditingDescription] = useState(false);
-  const [description, setDescription] = useState(place?.description ?? "");
+  const [description, setDescription] = useState(place?.description ?? '');
   const [showAddNote, setShowAddNote] = useState(false);
-  const [noteText, setNoteText] = useState("");
+  const [noteText, setNoteText] = useState('');
   const [notePhotoUri, setNotePhotoUri] = useState<string | undefined>();
 
   function handleSaveDescription() {
@@ -44,31 +44,27 @@ export function usePlaceDetail() {
   }
 
   function handleDeletePlace() {
-    Alert.alert(
-      "Удалить место",
-      `Удалить "${place!.name}"?`,
-      [
-        { text: "Отмена", style: "cancel" },
-        {
-          text: "Удалить",
-          style: "destructive",
-          onPress: () => {
-            deletePlace(place!.id);
-            router.back();
-          },
+    Alert.alert('Удалить место', `Удалить "${place!.name}"?`, [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Удалить',
+        style: 'destructive',
+        onPress: () => {
+          deletePlace(place!.id);
+          router.back();
         },
-      ],
-    );
+      },
+    ]);
   }
 
   async function handlePickPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Нужно разрешение", "Разрешите доступ к галерее.");
+    if (status !== 'granted') {
+      Alert.alert('Нужно разрешение', 'Разрешите доступ к галерее.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ['images'],
       allowsEditing: true,
       quality: 0.8,
     });
@@ -79,7 +75,7 @@ export function usePlaceDetail() {
 
   function handleSaveNote() {
     if (!noteText.trim()) {
-      Alert.alert("Текст обязателен", "Введите текст заметки.");
+      Alert.alert('Текст обязателен', 'Введите текст заметки.');
       return;
     }
     addNote({
@@ -88,30 +84,30 @@ export function usePlaceDetail() {
       photoUri: notePhotoUri,
       companions: [],
     });
-    setNoteText("");
+    setNoteText('');
     setNotePhotoUri(undefined);
     setShowAddNote(false);
   }
 
   function handleDeleteNote(noteId: string) {
-    Alert.alert("Удалить заметку", "Удалить это воспоминание?", [
-      { text: "Отмена", style: "cancel" },
-      { text: "Удалить", style: "destructive", onPress: () => deleteNote(noteId) },
+    Alert.alert('Удалить заметку', 'Удалить это воспоминание?', [
+      { text: 'Отмена', style: 'cancel' },
+      { text: 'Удалить', style: 'destructive', onPress: () => deleteNote(noteId) },
     ]);
   }
 
   function handleCloseAddNote() {
     setShowAddNote(false);
-    setNoteText("");
+    setNoteText('');
     setNotePhotoUri(undefined);
   }
 
   function handleAddMemory() {
-    router.push({ pathname: "/create-memory", params: { placeId: place!.id } } as any);
+    router.push({ pathname: '/create-memory', params: { placeId: place!.id } } as any);
   }
 
   function handleCreateMeetingHere() {
-    router.push({ pathname: "/create-meeting", params: { placeId: place!.id } } as any);
+    router.push({ pathname: '/create-meeting', params: { placeId: place!.id } } as any);
   }
 
   function handleAddTag(tag: string) {

@@ -1,4 +1,4 @@
-export type { AuthData } from "./firebaseAuth";
+export type { AuthData } from './firebaseAuth';
 
 export {
   login,
@@ -9,4 +9,4 @@ export {
   onAuthStateChanged,
   getCurrentUser,
   mapFirebaseError,
-} from "./firebaseAuth";
+} from './firebaseAuth';

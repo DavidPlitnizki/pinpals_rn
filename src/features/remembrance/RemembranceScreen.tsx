@@ -1,13 +1,13 @@
-import React from "react";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Colors, Radii, Spacing, Typography } from "../../design-system/tokens";
-import { Meeting, Place } from "../../models/types";
-import { MeetingCard } from "./components/MeetingCard";
-import { PlaceRow } from "./components/PlaceRow";
-import { useRemembranceScreen } from "./hooks/useRemembranceScreen";
+import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
+import { Meeting, Place } from '../../models/types';
+import { MeetingCard } from './components/MeetingCard';
+import { PlaceRow } from './components/PlaceRow';
+import { useRemembranceScreen } from './hooks/useRemembranceScreen';
 
 export default function RemembranceScreen() {
   const {
@@ -22,30 +22,25 @@ export default function RemembranceScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <Text style={styles.title}>Remembrance</Text>
         </View>
 
         <View style={styles.tabs}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === "all" && styles.activeTab]}
-            onPress={() => setActiveTab("all")}
+            style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+            onPress={() => setActiveTab('all')}
           >
-            <Text style={[styles.tabText, activeTab === "all" && styles.activeTabText]}>
+            <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
               All ({places.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === "favorites" && styles.activeTab]}
-            onPress={() => setActiveTab("favorites")}
+            style={[styles.tab, activeTab === 'favorites' && styles.activeTab]}
+            onPress={() => setActiveTab('favorites')}
           >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === "favorites" && styles.activeTabText,
-              ]}
-            >
+            <Text style={[styles.tabText, activeTab === 'favorites' && styles.activeTabText]}>
               Favorites ({places.filter((p) => p.isFavorite).length})
             </Text>
           </TouchableOpacity>
@@ -55,26 +50,20 @@ export default function RemembranceScreen() {
           data={displayedPlaces}
           keyExtractor={(item) => item.id}
           renderItem={({ item }: { item: Place }) => (
-            <PlaceRow
-              place={item}
-              onPress={handlePlacePress}
-              onDelete={handleDeletePlace}
-            />
+            <PlaceRow place={item} onPress={handlePlacePress} onDelete={handleDeletePlace} />
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>
-                {activeTab === "favorites" ? "♥" : "📍"}
-              </Text>
+              <Text style={styles.emptyIcon}>{activeTab === 'favorites' ? '♥' : '📍'}</Text>
               <Text style={styles.emptyTitle}>
-                {activeTab === "favorites" ? "No favorites yet" : "No places yet"}
+                {activeTab === 'favorites' ? 'No favorites yet' : 'No places yet'}
               </Text>
               <Text style={styles.emptySubtitle}>
-                {activeTab === "favorites"
-                  ? "Mark places as favorites to see them here"
-                  : "Long press on the map to add your first place"}
+                {activeTab === 'favorites'
+                  ? 'Mark places as favorites to see them here'
+                  : 'Long press on the map to add your first place'}
               </Text>
             </View>
           }
@@ -103,7 +92,7 @@ const styles = StyleSheet.create({
   },
   title: { ...Typography.largeTitle, color: Colors.neutral[900] },
   tabs: {
-    flexDirection: "row",
+    flexDirection: 'row',
     paddingHorizontal: Spacing.s20,
     marginBottom: Spacing.s8,
     gap: Spacing.s8,
@@ -118,13 +107,13 @@ const styles = StyleSheet.create({
   tabText: {
     ...Typography.subheadline,
     color: Colors.neutral[600],
-    fontWeight: "600",
+    fontWeight: '600',
   },
   activeTabText: { color: Colors.white },
   listContent: { padding: Spacing.s16, gap: Spacing.s8 },
   emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: Spacing.s32,
     paddingTop: Spacing.s48,
   },
@@ -133,12 +122,12 @@ const styles = StyleSheet.create({
     ...Typography.title3,
     color: Colors.neutral[700],
     marginBottom: Spacing.s8,
-    textAlign: "center",
+    textAlign: 'center',
   },
   emptySubtitle: {
     ...Typography.body,
     color: Colors.neutral[400],
-    textAlign: "center",
+    textAlign: 'center',
   },
   meetingsSection: { marginTop: Spacing.s24 },
   sectionTitle: {

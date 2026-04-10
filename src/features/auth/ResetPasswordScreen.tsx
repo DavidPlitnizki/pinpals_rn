@@ -16,15 +16,8 @@ import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
 import { useResetPasswordScreen } from './hooks/useResetPasswordScreen';
 
 export default function ResetPasswordScreen() {
-  const {
-    email,
-    setEmail,
-    isLoading,
-    isSuccess,
-    error,
-    handleSendReset,
-    goToLogin,
-  } = useResetPasswordScreen();
+  const { email, setEmail, isLoading, isSuccess, error, handleSendReset, goToLogin } =
+    useResetPasswordScreen();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -73,7 +66,7 @@ function FormState({ email, setEmail, isLoading, error, onSend, onBack }: FormSt
 
       <Text style={styles.title}>Reset Password</Text>
       <Text style={styles.subtitle}>
-        Enter your email and we'll send you a link to reset your password.
+        Enter your email and we&apos;ll send you a link to reset your password.
       </Text>
 
       <View style={styles.formSection}>
@@ -115,18 +108,10 @@ function SuccessState({ email, onBack }: SuccessStateProps) {
         <Text style={styles.checkmark}>✓</Text>
       </View>
       <Text style={styles.successTitle}>Check your email</Text>
-      <Text style={styles.successSubtitle}>
-        We sent a reset link to
-      </Text>
+      <Text style={styles.successSubtitle}>We sent a reset link to</Text>
       <Text style={styles.successEmail}>{email}</Text>
       <View style={styles.successButton}>
-        <PinButton
-          title="Back to Login"
-          onPress={onBack}
-          variant="primary"
-          size="lg"
-          fullWidth
-        />
+        <PinButton title="Back to Login" onPress={onBack} variant="primary" size="lg" fullWidth />
       </View>
     </View>
   );

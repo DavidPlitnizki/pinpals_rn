@@ -1,12 +1,6 @@
-import React, { useState } from "react";
-import {
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { Colors, Radii, Spacing, Typography } from "../tokens";
+import React, { useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Colors, Radii, Spacing, Typography } from '../tokens';
 
 interface TagInputProps {
   tags: string[];
@@ -21,20 +15,20 @@ export function TagInput({
   onAdd,
   onRemove,
   suggestions = [],
-  placeholder = "Добавить тег...",
+  placeholder = 'Добавить тег...',
 }: TagInputProps) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState('');
 
   function handleSubmit() {
     const tag = text.trim().toLowerCase();
     if (tag && !tags.includes(tag)) {
       onAdd(tag);
-      setText("");
+      setText('');
     }
   }
 
   const filteredSuggestions = suggestions.filter(
-    (s) => !tags.includes(s) && s.includes(text.toLowerCase())
+    (s) => !tags.includes(s) && s.includes(text.toLowerCase()),
   );
 
   return (
@@ -72,7 +66,7 @@ export function TagInput({
               style={styles.suggestionChip}
               onPress={() => {
                 onAdd(s);
-                setText("");
+                setText('');
               }}
             >
               <Text style={styles.suggestionText}>#{s}</Text>
@@ -89,13 +83,13 @@ const styles = StyleSheet.create({
     gap: Spacing.s8,
   },
   chips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.s8,
   },
   chip: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Colors.accent.light,
     borderRadius: Radii.full,
     paddingHorizontal: Spacing.s12,
@@ -104,13 +98,13 @@ const styles = StyleSheet.create({
   },
   chipText: {
     ...Typography.caption,
-    fontWeight: "600",
+    fontWeight: '600',
     color: Colors.accent.primary,
   },
   chipRemove: {
     ...Typography.caption,
     color: Colors.accent.primary,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   input: {
     height: 44,
@@ -122,8 +116,8 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   suggestions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.s4,
   },
   suggestionChip: {
@@ -131,7 +125,7 @@ const styles = StyleSheet.create({
     borderRadius: Radii.full,
     paddingHorizontal: Spacing.s12,
     height: 28,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   suggestionText: {
     ...Typography.caption,

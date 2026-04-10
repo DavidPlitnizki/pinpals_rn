@@ -1,6 +1,6 @@
-import { Ionicons } from "@expo/vector-icons";
-import RNSlider from "@react-native-community/slider";
-import React, { useEffect, useRef } from "react";
+import { Ionicons } from '@expo/vector-icons';
+import RNSlider from '@react-native-community/slider';
+import React, { useEffect, useRef } from 'react';
 import {
   Animated,
   Dimensions,
@@ -13,21 +13,16 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { PinChip } from "../../../design-system/components/PinChip";
-import {
-  Colors,
-  Radii,
-  Spacing,
-  Typography,
-} from "../../../design-system/tokens";
-import { Place, PlaceCategory } from "../../../models/types";
-import { CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS } from "../constants";
-import { formatRadius, SpecialFilter } from "../hooks/useSearchSheet";
+import { PinChip } from '../../../design-system/components/PinChip';
+import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { Place, PlaceCategory } from '../../../models/types';
+import { CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS } from '../constants';
+import { formatRadius, SpecialFilter } from '../hooks/useSearchSheet';
 
-const SHEET_HEIGHT = Dimensions.get("window").height * 0.75;
+const SHEET_HEIGHT = Dimensions.get('window').height * 0.75;
 const ANIMATION_DURATION = 280;
 
 interface Props {
@@ -80,6 +75,7 @@ export function SearchSheet({
         }),
       ]).start();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   function handleClose() {
@@ -107,21 +103,16 @@ export function SearchSheet({
         }}
         activeOpacity={0.7}
       >
-        <View
-          style={[
-            styles.categoryDot,
-            { backgroundColor: CATEGORY_COLORS[item.category] },
-          ]}
-        />
+        <View style={[styles.categoryDot, { backgroundColor: CATEGORY_COLORS[item.category] }]} />
         <View style={styles.placeInfo}>
           <Text style={styles.placeName} numberOfLines={1}>
             {item.name}
           </Text>
           <Text style={styles.placeMeta}>
             {CATEGORY_LABELS[item.category]}
-            {"  "}
-            {"★".repeat(item.rating)}
-            {item.isFavorite ? "  ⭐" : ""}
+            {'  '}
+            {'★'.repeat(item.rating)}
+            {item.isFavorite ? '  ⭐' : ''}
           </Text>
         </View>
         <Text style={styles.chevron}>›</Text>
@@ -139,9 +130,7 @@ export function SearchSheet({
     >
       <View style={styles.overlay}>
         <TouchableWithoutFeedback onPress={handleClose}>
-          <Animated.View
-            style={[styles.backdrop, { opacity: backdropOpacity }]}
-          />
+          <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} />
         </TouchableWithoutFeedback>
 
         <Animated.View
@@ -180,14 +169,14 @@ export function SearchSheet({
             <PinChip
               label="Mine"
               color={Colors.brand.primary}
-              selected={specialFilters.has("mine")}
-              onPress={() => onToggleSpecial("mine")}
+              selected={specialFilters.has('mine')}
+              onPress={() => onToggleSpecial('mine')}
             />
             <PinChip
               label="⭐ Want to visit"
               color={Colors.warning}
-              selected={specialFilters.has("favorites")}
-              onPress={() => onToggleSpecial("favorites")}
+              selected={specialFilters.has('favorites')}
+              onPress={() => onToggleSpecial('favorites')}
             />
             {CATEGORIES.map((cat) => (
               <PinChip
@@ -202,9 +191,7 @@ export function SearchSheet({
 
           {/* Radius slider */}
           <View style={styles.sliderRow}>
-            <Text style={styles.sliderLabel}>
-              Radius: {formatRadius(radiusM)}
-            </Text>
+            <Text style={styles.sliderLabel}>Radius: {formatRadius(radiusM)}</Text>
             <RNSlider
               style={styles.sliderHost}
               value={radiusM}
@@ -225,10 +212,7 @@ export function SearchSheet({
             renderItem={renderPlace}
             ItemSeparatorComponent={Separator}
             ListEmptyComponent={EmptyState}
-            contentContainerStyle={[
-              styles.list,
-              filteredPlaces.length === 0 && styles.listEmpty,
-            ]}
+            contentContainerStyle={[styles.list, filteredPlaces.length === 0 && styles.listEmpty]}
             style={styles.listContainer}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -254,21 +238,21 @@ function EmptyState() {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: "flex-end",
+    justifyContent: 'flex-end',
   },
   backdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   sheet: {
     height: SHEET_HEIGHT,
     backgroundColor: Colors.background,
     borderTopLeftRadius: Radii.lg,
     borderTopRightRadius: Radii.lg,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   handleRow: {
-    alignItems: "center",
+    alignItems: 'center',
     paddingTop: Spacing.s12,
     paddingBottom: Spacing.s8,
   },
@@ -279,8 +263,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral[200],
   },
   inputWrap: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: Spacing.s16,
     marginBottom: Spacing.s12,
     backgroundColor: Colors.neutral[50],
@@ -325,8 +309,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.s16,
   },
   placeRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: Spacing.s12,
     gap: Spacing.s12,
   },
@@ -342,7 +326,7 @@ const styles = StyleSheet.create({
   placeName: {
     ...Typography.callout,
     color: Colors.neutral[900],
-    fontWeight: "600",
+    fontWeight: '600',
     marginBottom: 2,
   },
   placeMeta: {
@@ -366,8 +350,8 @@ const styles = StyleSheet.create({
   },
   empty: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyText: {
     ...Typography.subheadline,

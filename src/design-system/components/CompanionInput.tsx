@@ -1,12 +1,6 @@
-import React, { useState } from "react";
-import {
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { Colors, Radii, Spacing, Typography } from "../tokens";
+import React, { useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Colors, Radii, Spacing, Typography } from '../tokens';
 
 interface CompanionInputProps {
   companions: string[];
@@ -19,15 +13,15 @@ export function CompanionInput({
   companions,
   onAdd,
   onRemove,
-  placeholder = "Имя...",
+  placeholder = 'Имя...',
 }: CompanionInputProps) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState('');
 
   function handleSubmit() {
     const name = text.trim();
     if (name && !companions.includes(name)) {
       onAdd(name);
-      setText("");
+      setText('');
     }
   }
 
@@ -71,13 +65,13 @@ const styles = StyleSheet.create({
     gap: Spacing.s8,
   },
   chips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.s8,
   },
   chip: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Colors.brand.light,
     borderRadius: Radii.full,
     paddingHorizontal: Spacing.s12,
@@ -86,17 +80,17 @@ const styles = StyleSheet.create({
   },
   chipText: {
     ...Typography.caption,
-    fontWeight: "600",
+    fontWeight: '600',
     color: Colors.brand.dark,
   },
   chipRemove: {
     ...Typography.caption,
     color: Colors.brand.dark,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.s8,
   },
   input: {
@@ -114,12 +108,12 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: Radii.md,
     backgroundColor: Colors.brand.primary,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addBtnText: {
     color: Colors.white,
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: '700',
   },
 });

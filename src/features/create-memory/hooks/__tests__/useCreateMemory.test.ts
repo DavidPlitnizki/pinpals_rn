@@ -29,6 +29,7 @@ jest.mock('../../../../store/usePlacesStore', () => ({
   }),
 }));
 
+// eslint-disable-next-line import/first
 import { useCreateMemory } from '../useCreateMemory';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -183,7 +184,7 @@ describe('handleSave', () => {
     act(() => result.current.setText('Было здорово!'));
     act(() => result.current.handleSave());
     expect(mockAddNote).toHaveBeenCalledWith(
-      expect.objectContaining({ placeId: 'place-1', text: 'Было здорово!' })
+      expect.objectContaining({ placeId: 'place-1', text: 'Было здорово!' }),
     );
   });
 
@@ -191,9 +192,7 @@ describe('handleSave', () => {
     const { result } = renderCreateMemory();
     act(() => result.current.setText('  пробелы  '));
     act(() => result.current.handleSave());
-    expect(mockAddNote).toHaveBeenCalledWith(
-      expect.objectContaining({ text: 'пробелы' })
-    );
+    expect(mockAddNote).toHaveBeenCalledWith(expect.objectContaining({ text: 'пробелы' }));
   });
 
   it('calls router.back() after saving', () => {
@@ -206,17 +205,13 @@ describe('handleSave', () => {
     const { result } = renderCreateMemory();
     act(() => result.current.addCompanion('Петр'));
     act(() => result.current.handleSave());
-    expect(mockAddNote).toHaveBeenCalledWith(
-      expect.objectContaining({ companions: ['Петр'] })
-    );
+    expect(mockAddNote).toHaveBeenCalledWith(expect.objectContaining({ companions: ['Петр'] }));
   });
 
   it('includes selected mood in saved note', () => {
     const { result } = renderCreateMemory();
     act(() => result.current.setMood('nostalgic'));
     act(() => result.current.handleSave());
-    expect(mockAddNote).toHaveBeenCalledWith(
-      expect.objectContaining({ mood: 'nostalgic' })
-    );
+    expect(mockAddNote).toHaveBeenCalledWith(expect.objectContaining({ mood: 'nostalgic' }));
   });
 });

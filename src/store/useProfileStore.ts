@@ -25,6 +25,6 @@ export const useProfileStore = create<ProfileState>()(
     {
       name: 'pinpals-profile',
       storage: createJSONStorage(() => AsyncStorage),
-    }
-  )
+    },
+  ),
 );

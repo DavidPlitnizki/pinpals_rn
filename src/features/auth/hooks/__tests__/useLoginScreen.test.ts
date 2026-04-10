@@ -14,6 +14,7 @@ jest.mock('../../../../contexts/AuthContext', () => ({
   useAuth: () => ({ login: mockLogin, skipAuth: mockSkipAuth }),
 }));
 
+// eslint-disable-next-line import/first
 import { useLoginScreen } from '../useLoginScreen';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -73,17 +74,26 @@ describe('handleLogin', () => {
 
   it('sets isLoading to true while logging in then false after', async () => {
     let resolve: () => void;
-    mockLogin.mockReturnValue(new Promise<void>((r) => { resolve = r; }));
+    mockLogin.mockReturnValue(
+      new Promise<void>((r) => {
+        resolve = r;
+      }),
+    );
 
     const { result } = renderLogin();
     act(() => result.current.setEmail('user@test.com'));
     act(() => result.current.setPassword('password123'));
 
     let loginPromise: Promise<void>;
-    act(() => { loginPromise = result.current.handleLogin(); });
+    act(() => {
+      loginPromise = result.current.handleLogin();
+    });
     expect(result.current.isLoading).toBe(true);
 
-    await act(async () => { resolve!(); await loginPromise; });
+    await act(async () => {
+      resolve!();
+      await loginPromise;
+    });
     expect(result.current.isLoading).toBe(false);
   });
 

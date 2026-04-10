@@ -9,7 +9,7 @@ import {
   signInAnonymously,
   signOut,
   FirebaseAuthTypes,
-} from "@react-native-firebase/auth";
+} from '@react-native-firebase/auth';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,52 +32,37 @@ function userToAuthData(user: FirebaseAuthTypes.User): AuthData {
 }
 
 const ERROR_MAP: Record<string, string> = {
-  "auth/email-already-in-use": "An account with this email already exists.",
-  "auth/invalid-email": "Invalid email address.",
-  "auth/wrong-password": "Incorrect password.",
-  "auth/user-not-found": "No account found with this email.",
-  "auth/too-many-requests": "Too many attempts. Try again later.",
-  "auth/network-request-failed": "Network error. Check your connection.",
-  "auth/invalid-credential": "Invalid credentials. Please try again.",
-  "auth/weak-password": "Password is too weak. Use at least 6 characters.",
-  "auth/user-disabled": "This account has been disabled.",
+  'auth/email-already-in-use': 'An account with this email already exists.',
+  'auth/invalid-email': 'Invalid email address.',
+  'auth/wrong-password': 'Incorrect password.',
+  'auth/user-not-found': 'No account found with this email.',
+  'auth/too-many-requests': 'Too many attempts. Try again later.',
+  'auth/network-request-failed': 'Network error. Check your connection.',
+  'auth/invalid-credential': 'Invalid credentials. Please try again.',
+  'auth/weak-password': 'Password is too weak. Use at least 6 characters.',
+  'auth/user-disabled': 'This account has been disabled.',
 };
 
 export function mapFirebaseError(error: any): string {
   const code = error?.code as string | undefined;
   if (code && ERROR_MAP[code]) return ERROR_MAP[code];
-  return error?.message ?? "Something went wrong. Please try again.";
+  return error?.message ?? 'Something went wrong. Please try again.';
 }
 
 // ── Email / Password ─────────────────────────────────────────────────────────
 
-export async function login(
-  email: string,
-  password: string
-): Promise<AuthData> {
+export async function login(email: string, password: string): Promise<AuthData> {
   try {
-    const credential = await signInWithEmailAndPassword(
-      getAuth(),
-      email,
-      password
-    );
+    const credential = await signInWithEmailAndPassword(getAuth(), email, password);
     return userToAuthData(credential.user);
   } catch (error) {
     throw new Error(mapFirebaseError(error));
   }
 }
 
-export async function signUp(
-  email: string,
-  password: string,
-  name: string
-): Promise<AuthData> {
+export async function signUp(email: string, password: string, name: string): Promise<AuthData> {
   try {
-    const credential = await createUserWithEmailAndPassword(
-      getAuth(),
-      email,
-      password
-    );
+    const credential = await createUserWithEmailAndPassword(getAuth(), email, password);
     await updateProfile(credential.user, { displayName: name });
     await reload(credential.user);
     return userToAuthData(credential.user);
@@ -108,7 +93,7 @@ export async function logout(): Promise<void> {
 // ── Auth State ───────────────────────────────────────────────────────────────
 
 export function onAuthStateChanged(
-  callback: (user: FirebaseAuthTypes.User | null) => void
+  callback: (user: FirebaseAuthTypes.User | null) => void,
 ): () => void {
   return _onAuthStateChanged(getAuth(), callback);
 }

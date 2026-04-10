@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TextInputProps,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, TextInput, StyleSheet, TextInputProps, TouchableOpacity } from 'react-native';
 import { Colors, Spacing, Radii, Typography } from '../tokens';
 
 interface PinTextFieldProps extends TextInputProps {
@@ -40,8 +33,8 @@ export function PinTextField({
   const borderColor = errorMessage
     ? Colors.error
     : focused
-    ? Colors.brand.primary
-    : Colors.neutral[200];
+      ? Colors.brand.primary
+      : Colors.neutral[200];
 
   return (
     <View style={styles.container}>
@@ -86,9 +79,7 @@ export function PinTextField({
         )}
       </View>
 
-      {errorMessage ? (
-        <Text style={styles.errorText}>{errorMessage}</Text>
-      ) : null}
+      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
     </View>
   );
 }

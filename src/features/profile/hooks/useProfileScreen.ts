@@ -1,11 +1,11 @@
-import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
-import { Alert } from "react-native";
+import * as ImagePicker from 'expo-image-picker';
+import { useState } from 'react';
+import { Alert } from 'react-native';
 
-import { useAuth } from "../../../contexts/AuthContext";
-import { useMeetingsStore } from "../../../store/useMeetingsStore";
-import { usePlacesStore } from "../../../store/usePlacesStore";
-import { useProfileStore } from "../../../store/useProfileStore";
+import { useAuth } from '../../../contexts/AuthContext';
+import { useMeetingsStore } from '../../../store/useMeetingsStore';
+import { usePlacesStore } from '../../../store/usePlacesStore';
+import { useProfileStore } from '../../../store/useProfileStore';
 
 export function useProfileScreen() {
   const { profile, updateProfile } = useProfileStore();
@@ -14,12 +14,12 @@ export function useProfileScreen() {
   const { logout, isGuest } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile.name);
-  const [bio, setBio] = useState(profile.bio ?? "");
+  const [bio, setBio] = useState(profile.bio ?? '');
 
   async function handlePickAvatar() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission needed", "Please allow access to your photo library.");
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow access to your photo library.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -35,7 +35,7 @@ export function useProfileScreen() {
 
   function handleSave() {
     if (!name.trim()) {
-      Alert.alert("Name required", "Please enter your name.");
+      Alert.alert('Name required', 'Please enter your name.');
       return;
     }
     updateProfile({ name: name.trim(), bio: bio.trim() || undefined });
@@ -44,7 +44,7 @@ export function useProfileScreen() {
 
   function handleCancelEdit() {
     setName(profile.name);
-    setBio(profile.bio ?? "");
+    setBio(profile.bio ?? '');
     setIsEditing(false);
   }
 
@@ -54,17 +54,19 @@ export function useProfileScreen() {
 
   function handleDeleteAccount() {
     Alert.alert(
-      "Delete Account",
-      "Are you sure you want to delete your account? This action cannot be undone.",
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone.',
       [
-        { text: "Cancel", style: "cancel" },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: "Delete Account",
-          style: "destructive",
-          onPress: async () => { await logout(); },
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+          },
         },
       ],
-      { cancelable: true }
+      { cancelable: true },
     );
   }
 

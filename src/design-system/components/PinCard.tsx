@@ -12,11 +12,7 @@ export function PinCard({ children, style, onPress }: PinCardProps) {
   if (onPress) {
     return (
       <Pressable
-        style={({ pressed }) => [
-          styles.card,
-          style,
-          pressed && styles.pressed,
-        ]}
+        style={({ pressed }) => [styles.card, style, pressed && styles.pressed]}
         onPress={onPress}
       >
         {children}
@@ -24,11 +20,7 @@ export function PinCard({ children, style, onPress }: PinCardProps) {
     );
   }
 
-  return (
-    <View style={[styles.card, style]}>
-      {children}
-    </View>
-  );
+  return <View style={[styles.card, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({

@@ -10,7 +10,9 @@ function generateId(): string {
 interface MeetingsState {
   meetings: Meeting[];
 
-  addMeeting: (meeting: Omit<Meeting, 'id' | 'createdAt' | 'status' | 'proposedPlaceIds' | 'participants'>) => void;
+  addMeeting: (
+    meeting: Omit<Meeting, 'id' | 'createdAt' | 'status' | 'proposedPlaceIds' | 'participants'>,
+  ) => void;
   updateMeeting: (id: string, updates: Partial<Meeting>) => void;
   deleteMeeting: (id: string) => void;
   updateMeetingStatus: (id: string, status: MeetingStatus) => void;
@@ -66,6 +68,6 @@ export const useMeetingsStore = create<MeetingsState>()(
         }
         return state;
       },
-    }
-  )
+    },
+  ),
 );
