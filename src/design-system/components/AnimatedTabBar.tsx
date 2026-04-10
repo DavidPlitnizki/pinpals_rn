@@ -1,14 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useEffect, useRef } from 'react';
-import {
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../tokens';
 
@@ -66,7 +59,11 @@ export default function AnimatedTabBar({ state, descriptors, navigation }: Botto
           const iconColor = isFocused ? Colors.brand.primary : Colors.neutral[400];
 
           function onPress() {
-            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
             if (!isFocused && !event.defaultPrevented) navigation.navigate(route.name);
           }
 
