@@ -15,8 +15,18 @@ export interface PlaceStats {
 }
 
 const MONTH_NAMES = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+  'Январь',
+  'Февраль',
+  'Март',
+  'Апрель',
+  'Май',
+  'Июнь',
+  'Июль',
+  'Август',
+  'Сентябрь',
+  'Октябрь',
+  'Ноябрь',
+  'Декабрь',
 ];
 
 function computeStats(places: Place[]): PlaceStats {
@@ -27,8 +37,9 @@ function computeStats(places: Place[]): PlaceStats {
   for (const p of places) {
     catCount[p.category] = (catCount[p.category] ?? 0) + 1;
   }
-  const topCat = (Object.entries(catCount) as [PlaceCategory, number][])
-    .sort((a, b) => b[1] - a[1])[0];
+  const topCat = (Object.entries(catCount) as [PlaceCategory, number][]).sort(
+    (a, b) => b[1] - a[1],
+  )[0];
   const favCategory = topCat
     ? { category: topCat[0], label: CATEGORY_LABELS[topCat[0]], count: topCat[1] }
     : null;
@@ -111,9 +122,7 @@ function pickDayMemory(places: Place[], notes: PlaceNote[]): DayMemory | null {
   const pool = withNotes.length > 0 ? withNotes : places;
 
   // Deterministic by day-of-year so it stays the same all day
-  const dayOfYear = Math.floor(
-    (today.getTime() - new Date(todayYear, 0, 0).getTime()) / 86400000,
-  );
+  const dayOfYear = Math.floor((today.getTime() - new Date(todayYear, 0, 0).getTime()) / 86400000);
   const picked = pool[dayOfYear % pool.length];
   const pickedDate = new Date(picked.lastVisited ?? picked.createdAt);
   const diffMs = today.getTime() - pickedDate.getTime();

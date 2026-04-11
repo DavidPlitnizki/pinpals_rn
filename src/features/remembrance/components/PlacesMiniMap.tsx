@@ -69,10 +69,7 @@ export function PlacesMiniMap({ places }: Props) {
           ))}
           {selectedPlace && (
             <MarkerView
-              coordinate={[
-                selectedPlace.coordinates.longitude,
-                selectedPlace.coordinates.latitude,
-              ]}
+              coordinate={[selectedPlace.coordinates.longitude, selectedPlace.coordinates.latitude]}
               anchor={{ x: 0.5, y: 1.3 }}
             >
               <TouchableOpacity

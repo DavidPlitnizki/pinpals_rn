@@ -18,36 +18,16 @@ export function StatsWidget({ stats }: Props) {
 
   return (
     <View style={styles.container}>
-      <StatCell
-        value={String(stats.total)}
-        label="мест"
-        accent={Colors.brand.primary}
-      />
+      <StatCell value={String(stats.total)} label="мест" accent={Colors.brand.primary} />
       <View style={styles.divider} />
-      <StatCell
-        value={stats.favCategory?.label ?? '—'}
-        label="любимая"
-        accent={catColor}
-      />
+      <StatCell value={stats.favCategory?.label ?? '—'} label="любимая" accent={catColor} />
       <View style={styles.divider} />
-      <StatCell
-        value={stats.activeMonth ?? '—'}
-        label="активный"
-        accent={Colors.accent.primary}
-      />
+      <StatCell value={stats.activeMonth ?? '—'} label="активный" accent={Colors.accent.primary} />
     </View>
   );
 }
 
-function StatCell({
-  value,
-  label,
-  accent,
-}: {
-  value: string;
-  label: string;
-  accent: string;
-}) {
+function StatCell({ value, label, accent }: { value: string; label: string; accent: string }) {
   return (
     <View style={styles.cell}>
       <Text style={[styles.value, { color: accent }]} numberOfLines={1} adjustsFontSizeToFit>

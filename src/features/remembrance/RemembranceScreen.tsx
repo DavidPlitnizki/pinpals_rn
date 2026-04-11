@@ -62,7 +62,11 @@ export default function RemembranceScreen() {
               onPress={() => setFiltersOpen(true)}
               hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
             >
-              <Ionicons name="options" size={18} color={activeFilterCount > 0 ? Colors.brand.primary : Colors.neutral[400]} />
+              <Ionicons
+                name="options"
+                size={18}
+                color={activeFilterCount > 0 ? Colors.brand.primary : Colors.neutral[400]}
+              />
               {activeFilterCount > 0 && (
                 <View style={styles.filterBadge}>
                   <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
@@ -99,7 +103,10 @@ export default function RemembranceScreen() {
               {' • '}
               {displayedPlaces.length} из {places.length} мест
             </Text>
-            <TouchableOpacity onPress={clearFilters} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+            <TouchableOpacity
+              onPress={clearFilters}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
               <Text style={styles.clearFiltersText}>✕ Сбросить</Text>
             </TouchableOpacity>
           </View>
@@ -141,11 +148,18 @@ export default function RemembranceScreen() {
             data={displayedPlaces}
             keyExtractor={(item) => item.id}
             renderItem={({ item }: { item: Place }) => (
-              <PlaceRow place={item} onPress={handlePlacePress} onDelete={handleDeletePlace} allTags={allTags} />
+              <PlaceRow
+                place={item}
+                onPress={handlePlacePress}
+                onDelete={handleDeletePlace}
+                allTags={allTags}
+              />
             )}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={<EmptyState activeTab={activeTab} hasFilters={activeFilterCount > 0} />}
+            ListEmptyComponent={
+              <EmptyState activeTab={activeTab} hasFilters={activeFilterCount > 0} />
+            }
             ListFooterComponent={
               upcomingMeetings.length > 0 ? (
                 <View style={styles.meetingsSection}>
@@ -171,7 +185,9 @@ export default function RemembranceScreen() {
             columnWrapperStyle={styles.gridRow}
             contentContainerStyle={styles.gridContent}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={<EmptyState activeTab={activeTab} hasFilters={activeFilterCount > 0} />}
+            ListEmptyComponent={
+              <EmptyState activeTab={activeTab} hasFilters={activeFilterCount > 0} />
+            }
           />
         )}
 
