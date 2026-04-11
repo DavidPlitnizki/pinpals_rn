@@ -5,5 +5,8 @@ module.exports = defineConfig([
   ...expoConfig,
   {
     ignores: ['node_modules/', '.expo/', 'android/', 'ios/', 'build/'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'warn',
+    },
   },
 ]);
