@@ -1,4 +1,8 @@
 {
+  "editor.showUnused": true,
+  "typescript.showUnused": true,
+  "javascript.showUnused": true,
+
   "editor.codeActionsOnSave": {
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",
