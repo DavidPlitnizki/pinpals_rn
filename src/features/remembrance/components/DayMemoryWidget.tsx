@@ -2,8 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { CATEGORY_COLORS, CATEGORY_LABELS } from '../../../shared/constants';
 import { MOOD_CONFIG } from '../../../models/types';
+import { CATEGORY_COLORS, CATEGORY_LABELS } from '../../../shared/constants';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { DayMemory } from '../hooks/useRemembranceScreen';
 
@@ -64,7 +64,7 @@ export function DayMemoryWidget({ memory, onPress }: Props) {
         </View>
         {note?.text ? (
           <Text style={styles.noteText} numberOfLines={2}>
-            "{note.text}"
+            {note.text}
           </Text>
         ) : null}
       </View>
@@ -74,9 +74,7 @@ export function DayMemoryWidget({ memory, onPress }: Props) {
         <Image source={{ uri: photoUri }} style={styles.photo} />
       ) : (
         <View style={[styles.photoPlaceholder, { backgroundColor: accentColor + '33' }]}>
-          <Text style={styles.photoPlaceholderEmoji}>
-            {mood ? MOOD_CONFIG[mood].emoji : '📍'}
-          </Text>
+          <Text style={styles.photoPlaceholderEmoji}>{mood ? MOOD_CONFIG[mood].emoji : '📍'}</Text>
         </View>
       )}
     </TouchableOpacity>

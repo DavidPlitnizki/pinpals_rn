@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
@@ -51,7 +44,12 @@ export function FiltersSheet({
   const moodsToShow = MEMORY_MOODS.filter((m) => allMoods.includes(m));
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         {/* Header */}
         <View style={styles.header}>
@@ -130,9 +128,7 @@ export function FiltersSheet({
                       style={[styles.chip, active && styles.chipActive]}
                       onPress={() => onToggleTag(tag)}
                     >
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                        #{tag}
-                      </Text>
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>#{tag}</Text>
                     </TouchableOpacity>
                   );
                 })}

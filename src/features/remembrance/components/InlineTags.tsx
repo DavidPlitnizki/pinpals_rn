@@ -1,12 +1,5 @@
 import React, { useRef, useState } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 

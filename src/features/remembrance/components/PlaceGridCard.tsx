@@ -37,9 +37,7 @@ export function PlaceGridCard({ place, onPress, allTags = [] }: Props) {
           </View>
           {mood && <Text style={styles.moodEmoji}>{MOOD_CONFIG[mood].emoji}</Text>}
         </View>
-        {place.visitCount > 0 && (
-          <Text style={styles.visits}>{place.visitCount}× визит</Text>
-        )}
+        {place.visitCount > 0 && <Text style={styles.visits}>{place.visitCount}× визит</Text>}
 
         {/* Inline tags — stop propagation so chip taps don't open detail */}
         <TouchableOpacity activeOpacity={1} onPress={() => {}}>
