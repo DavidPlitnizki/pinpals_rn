@@ -8,14 +8,19 @@ import { PinRatingView } from '../../../design-system/components/PinRatingView';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { Place } from '../../../models/types';
 import { CATEGORY_COLORS, CATEGORY_LABELS } from '../../../shared/constants';
+import { usePlacesStore } from '../../../store/usePlacesStore';
+import { InlineTags } from './InlineTags';
 
 interface Props {
   place: Place;
   onPress: (id: string) => void;
   onDelete: (id: string, name: string) => void;
+  allTags?: string[];
 }
 
-export function PlaceRow({ place, onPress, onDelete }: Props) {
+export function PlaceRow({ place, onPress, onDelete, allTags = [] }: Props) {
+  const { addTagToPlace, removeTagFromPlace } = usePlacesStore();
+
   return (
     <Swipeable
       renderRightActions={() => (
@@ -50,6 +55,16 @@ export function PlaceRow({ place, onPress, onDelete }: Props) {
             </View>
             <Text style={styles.chevron}>›</Text>
           </View>
+
+          {/* Inline tags — stop propagation so tapping chips doesn't open detail */}
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <InlineTags
+              tags={place.tags ?? []}
+              allTags={allTags}
+              onAdd={(tag) => addTagToPlace(place.id, tag)}
+              onRemove={(tag) => removeTagFromPlace(place.id, tag)}
+            />
+          </TouchableOpacity>
         </PinCard>
       </TouchableOpacity>
     </Swipeable>
@@ -58,7 +73,7 @@ export function PlaceRow({ place, onPress, onDelete }: Props) {
 
 const styles = StyleSheet.create({
   card: { marginBottom: 0 },
-  row: { flexDirection: 'row', alignItems: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.s8 },
   info: { flex: 1 },
   titleRow: {
     flexDirection: 'row',
