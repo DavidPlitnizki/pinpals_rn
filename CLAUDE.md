@@ -1,89 +1,113 @@
-# Pinpals RN
+# CLAUDE.md
 
-## Overview
-Pinpals — React Native (Expo) приложение для отметки мест на карте, планирования встреч, сохранения заметок и шаринга локации с друзьями.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+```bash
+# Start dev server (requires physical device or simulator with dev client)
+npx expo start
+
+# Run on iOS simulator
+npx expo run:ios
+
+# TypeScript check
+npm run typecheck
+
+# Lint (zero warnings allowed)
+npm run lint
+
+# Tests
+npm test
+npm run test:watch
+
+# Single test file
+npx jest src/features/auth/hooks/__tests__/useLoginScreen.test.ts
+
+# Format
+npm run format:fix
+```
 
 ## Tech Stack
-- **React Native** 0.83 + **Expo** 55 (canary)
-- **Expo Router** — file-based routing
-- **Zustand** + AsyncStorage — стейт и персистентность
-- **react-native-maps** — карты
-- **Architecture**: Feature-sliced, screen + hook per feature
+
+- **React Native** 0.83 + **Expo** 55 (canary, requires dev client — `expo-dev-client`)
+- **Expo Router** — file-based routing under `src/app/`
+- **Mapbox** (`@rnmapbox/maps`) — requires `EXPO_PUBLIC_MAPBOX_TOKEN` env var set in `.env.local`
+- **Firebase** (`@react-native-firebase/auth`) — real email/password + anonymous auth
+- **Zustand** + AsyncStorage — three separate persisted stores
+- **react-native-reanimated** + **react-native-gesture-handler** — animations and gestures
 
 ## Project Structure
+
 ```
 src/
 ├── app/                          # Expo Router routes
-│   ├── _layout.tsx               # Root layout: AuthProvider + AuthGate + Stack
-│   ├── index.tsx                 # Entry — AuthGate handles redirect
-│   ├── (auth)/                   # Auth group (unauthenticated)
-│   │   ├── _layout.tsx
-│   │   ├── login.tsx
-│   │   ├── sign-up.tsx
-│   │   └── reset-password.tsx
-│   ├── (tabs)/                   # Main app tabs (authenticated / guest)
-│   │   ├── map.tsx
-│   │   ├── explore.tsx
-│   │   ├── my-places.tsx
-│   │   └── profile.tsx
+│   ├── _layout.tsx               # Root: GestureHandlerRootView > AuthProvider > AuthGate > Stack
+│   ├── (auth)/                   # Unauthenticated group
+│   ├── (tabs)/                   # map, remembrance, profile
 │   ├── place/[id].tsx
-│   └── create-meeting.tsx        # Modal
+│   ├── create-meeting.tsx        # Modal (presentation: 'modal')
+│   └── create-memory.tsx         # Modal (headerShown: false)
 ├── features/
-│   ├── auth/                     # Login, SignUp, ResetPassword
-│   │   ├── LoginScreen.tsx
-│   │   ├── SignUpScreen.tsx
-│   │   ├── ResetPasswordScreen.tsx
-│   │   ├── hooks/
-│   │   └── components/           # AuthDivider, SocialButtons
-│   ├── map/
-│   ├── explore/
-│   ├── my-places/
-│   ├── place-detail/
-│   ├── create-meeting/
-│   └── profile/
+│   ├── auth/                     # LoginScreen, SignUpScreen, ResetPasswordScreen
+│   ├── map/                      # MapScreen + AddPlaceModal, SearchSheet, FriendsSheet
+│   ├── place-detail/             # PlaceDetailScreen + AddNoteModal
+│   ├── remembrance/              # RemembranceScreen — timeline of memories/meetings
+│   ├── create-memory/            # CreateMemoryScreen — add note/photos/mood to a place
+│   ├── create-meeting/           # CreateMeetingScreen
+│   └── profile/                  # ProfileScreen
 ├── design-system/
 │   ├── tokens.ts                 # Colors, Spacing, Radii, Typography
-│   └── components/               # PinButton, PinCard, PinChip, PinTextField, PinRatingView
+│   └── components/               # PinButton, PinCard, PinChip, PinTextField, PinRatingView,
+│                                 # AnimatedTabBar, MemoryCard, MoodPicker, CompanionInput, TagInput
 ├── contexts/
-│   └── AuthContext.tsx           # isAuth, isGuest, isLoading, login/signUp/logout/skipAuth
+│   └── AuthContext.tsx           # isAuth, isGuest, isLoading, authData, login/signUp/logout/skipAuth
 ├── services/
-│   └── authService.ts            # Phase 1 stub — AsyncStorage only
+│   ├── authService.ts            # Re-exports from firebaseAuth.ts (thin adapter)
+│   └── firebaseAuth.ts           # Firebase Auth: login, signUp, sendPasswordReset, loginAnonymously, logout, onAuthStateChanged
 ├── store/
-│   └── useAppStore.ts            # Zustand: places, notes, meetings, profile
-└── models/
-    └── types.ts                  # Place, PlaceNote, Meeting, UserProfile, PlaceCategory
+│   ├── usePlacesStore.ts         # Places + PlaceNotes, persisted as 'pinpals-places' (v3)
+│   ├── useMeetingsStore.ts       # Meetings, persisted as 'pinpals-meetings'
+│   └── useProfileStore.ts        # UserProfile, persisted as 'pinpals-profile'
+├── models/
+│   └── types.ts                  # Place, PlaceNote, Meeting, UserProfile, PlaceCategory, MemoryMood
+├── hooks/
+│   └── useDebouncedValue.ts
+└── shared/
+    └── constants.ts              # CATEGORY_COLORS, CATEGORIES, CATEGORY_LABELS
 ```
 
-## Design Tokens (`src/design-system/tokens.ts`)
-- **Brand**: #4A7C59 (primary), #2C5C3F (dark), #D6EDE1 (light)
-- **Accent**: #E8834A (primary), #FDEBD0 (light)
-- **Neutral**: 50 (#F0F5F2) → 900 (#1C2B22)
-- **Spacing**: s4, s8, s12, s16, s20, s24, s32, s48
-- **Radii**: sm=8, md=12, lg=16, full=9999
-- **Typography**: largeTitle (34/700) → caption (12/400)
-- **error**: #E53935
-
 ## Architecture Conventions
-- Each feature = folder with `XxxScreen.tsx` + `hooks/useXxxScreen.ts`
-- Hooks own all logic; screens are pure render
-- Design tokens via `Colors.*`, `Spacing.*`, `Radii.*`, `Typography.*`
+
+- Each feature = `XxxScreen.tsx` + `hooks/useXxxScreen.ts`; hooks own all logic, screens are pure render
+- Design tokens via `Colors.*`, `Spacing.*`, `Radii.*`, `Typography.*` from `src/design-system/tokens.ts`
 - `StyleSheet.create()` in every screen/component
-- `SafeAreaView edges={['top']}` (or `['top','bottom']` for auth/modal screens)
+- `SafeAreaView edges={['top']}` for tabs; `edges={['top','bottom']}` for auth/modal screens
 - `KeyboardAvoidingView + ScrollView` for forms
 
 ## Auth Flow
-- **AuthGate** in `_layout.tsx`: unauthenticated + non-guest → `/(auth)/login`; authenticated or guest + in auth group → `/(tabs)/map`
-- **Skip** sets `pinpals_guest` in AsyncStorage, treated same as auth for routing
-- Social login (Google/Apple) — mock, shows `Alert` in Phase 1
-- `authService.ts` — no real backend; `login()`/`signUp()` just persist to AsyncStorage
+
+**AuthGate** (`src/app/_layout.tsx`): subscribes to Firebase `onAuthStateChanged` via `AuthContext`. 
+- Anonymous Firebase sign-in = guest mode (`isGuest: true`, `isAuth: false`)
+- `skipAuth()` calls `loginAnonymously()` — Firebase anonymous, not AsyncStorage
+- Unauthenticated & non-guest → `/(auth)/login`; authenticated or guest in auth group → `/(tabs)/map`
+
+## Key Data Model Notes
+
+- `Place.rating` is legacy (1–5 int); mood-based coloring via `PlaceNote.colorTag` and `PlaceNote.mood` (`MemoryMood`)
+- `PlaceNote.companions` is `string[]` of names (Phase 1; Phase 2 will link to real users)
+- `usePlacesStore` version 3 — has migration logic; bump version + add migration when changing schema
+- `MOOD_CONFIG` in `types.ts` maps each `MemoryMood` to emoji, color, label
+
+## Environment
+
+Requires `.env.local` (gitignored):
+```
+EXPO_PUBLIC_MAPBOX_TOKEN=pk.eyJ1...
+```
+Firebase config is in `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) — committed to the repo.
 
 ## Development Phases
-- **Phase 1** (current): Соло-фичи — карта, explore, my places, place detail, meetings, profile, mock auth
-- **Phase 2**: Социальные фичи — чат, шаринг локации, друзья, реальный backend auth
 
-## Run
-```bash
-npx expo start
-# iOS simulator
-npx expo run:ios
-```
+- **Phase 1** (current): Solo features — map, remembrance, place detail, meetings, profile, Firebase auth (email + anonymous)
+- **Phase 2**: Social — chat, live location sharing, friends, linking companions to real users

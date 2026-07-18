@@ -14,7 +14,9 @@ const ICONS: Record<string, { active: string; inactive: string }> = {
   profile: { active: 'person', inactive: 'person-outline' },
 };
 
-export default function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+export default function AnimatedTabBar(props: BottomTabBarProps) {
+  // @ts-ignore - type mismatch between expo-router and @react-navigation/bottom-tabs
+  const { state, descriptors, navigation } = props;
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 

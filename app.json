@@ -9,22 +9,21 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/icon.png",
-      "bundleIdentifier": "com.davidplit.pinpals",
-      "newArchEnabled": true,
+      "bundleIdentifier": "com.dpstudio.pinpals",
       "googleServicesFile": "./GoogleService-Info.plist",
+      "deploymentTarget": "17.0",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "googleServicesFile": "./google-services.json",
-      "newArchEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#4A7C59"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.davidplit.pinpals",
+      "package": "com.dpstudio.pinpals",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
@@ -34,16 +33,6 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-    "fonts": [
-      "./assets/fonts/Inter_400Regular.ttf",
-      "./assets/fonts/Inter_500Medium.ttf",
-      "./assets/fonts/Inter_600SemiBold.ttf",
-      "./assets/fonts/Inter_700Bold.ttf",
-      "./assets/fonts/Nunito_400Regular.ttf",
-      "./assets/fonts/Nunito_600SemiBold.ttf",
-      "./assets/fonts/Nunito_700Bold.ttf",
-      "./assets/fonts/Nunito_800ExtraBold.ttf"
-    ],
     "plugins": [
       "expo-router",
       "@rnmapbox/maps",

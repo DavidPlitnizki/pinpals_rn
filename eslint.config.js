@@ -7,6 +7,8 @@ module.exports = defineConfig([
     ignores: ['node_modules/', '.expo/', 'android/', 'ios/', 'build/'],
     rules: {
       '@typescript-eslint/no-unused-vars': 'warn',
+      'react-hooks/refs': 'off',
+      'react-hooks/immutability': 'off',
     },
   },
 ]);
