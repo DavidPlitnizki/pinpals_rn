@@ -3,6 +3,7 @@ import AnimatedTabBar from '../../design-system/components/AnimatedTabBar';
 
 export default function TabLayout() {
   return (
+    // @ts-ignore - type mismatch between expo-router and @react-navigation/bottom-tabs
     <Tabs tabBar={(props) => <AnimatedTabBar {...props} />} screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="map" options={{ title: 'Map' }} />
       <Tabs.Screen name="remembrance" options={{ title: 'Remembrance' }} />
