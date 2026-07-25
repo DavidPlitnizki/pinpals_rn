@@ -1,4 +1,6 @@
 import { Camera } from '@rnmapbox/maps';
+import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -8,12 +10,12 @@ import { Coordinates } from '../../../models/types';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from '../constants';
-import { AddPlaceState } from '../types';
+import { AddPlaceState, QuickAddPlaceState } from '../types';
 
 export function useMapScreen() {
   const router = useRouter();
   const cameraRef = useRef<Camera>(null);
-  const { places, addPlace, deletePlace } = usePlacesStore();
+  const { places, addPlace, deletePlace, addNote } = usePlacesStore();
   const { profile } = useProfileStore();
 
   const currentCenter = useRef<[number, number]>(DEFAULT_CENTER);
@@ -29,6 +31,15 @@ export function useMapScreen() {
     rating: 3,
     description: '',
     coordinates: null,
+  });
+  const [showQuickAddSheet, setShowQuickAddSheet] = useState(false);
+  const [quickAddState, setQuickAddState] = useState<QuickAddPlaceState>({
+    name: '',
+    rating: 5,
+    description: '',
+    photoUris: [],
+    coordinates: null,
+    createdAt: new Date().toISOString(),
   });
 
   const toastAnim = useRef(new Animated.Value(0)).current;
@@ -106,18 +117,77 @@ export function useMapScreen() {
 
   function handleLongPress(feature: { geometry: { coordinates: [number, number] } }) {
     const [longitude, latitude] = feature.geometry.coordinates;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     cameraRef.current?.setCamera({
       centerCoordinate: [longitude, latitude],
       zoomLevel: currentZoom.current,
       animationDuration: 600,
     });
-    addPlace({
-      name: `Pin ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+    setQuickAddState({
+      name: '',
+      rating: 5,
+      description: '',
+      photoUris: [],
+      mood: undefined,
       coordinates: { latitude, longitude },
+      createdAt: new Date().toISOString(),
+    });
+    setShowQuickAddSheet(true);
+  }
+
+  function handleCloseQuickAddSheet() {
+    setShowQuickAddSheet(false);
+  }
+
+  async function handlePickQuickAddPhotos() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow access to the photo library.');
+      return;
+    }
+    const remaining = 5 - quickAddState.photoUris.length;
+    if (remaining <= 0) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      const newUris = result.assets.map((a) => a.uri);
+      setQuickAddState((s) => ({ ...s, photoUris: [...s.photoUris, ...newUris].slice(0, 5) }));
+    }
+  }
+
+  function handleRemoveQuickAddPhoto(uri: string) {
+    setQuickAddState((s) => ({ ...s, photoUris: s.photoUris.filter((u) => u !== uri) }));
+  }
+
+  function handleSaveQuickAddPlace() {
+    if (!quickAddState.coordinates) return;
+    const name = quickAddState.name.trim() || 'New Pin';
+    const placeId = addPlace({
+      name,
+      coordinates: quickAddState.coordinates,
       category: 'nature',
-      rating: 3,
+      rating: quickAddState.rating,
       isFavorite: false,
     });
+
+    const description = quickAddState.description.trim();
+    if (description || quickAddState.photoUris.length > 0 || quickAddState.mood) {
+      addNote({
+        placeId,
+        text: description,
+        photoUri: quickAddState.photoUris[0],
+        photoUris: quickAddState.photoUris.length > 0 ? quickAddState.photoUris : undefined,
+        mood: quickAddState.mood,
+        companions: [],
+        createdAt: quickAddState.createdAt,
+      });
+    }
+
+    setShowQuickAddSheet(false);
   }
 
   function handleAddAtCurrentLocation() {
@@ -180,6 +250,8 @@ export function useMapScreen() {
     showAddModal,
     showProfileMenu,
     addPlaceState,
+    showQuickAddSheet,
+    quickAddState,
     toastAnim,
     toastMsg,
     toastGPS,
@@ -190,9 +262,14 @@ export function useMapScreen() {
     handleAddAtCurrentLocation,
     handleCloseModal,
     handleSavePlace,
+    handleCloseQuickAddSheet,
+    handlePickQuickAddPhotos,
+    handleRemoveQuickAddPhoto,
+    handleSaveQuickAddPlace,
     handleMarkerPress,
     handleDeleteMarker,
     setShowProfileMenu,
     setAddPlaceState,
+    setQuickAddState,
   };
 }

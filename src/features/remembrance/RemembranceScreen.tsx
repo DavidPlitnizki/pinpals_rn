@@ -99,15 +99,15 @@ export default function RemembranceScreen() {
           <View style={styles.activeFilters}>
             <Ionicons name="funnel" size={12} color={Colors.brand.primary} />
             <Text style={styles.activeFiltersText}>
-              {activeFilterCount === 1 ? '1 фильтр' : `${activeFilterCount} фильтра`}
+              {activeFilterCount === 1 ? '1 filter' : `${activeFilterCount} filters`}
               {' • '}
-              {displayedPlaces.length} из {places.length} мест
+              {displayedPlaces.length} of {places.length} places
             </Text>
             <TouchableOpacity
               onPress={clearFilters}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
-              <Text style={styles.clearFiltersText}>✕ Сбросить</Text>
+              <Text style={styles.clearFiltersText}>✕ Clear</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -216,8 +216,8 @@ function EmptyState({ activeTab, hasFilters }: { activeTab: string; hasFilters: 
     return (
       <View style={styles.emptyState}>
         <Text style={styles.emptyIcon}>🔍</Text>
-        <Text style={styles.emptyTitle}>Ничего не найдено</Text>
-        <Text style={styles.emptySubtitle}>Попробуйте изменить или сбросить фильтры</Text>
+        <Text style={styles.emptyTitle}>Nothing found</Text>
+        <Text style={styles.emptySubtitle}>Try changing or clearing the filters</Text>
       </View>
     );
   }

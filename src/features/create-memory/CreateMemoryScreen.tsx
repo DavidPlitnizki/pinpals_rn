@@ -45,7 +45,7 @@ export default function CreateMemoryScreen() {
   if (!place) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <Text style={styles.errorText}>Место не найдено</Text>
+        <Text style={styles.errorText}>Place not found</Text>
       </SafeAreaView>
     );
   }
@@ -55,7 +55,7 @@ export default function CreateMemoryScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={prevStep}>
-          <Text style={styles.backBtn}>{step === 0 ? 'Отмена' : 'Назад'}</Text>
+          <Text style={styles.backBtn}>{step === 0 ? 'Cancel' : 'Back'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{place.name}</Text>
         <View style={styles.backBtnPlaceholder} />
@@ -90,9 +90,9 @@ export default function CreateMemoryScreen() {
       {/* Bottom buttons */}
       <View style={styles.footer}>
         {isLastStep ? (
-          <PinButton title="Сохранить воспоминание" onPress={handleSave} fullWidth />
+          <PinButton title="Save Memory" onPress={handleSave} fullWidth />
         ) : (
-          <PinButton title="Далее" onPress={nextStep} disabled={!canGoNext} fullWidth />
+          <PinButton title="Next" onPress={nextStep} disabled={!canGoNext} fullWidth />
         )}
       </View>
     </SafeAreaView>
@@ -112,7 +112,7 @@ function PhotoStep({
 }) {
   return (
     <View style={styles.stepContent}>
-      <Text style={styles.stepHint}>Добавь до 5 фото к этому воспоминанию</Text>
+      <Text style={styles.stepHint}>Add up to 5 photos to this memory</Text>
       <View style={styles.photoGrid}>
         {photoUris.map((uri) => (
           <View key={uri} style={styles.photoItem}>
@@ -125,7 +125,7 @@ function PhotoStep({
         {photoUris.length < 5 && (
           <TouchableOpacity style={styles.photoAdd} onPress={onPick}>
             <Text style={styles.photoAddIcon}>📷</Text>
-            <Text style={styles.photoAddText}>Добавить</Text>
+            <Text style={styles.photoAddText}>Add</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -142,7 +142,7 @@ function MoodStep({
 }) {
   return (
     <View style={styles.stepContent}>
-      <Text style={styles.stepHint}>Какое настроение у этого момента?</Text>
+      <Text style={styles.stepHint}>What was the mood of this moment?</Text>
       <MoodPicker selected={mood} onSelect={onSelect} />
     </View>
   );
@@ -159,12 +159,12 @@ function CompanionStep({
 }) {
   return (
     <View style={styles.stepContent}>
-      <Text style={styles.stepHint}>С кем ты был?</Text>
+      <Text style={styles.stepHint}>Who were you with?</Text>
       <CompanionInput
         companions={companions}
         onAdd={onAdd}
         onRemove={onRemove}
-        placeholder="Имя друга..."
+        placeholder="Friend's name..."
       />
     </View>
   );
@@ -173,12 +173,12 @@ function CompanionStep({
 function NoteStep({ text, onChangeText }: { text: string; onChangeText: (t: string) => void }) {
   return (
     <View style={styles.stepContent}>
-      <Text style={styles.stepHint}>Добавь заметку (необязательно)</Text>
+      <Text style={styles.stepHint}>Add a note (optional)</Text>
       <TextInput
         style={styles.noteInput}
         value={text}
         onChangeText={onChangeText}
-        placeholder="Что запомнилось..."
+        placeholder="What do you remember..."
         placeholderTextColor={Colors.text.secondary}
         multiline
         textAlignVertical="top"
@@ -192,14 +192,14 @@ function DateStep({ date, onChangeDate }: { date: Date; onChangeDate: (d: Date) 
 
   return (
     <View style={styles.stepContent}>
-      <Text style={styles.stepHint}>Когда это было?</Text>
+      <Text style={styles.stepHint}>When was this?</Text>
       <View style={styles.dateOptions}>
         <TouchableOpacity
           style={[styles.dateOption, isToday && styles.dateOptionActive]}
           onPress={() => onChangeDate(new Date())}
         >
           <Text style={[styles.dateOptionText, isToday && styles.dateOptionTextActive]}>
-            Сегодня
+            Today
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -211,12 +211,12 @@ function DateStep({ date, onChangeDate }: { date: Date; onChangeDate: (d: Date) 
           }}
         >
           <Text style={[styles.dateOptionText, !isToday && styles.dateOptionTextActive]}>
-            Вчера
+            Yesterday
           </Text>
         </TouchableOpacity>
       </View>
       <Text style={styles.dateDisplay}>
-        {date.toLocaleDateString('ru-RU', {
+        {date.toLocaleDateString('en-US', {
           day: 'numeric',
           month: 'long',
           year: 'numeric',

@@ -43,7 +43,7 @@ export function DayMemoryWidget({ memory, onPress }: Props) {
 
       {/* Content */}
       <View style={styles.content}>
-        <Text style={styles.eyebrow}>Воспоминание дня</Text>
+        <Text style={styles.eyebrow}>Memory of the Day</Text>
         <Text style={styles.placeName} numberOfLines={1}>
           {place.name}
         </Text>

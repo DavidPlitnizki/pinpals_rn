@@ -25,33 +25,11 @@ export interface Recent {
   unread: number;
 }
 
-const MOCK_FRIENDS: Friend[] = [
-  { id: '1', name: 'Alice', unread: 2, lastMessage: 'See you there!' },
-  { id: '2', name: 'Bob', unread: 0, lastMessage: 'Sounds good' },
-  { id: '3', name: 'Carol', unread: 1, lastMessage: 'Where are you?' },
-  { id: '4', name: 'Dan', unread: 0, lastMessage: "Let's go hiking" },
-  { id: '5', name: 'Eva', unread: 0, lastMessage: 'Great spot!' },
-];
+const FRIENDS: Friend[] = [];
 
-const MOCK_RECENTS: Recent[] = [
-  { id: '1', name: 'Alice', type: 'friend', unread: 2 },
-  { id: 'g1', name: 'Weekend Hikers', type: 'group', unread: 3 },
-  { id: '3', name: 'Carol', type: 'friend', unread: 1 },
-  { id: 'g3', name: 'Coffee Crew', type: 'group', unread: 1 },
-  { id: '2', name: 'Bob', type: 'friend', unread: 0 },
-];
+const RECENTS: Recent[] = [];
 
-const MOCK_GROUPS: Group[] = [
-  {
-    id: 'g1',
-    name: 'Weekend Hikers',
-    membersCount: 5,
-    unread: 3,
-    lastMessage: 'Trail starts at 9am',
-  },
-  { id: 'g2', name: 'City Explorers', membersCount: 8, unread: 0, lastMessage: 'New spot found!' },
-  { id: 'g3', name: 'Coffee Crew', membersCount: 3, unread: 1, lastMessage: 'Meet at the usual?' },
-];
+const GROUPS: Group[] = [];
 
 export function useFriendsSheet() {
   const [visible, setVisible] = useState(false);
@@ -59,18 +37,18 @@ export function useFriendsSheet() {
   const debouncedQuery = useDebouncedValue(query);
 
   const filteredFriends = useMemo(() => {
-    if (!debouncedQuery.trim()) return MOCK_FRIENDS;
+    if (!debouncedQuery.trim()) return FRIENDS;
     const lower = debouncedQuery.toLowerCase();
-    return MOCK_FRIENDS.filter((f) => f.name.toLowerCase().includes(lower));
+    return FRIENDS.filter((f) => f.name.toLowerCase().includes(lower));
   }, [debouncedQuery]);
 
   const filteredGroups = useMemo(() => {
-    if (!debouncedQuery.trim()) return MOCK_GROUPS;
+    if (!debouncedQuery.trim()) return GROUPS;
     const lower = debouncedQuery.toLowerCase();
-    return MOCK_GROUPS.filter((g) => g.name.toLowerCase().includes(lower));
+    return GROUPS.filter((g) => g.name.toLowerCase().includes(lower));
   }, [debouncedQuery]);
 
-  const hasUnread = MOCK_FRIENDS.some((f) => f.unread > 0) || MOCK_GROUPS.some((g) => g.unread > 0);
+  const hasUnread = FRIENDS.some((f) => f.unread > 0) || GROUPS.some((g) => g.unread > 0);
 
   function open() {
     setVisible(true);
@@ -87,7 +65,7 @@ export function useFriendsSheet() {
     setQuery,
     filteredFriends,
     filteredGroups,
-    recents: MOCK_RECENTS,
+    recents: RECENTS,
     hasUnread,
     open,
     close,

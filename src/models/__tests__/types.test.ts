@@ -1,8 +1,8 @@
 import { MOOD_CONFIG, MEMORY_MOODS, MemoryMood } from '../types';
 
 describe('MEMORY_MOODS', () => {
-  it('contains 7 moods', () => {
-    expect(MEMORY_MOODS).toHaveLength(7);
+  it('contains 8 moods', () => {
+    expect(MEMORY_MOODS).toHaveLength(8);
   });
 
   it('contains all expected mood values', () => {
@@ -14,6 +14,7 @@ describe('MEMORY_MOODS', () => {
       'peaceful',
       'melancholic',
       'adventurous',
+      'inLove',
     ];
     expect(MEMORY_MOODS).toEqual(expect.arrayContaining(expected));
   });

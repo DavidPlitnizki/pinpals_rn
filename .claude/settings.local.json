@@ -4,5 +4,8 @@
       "Bash(npm run:*)",
       "Bash(npx prettier:*)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }

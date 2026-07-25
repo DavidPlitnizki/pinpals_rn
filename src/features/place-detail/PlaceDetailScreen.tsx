@@ -131,7 +131,7 @@ export default function PlaceDetailScreen() {
               />
               {place.visitCount > 0 && (
                 <Text style={styles.visitText}>
-                  {place.visitCount} {place.visitCount === 1 ? 'визит' : 'визитов'}
+                  {place.visitCount} {place.visitCount === 1 ? 'visit' : 'visits'}
                 </Text>
               )}
             </View>
@@ -139,14 +139,14 @@ export default function PlaceDetailScreen() {
 
           {/* Tags */}
           <PinCard style={styles.section}>
-            <Text style={styles.sectionTitle}>Теги</Text>
+            <Text style={styles.sectionTitle}>Tags</Text>
             <TagInput tags={place.tags || []} onAdd={handleAddTag} onRemove={handleRemoveTag} />
           </PinCard>
 
           {/* Description */}
           <PinCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Описание</Text>
+              <Text style={styles.sectionTitle}>Description</Text>
               <TouchableOpacity
                 onPress={() => {
                   if (isEditingDescription) {
@@ -156,30 +156,28 @@ export default function PlaceDetailScreen() {
                   }
                 }}
               >
-                <Text style={styles.editButton}>
-                  {isEditingDescription ? 'Сохранить' : 'Изменить'}
-                </Text>
+                <Text style={styles.editButton}>{isEditingDescription ? 'Save' : 'Edit'}</Text>
               </TouchableOpacity>
             </View>
             {isEditingDescription ? (
               <PinTextField
                 value={description}
                 onChangeText={setDescription}
-                placeholder="Добавьте описание..."
+                placeholder="Add a description..."
                 multiline
               />
             ) : (
               <Text style={[styles.descriptionText, !place.description && styles.placeholderText]}>
-                {place.description || 'Нет описания. Нажмите Изменить.'}
+                {place.description || 'No description. Tap Edit to add one.'}
               </Text>
             )}
           </PinCard>
 
           {/* Action buttons */}
           <View style={styles.actions}>
-            <PinButton title="Добавить воспоминание" onPress={handleAddMemory} fullWidth />
+            <PinButton title="Add Memory" onPress={handleAddMemory} fullWidth />
             <PinButton
-              title="Предложить встречу здесь"
+              title="Suggest a Meeting Here"
               onPress={handleCreateMeetingHere}
               variant="secondary"
               fullWidth
@@ -188,11 +186,11 @@ export default function PlaceDetailScreen() {
 
           {/* Timeline of memories */}
           <View style={styles.notesSection}>
-            <Text style={styles.sectionTitle}>Воспоминания ({placeNotes.length})</Text>
+            <Text style={styles.sectionTitle}>Memories ({placeNotes.length})</Text>
 
             {placeNotes.length === 0 ? (
               <PinCard>
-                <Text style={styles.placeholderText}>Пока нет воспоминаний. Добавьте первое!</Text>
+                <Text style={styles.placeholderText}>No memories yet. Add the first one!</Text>
               </PinCard>
             ) : (
               <View style={styles.timeline}>
@@ -217,7 +215,7 @@ export default function PlaceDetailScreen() {
                         style={styles.deleteNote}
                         onPress={() => handleDeleteNote(note.id)}
                       >
-                        <Text style={styles.deleteNoteText}>Удалить</Text>
+                        <Text style={styles.deleteNoteText}>Delete</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -229,7 +227,7 @@ export default function PlaceDetailScreen() {
           {/* Delete */}
           <View style={styles.dangerZone}>
             <PinButton
-              title="Удалить место"
+              title="Delete Place"
               onPress={handleDeletePlace}
               variant="danger"
               fullWidth

@@ -82,7 +82,7 @@ export function PlacesMiniMap({ places }: Props) {
                 }
               >
                 <Text style={styles.calloutName}>{selectedPlace.name}</Text>
-                <Text style={styles.calloutHint}>Подробнее →</Text>
+                <Text style={styles.calloutHint}>Details →</Text>
               </TouchableOpacity>
             </MarkerView>
           )}

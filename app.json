@@ -54,7 +54,8 @@
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       "expo-build-properties",
-      "./plugins/withModularHeaders"
+      "./plugins/withModularHeaders",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
