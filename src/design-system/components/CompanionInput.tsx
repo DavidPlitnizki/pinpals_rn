@@ -13,7 +13,7 @@ export function CompanionInput({
   companions,
   onAdd,
   onRemove,
-  placeholder = 'Имя...',
+  placeholder = 'Name...',
 }: CompanionInputProps) {
   const [text, setText] = useState('');
 

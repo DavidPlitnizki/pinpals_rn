@@ -44,10 +44,10 @@ export function usePlaceDetail() {
   }
 
   function handleDeletePlace() {
-    Alert.alert('Удалить место', `Удалить "${place!.name}"?`, [
-      { text: 'Отмена', style: 'cancel' },
+    Alert.alert('Delete place', `Delete "${place!.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Удалить',
+        text: 'Delete',
         style: 'destructive',
         onPress: () => {
           deletePlace(place!.id);
@@ -60,7 +60,7 @@ export function usePlaceDetail() {
   async function handlePickPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Нужно разрешение', 'Разрешите доступ к галерее.');
+      Alert.alert('Permission needed', 'Please allow access to the photo library.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -75,7 +75,7 @@ export function usePlaceDetail() {
 
   function handleSaveNote() {
     if (!noteText.trim()) {
-      Alert.alert('Текст обязателен', 'Введите текст заметки.');
+      Alert.alert('Text required', 'Please enter the note text.');
       return;
     }
     addNote({
@@ -90,9 +90,9 @@ export function usePlaceDetail() {
   }
 
   function handleDeleteNote(noteId: string) {
-    Alert.alert('Удалить заметку', 'Удалить это воспоминание?', [
-      { text: 'Отмена', style: 'cancel' },
-      { text: 'Удалить', style: 'destructive', onPress: () => deleteNote(noteId) },
+    Alert.alert('Delete note', 'Delete this memory?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteNote(noteId) },
     ]);
   }
 

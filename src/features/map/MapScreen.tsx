@@ -9,12 +9,13 @@ import { FriendsSheet } from './components/FriendsSheet';
 import { MapControls } from './components/MapControls';
 import { MapMarkers } from './components/MapMarkers';
 import { MapToast } from './components/MapToast';
+import { QuickAddPlaceSheet } from './components/QuickAddPlaceSheet';
 import { SearchSheet } from './components/SearchSheet';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from './constants';
 import { useFriendsSheet } from './hooks/useFriendsSheet';
 import { useMapScreen } from './hooks/useMapScreen';
 import { useSearchSheet } from './hooks/useSearchSheet';
-import { AddPlaceState } from './types';
+import { AddPlaceState, QuickAddPlaceState } from './types';
 
 export default function MapScreen() {
   const router = useRouter();
@@ -25,6 +26,8 @@ export default function MapScreen() {
     gpsCoords,
     showAddModal,
     addPlaceState,
+    showQuickAddSheet,
+    quickAddState,
     toastAnim,
     toastMsg,
     toastGPS,
@@ -35,9 +38,14 @@ export default function MapScreen() {
     handleAddAtCurrentLocation,
     handleCloseModal,
     handleSavePlace,
+    handleCloseQuickAddSheet,
+    handlePickQuickAddPhotos,
+    handleRemoveQuickAddPhoto,
+    handleSaveQuickAddPlace,
     handleMarkerPress,
     handleDeleteMarker,
     setAddPlaceState,
+    setQuickAddState,
   } = useMapScreen();
 
   const search = useSearchSheet(places, gpsCoords);
@@ -54,6 +62,10 @@ export default function MapScreen() {
 
   function onAddPlaceChange(update: Partial<AddPlaceState>) {
     setAddPlaceState((s) => ({ ...s, ...update }));
+  }
+
+  function onQuickAddChange(update: Partial<QuickAddPlaceState>) {
+    setQuickAddState((s) => ({ ...s, ...update }));
   }
 
   function onSearchPlacePress(placeId: string) {
@@ -95,6 +107,16 @@ export default function MapScreen() {
         onChange={onAddPlaceChange}
         onSave={handleSavePlace}
         onClose={handleCloseModal}
+      />
+
+      <QuickAddPlaceSheet
+        visible={showQuickAddSheet}
+        state={quickAddState}
+        onChange={onQuickAddChange}
+        onPickPhotos={handlePickQuickAddPhotos}
+        onRemovePhoto={handleRemoveQuickAddPhoto}
+        onSave={handleSaveQuickAddPlace}
+        onClose={handleCloseQuickAddSheet}
       />
 
       <FriendsSheet

@@ -58,7 +58,7 @@ export default function RootLayout() {
             />
             <Stack.Screen
               name="create-memory"
-              options={{ title: 'Новое воспоминание', presentation: 'modal', headerShown: false }}
+              options={{ title: 'New Memory', presentation: 'modal', headerShown: false }}
             />
           </Stack>
         </AuthGate>

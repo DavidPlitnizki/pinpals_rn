@@ -19,11 +19,11 @@ interface Props {
 }
 
 const PERIOD_OPTIONS: { value: FilterPeriod; label: string }[] = [
-  { value: 'all', label: 'Все время' },
-  { value: 'week', label: 'Неделя' },
-  { value: 'month', label: 'Месяц' },
-  { value: '3months', label: '3 месяца' },
-  { value: 'year', label: 'Год' },
+  { value: 'all', label: 'All Time' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+  { value: '3months', label: '3 Months' },
+  { value: 'year', label: 'Year' },
 ];
 
 export function FiltersSheet({
@@ -54,12 +54,12 @@ export function FiltersSheet({
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.cancel}>Закрыть</Text>
+            <Text style={styles.cancel}>Close</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Фильтры</Text>
+          <Text style={styles.title}>Filters</Text>
           {activeFilterCount > 0 ? (
             <TouchableOpacity onPress={onClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={styles.clear}>Сбросить</Text>
+              <Text style={styles.clear}>Clear</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.placeholder} />
@@ -69,7 +69,7 @@ export function FiltersSheet({
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Period */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Период</Text>
+            <Text style={styles.sectionTitle}>Period</Text>
             <View style={styles.chips}>
               {PERIOD_OPTIONS.map((opt) => {
                 const active = filters.period === opt.value;
@@ -91,7 +91,7 @@ export function FiltersSheet({
           {/* Mood */}
           {moodsToShow.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Настроение</Text>
+              <Text style={styles.sectionTitle}>Mood</Text>
               <View style={styles.chips}>
                 {moodsToShow.map((mood) => {
                   const cfg = MOOD_CONFIG[mood];
@@ -118,7 +118,7 @@ export function FiltersSheet({
           {/* Tags */}
           {allTags.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Теги</Text>
+              <Text style={styles.sectionTitle}>Tags</Text>
               <View style={styles.chips}>
                 {allTags.map((tag) => {
                   const active = filters.tags.includes(tag);
@@ -140,7 +140,7 @@ export function FiltersSheet({
         {/* Apply button */}
         <View style={styles.footer}>
           <TouchableOpacity style={styles.applyBtn} onPress={onClose}>
-            <Text style={styles.applyText}>Применить</Text>
+            <Text style={styles.applyText}>Apply</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

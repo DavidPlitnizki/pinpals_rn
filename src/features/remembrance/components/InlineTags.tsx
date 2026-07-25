@@ -69,7 +69,7 @@ export function InlineTags({ tags, allTags = [], onAdd, onRemove }: Props) {
             onPress={openInput}
             hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
           >
-            <Text style={styles.addBtnText}>+ тег</Text>
+            <Text style={styles.addBtnText}>+ tag</Text>
           </TouchableOpacity>
         ) : (
           <TextInput
@@ -77,7 +77,7 @@ export function InlineTags({ tags, allTags = [], onAdd, onRemove }: Props) {
             style={styles.input}
             value={text}
             onChangeText={setText}
-            placeholder="тег..."
+            placeholder="tag..."
             placeholderTextColor={Colors.neutral[300]}
             returnKeyType="done"
             onSubmitEditing={handleSubmit}

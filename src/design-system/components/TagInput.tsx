@@ -15,7 +15,7 @@ export function TagInput({
   onAdd,
   onRemove,
   suggestions = [],
-  placeholder = 'Добавить тег...',
+  placeholder = 'Add a tag...',
 }: TagInputProps) {
   const [text, setText] = useState('');
 

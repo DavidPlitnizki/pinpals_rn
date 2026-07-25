@@ -11,22 +11,22 @@ import { EMPTY_FILTERS, FilterPeriod, PlaceFilters, Tab, ViewMode } from '../typ
 export interface PlaceStats {
   total: number;
   favCategory: { category: PlaceCategory; label: string; count: number } | null;
-  activeMonth: string | null; // e.g. "Март"
+  activeMonth: string | null; // e.g. "March"
 }
 
 const MONTH_NAMES = [
-  'Январь',
-  'Февраль',
-  'Март',
-  'Апрель',
-  'Май',
-  'Июнь',
-  'Июль',
-  'Август',
-  'Сентябрь',
-  'Октябрь',
-  'Ноябрь',
-  'Декабрь',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 function computeStats(places: Place[]): PlaceStats {
@@ -60,7 +60,7 @@ export interface DayMemory {
   place: Place;
   note: PlaceNote | null;
   yearsAgo: number;
-  label: string; // "1 год назад", "3 года назад", "В этот день X лет назад"
+  label: string; // "1 year ago", "3 years ago", "On this day X years ago"
 }
 
 function periodCutoff(period: FilterPeriod): Date | null {
@@ -74,9 +74,8 @@ function periodCutoff(period: FilterPeriod): Date | null {
 }
 
 function yearsAgoLabel(years: number): string {
-  if (years === 1) return '1 год назад';
-  if (years >= 2 && years <= 4) return `${years} года назад`;
-  return `${years} лет назад`;
+  if (years === 1) return '1 year ago';
+  return `${years} years ago`;
 }
 
 function pickDayMemory(places: Place[], notes: PlaceNote[]): DayMemory | null {
@@ -113,7 +112,7 @@ function pickDayMemory(places: Place[], notes: PlaceNote[]): DayMemory | null {
       place,
       note: noteWithPhoto ?? placeNotes[0] ?? null,
       yearsAgo: diffYears,
-      label: `В этот день ${yearsAgoLabel(diffYears)}`,
+      label: `On this day ${yearsAgoLabel(diffYears)}`,
     };
   }
 
@@ -130,10 +129,10 @@ function pickDayMemory(places: Place[], notes: PlaceNote[]): DayMemory | null {
 
   let label: string;
   if (diffDays < 30) {
-    label = `${diffDays} дней назад`;
+    label = diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
   } else if (diffDays < 365) {
     const months = Math.floor(diffDays / 30);
-    label = months === 1 ? '1 месяц назад' : `${months} месяцев назад`;
+    label = months === 1 ? '1 month ago' : `${months} months ago`;
   } else {
     const years = Math.floor(diffDays / 365);
     label = yearsAgoLabel(years);
