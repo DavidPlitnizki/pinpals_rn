@@ -3,13 +3,14 @@ import { useMemo, useState } from 'react';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { Coordinates, Place, PlaceCategory } from '../../../models/types';
 import { MapboxSearchResult, searchMapboxPlaces } from '../../../services/mapboxSearch';
+import { haversineMeters } from '../../../shared/geo';
+import { useSearchFiltersStore } from '../../../store/useSearchFiltersStore';
+import { DEFAULT_RADIUS_M, MAX_RADIUS_M } from '../constants';
+import { SpecialFilter } from '../types';
 
-export type SpecialFilter = 'mine' | 'favorites';
+export type { SpecialFilter };
 
 export const MIN_EXTERNAL_QUERY_LENGTH = 2;
-
-const DEFAULT_RADIUS_M = 5000;
-const MAX_RADIUS_M = 50000;
 
 const METERS_PER_DEGREE_LAT = 111320;
 
@@ -20,16 +21,6 @@ const CATEGORY_SEARCH_KEYWORDS: Record<PlaceCategory, string> = {
   art: 'art gallery',
   sports: 'sports',
 };
-
-function haversineMeters(a: Coordinates, b: Coordinates): number {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(b.latitude - a.latitude);
-  const dLon = toRad(b.longitude - a.longitude);
-  const sin2 =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.sin(dLon / 2) ** 2;
-  return 6371000 * 2 * Math.atan2(Math.sqrt(sin2), Math.sqrt(1 - sin2));
-}
 
 function radiusToBbox(center: Coordinates, radiusM: number): [number, number, number, number] {
   const latDelta = radiusM / METERS_PER_DEGREE_LAT;
@@ -53,13 +44,25 @@ export function formatRadius(meters: number): string {
 
 export function useSearchSheet(places: Place[], userLocation: Coordinates | null) {
   const [visible, setVisible] = useState(false);
-  const [query, setQuery] = useState('');
+
+  const query = useSearchFiltersStore((s) => s.query);
+  const setQuery = useSearchFiltersStore((s) => s.setQuery);
+  const radiusM = useSearchFiltersStore((s) => s.radiusM);
+  const setRadiusM = useSearchFiltersStore((s) => s.setRadiusM);
+  const radiusEnabled = useSearchFiltersStore((s) => s.radiusEnabled);
+  const setRadiusEnabled = useSearchFiltersStore((s) => s.setRadiusEnabled);
+  const activeCategoriesList = useSearchFiltersStore((s) => s.activeCategories);
+  const setActiveCategoriesList = useSearchFiltersStore((s) => s.setActiveCategories);
+  const specialFiltersList = useSearchFiltersStore((s) => s.specialFilters);
+  const setSpecialFiltersList = useSearchFiltersStore((s) => s.setSpecialFilters);
+  const alwaysShowFavorites = useSearchFiltersStore((s) => s.alwaysShowFavorites);
+  const setAlwaysShowFavorites = useSearchFiltersStore((s) => s.setAlwaysShowFavorites);
+  const resetPersistedFilters = useSearchFiltersStore((s) => s.resetFilters);
+
+  const activeCategories = useMemo(() => new Set(activeCategoriesList), [activeCategoriesList]);
+  const specialFilters = useMemo(() => new Set(specialFiltersList), [specialFiltersList]);
+
   const debouncedQuery = useDebouncedValue(query);
-  const [radiusM, setRadiusM] = useState(DEFAULT_RADIUS_M);
-  const [radiusEnabled, setRadiusEnabled] = useState(true);
-  const [activeCategories, setActiveCategories] = useState<Set<PlaceCategory>>(new Set());
-  const [specialFilters, setSpecialFilters] = useState<Set<SpecialFilter>>(new Set());
-  const [alwaysShowFavorites, setAlwaysShowFavorites] = useState(true);
 
   const [externalResults, setExternalResults] = useState<MapboxSearchResult[]>([]);
   const [externalLoading, setExternalLoading] = useState(false);
@@ -108,17 +111,21 @@ export function useSearchSheet(places: Place[], userLocation: Coordinates | null
     const next = new Set(activeCategories);
     if (next.has(cat)) next.delete(cat);
     else next.add(cat);
-    setActiveCategories(next);
+    setActiveCategoriesList(Array.from(next));
     void runExternalSearch(next, query);
   }
 
   function toggleSpecial(filter: SpecialFilter) {
-    setSpecialFilters((prev) => {
-      const next = new Set(prev);
-      if (next.has(filter)) next.delete(filter);
-      else next.add(filter);
-      return next;
-    });
+    const next = new Set(specialFilters);
+    if (next.has(filter)) next.delete(filter);
+    else next.add(filter);
+    setSpecialFiltersList(Array.from(next));
+  }
+
+  function resetFilters() {
+    resetPersistedFilters();
+    setExternalResults([]);
+    setExternalSearched(false);
   }
 
   const filteredPlaces = useMemo(() => {
@@ -177,5 +184,6 @@ export function useSearchSheet(places: Place[], userLocation: Coordinates | null
     close,
     toggleCategory,
     toggleSpecial,
+    resetFilters,
   };
 }

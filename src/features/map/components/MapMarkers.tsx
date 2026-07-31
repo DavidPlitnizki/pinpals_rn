@@ -7,11 +7,19 @@ import { Colors, Spacing, Typography } from '../../../design-system/tokens';
 import { Place, PlaceNote, MOOD_CONFIG } from '../../../models/types';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { CATEGORY_COLORS, CATEGORY_LABELS } from '../constants';
+import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 
 interface Props {
   places: Place[];
   onMarkerPress: (placeId: string) => void;
   onDeleteMarker: (placeId: string, placeName: string) => void;
+  onDirections: (place: Place) => void;
+  // Bump this (e.g. with route.pickerVisible) to force markers to re-register their
+  // native image — see usePointAnnotationRefresh for why this is needed.
+  refreshSignal?: unknown;
+  // Called when one of these annotations is selected, so the base MapView's onPress
+  // (which also fires on this tap) can skip querying for a native basemap POI underneath.
+  onAnnotationSelected?: () => void;
 }
 
 interface FootprintPreview {
@@ -33,11 +41,19 @@ function getFootprintPreview(placeId: string, notes: PlaceNote[]): FootprintPrev
   return null;
 }
 
-export function MapMarkers({ places, onMarkerPress, onDeleteMarker }: Props) {
+export function MapMarkers({
+  places,
+  onMarkerPress,
+  onDeleteMarker,
+  onDirections,
+  refreshSignal,
+  onAnnotationSelected,
+}: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedPlace = places.find((p) => p.id === selectedId);
   const getLatestMoodForPlace = usePlacesStore((s) => s.getLatestMoodForPlace);
   const notes = usePlacesStore((s) => s.notes);
+  const registerRef = usePointAnnotationRefresh(refreshSignal);
 
   function getPinColor(place: Place): string {
     const mood = getLatestMoodForPlace(place.id);
@@ -59,10 +75,14 @@ export function MapMarkers({ places, onMarkerPress, onDeleteMarker }: Props) {
         return (
           <PointAnnotation
             key={place.id}
+            ref={registerRef(place.id)}
             id={place.id}
             coordinate={[place.coordinates.longitude, place.coordinates.latitude]}
             anchor={{ x: 0.5, y: 1 }}
-            onSelected={() => setSelectedId(place.id)}
+            onSelected={() => {
+              setSelectedId(place.id);
+              onAnnotationSelected?.();
+            }}
             onDeselected={() => setSelectedId(null)}
           >
             <View style={styles.markerColumn}>
@@ -106,6 +126,19 @@ export function MapMarkers({ places, onMarkerPress, onDeleteMarker }: Props) {
             </TouchableOpacity>
             <View style={styles.calloutDivider} />
             <TouchableOpacity
+              style={styles.calloutActionButton}
+              hitSlop={{ top: Spacing.s8, bottom: Spacing.s8, left: Spacing.s8, right: Spacing.s8 }}
+              onPress={() => {
+                setSelectedId(null);
+                onDirections(selectedPlace);
+              }}
+            >
+              <Text style={styles.calloutDirections}>Directions</Text>
+            </TouchableOpacity>
+            <View style={styles.calloutDivider} />
+            <TouchableOpacity
+              style={styles.calloutActionButton}
+              hitSlop={{ top: Spacing.s8, bottom: Spacing.s8, left: Spacing.s8, right: Spacing.s8 }}
               onPress={() => {
                 setSelectedId(null);
                 onDeleteMarker(selectedPlace.id, selectedPlace.name);
@@ -221,6 +254,16 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.neutral[100],
     marginVertical: Spacing.s8,
+  },
+  calloutActionButton: {
+    paddingVertical: Spacing.s8,
+    alignItems: 'center',
+  },
+  calloutDirections: {
+    ...Typography.caption,
+    color: Colors.brand.primary,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   calloutDelete: {
     ...Typography.caption,
