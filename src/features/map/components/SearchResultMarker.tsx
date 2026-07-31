@@ -5,80 +5,62 @@ import React, { useState } from 'react';
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { PendingSearchMarker } from '../types';
-
-type IconName = React.ComponentProps<typeof Ionicons>['name'];
+import { iconForMaki } from '../utils/mapboxIcons';
 
 const PIN_SIZE = 40;
 const DROP_RED = '#E4483C';
 
-const MAKI_ICON_MAP: Record<string, IconName> = {
-  cafe: 'cafe',
-  coffee: 'cafe',
-  restaurant: 'restaurant',
-  'fast-food': 'fast-food',
-  bar: 'wine',
-  pub: 'beer',
-  park: 'leaf',
-  garden: 'leaf',
-  'art-gallery': 'color-palette',
-  museum: 'business',
-  cinema: 'film',
-  theatre: 'film',
-  parking: 'car',
-  fuel: 'car',
-  hospital: 'medkit',
-  pharmacy: 'medical',
-  bank: 'cash',
-  atm: 'cash',
-  shop: 'bag',
-  'clothing-store': 'shirt',
-  grocery: 'cart',
-  bakery: 'restaurant',
-  gym: 'barbell',
-  swimming: 'water',
-  library: 'book',
-  school: 'school',
-  college: 'school',
-  airport: 'airplane',
-  bus: 'bus',
-  rail: 'train',
-  ferry: 'boat',
-  bicycle: 'bicycle',
-  hotel: 'bed',
-  lodging: 'bed',
-  campsite: 'bonfire',
-};
-
-function iconFor(marker: PendingSearchMarker): IconName {
-  if (marker.maki && MAKI_ICON_MAP[marker.maki]) return MAKI_ICON_MAP[marker.maki];
-  return 'location';
-}
-
 interface Props {
   markers: PendingSearchMarker[];
   onConfirm: (marker: PendingSearchMarker) => void;
+  onDirections: (marker: PendingSearchMarker) => void;
+  // Bump this (e.g. with route.pickerVisible) to force markers to re-register their
+  // native image — see usePointAnnotationRefresh for why this is needed.
+  refreshSignal?: unknown;
+  // Called when one of these annotations is selected, so the base MapView's onPress
+  // (which also fires on this tap) can skip querying for a native basemap POI underneath.
+  onAnnotationSelected?: () => void;
 }
 
-export function SearchResultMarker({ markers, onConfirm }: Props) {
+export function SearchResultMarker({
+  markers,
+  onConfirm,
+  onDirections,
+  refreshSignal,
+  onAnnotationSelected,
+}: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = markers.find((m) => m.id === selectedId) ?? null;
+  const registerRef = usePointAnnotationRefresh(refreshSignal);
 
   return (
     <>
       {markers.map((marker) => (
         <PointAnnotation
           key={marker.id}
+          ref={registerRef(marker.id)}
           id={marker.id}
           coordinate={[marker.coordinates.longitude, marker.coordinates.latitude]}
           anchor={{ x: 0.5, y: 1 }}
-          onSelected={() => setSelectedId(marker.id)}
+          onSelected={() => {
+            setSelectedId(marker.id);
+            onAnnotationSelected?.();
+          }}
           onDeselected={() => setSelectedId((id) => (id === marker.id ? null : id))}
         >
-          <View style={styles.pinWrap}>
-            <Ionicons name="location-sharp" size={PIN_SIZE} color={DROP_RED} />
-            <View style={styles.iconBadge}>
-              <Ionicons name={iconFor(marker)} size={12} color={DROP_RED} />
+          <View style={styles.markerColumn}>
+            <View style={styles.markerLabel}>
+              <Text style={styles.markerLabelText} numberOfLines={1}>
+                {marker.name}
+              </Text>
+            </View>
+            <View style={styles.pinWrap}>
+              <Ionicons name="location-sharp" size={PIN_SIZE} color={DROP_RED} />
+              <View style={styles.iconBadge}>
+                <Ionicons name={iconForMaki(marker.maki)} size={12} color={DROP_RED} />
+              </View>
             </View>
           </View>
         </PointAnnotation>
@@ -95,7 +77,7 @@ export function SearchResultMarker({ markers, onConfirm }: Props) {
                 <Image source={{ uri: selected.imageUrl }} style={styles.calloutImage} />
               ) : (
                 <View style={styles.calloutImagePlaceholder}>
-                  <Ionicons name={iconFor(selected)} size={26} color={Colors.neutral[400]} />
+                  <Ionicons name={iconForMaki(selected.maki)} size={26} color={Colors.neutral[400]} />
                 </View>
               )}
             </View>
@@ -119,6 +101,15 @@ export function SearchResultMarker({ markers, onConfirm }: Props) {
                   </Text>
                 </TouchableOpacity>
               )}
+              <TouchableOpacity
+                style={styles.directionsButton}
+                onPress={() => {
+                  setSelectedId(null);
+                  onDirections(selected);
+                }}
+              >
+                <Text style={styles.directionsButtonText}>Directions</Text>
+              </TouchableOpacity>
               <View style={styles.calloutActions}>
                 <TouchableOpacity
                   style={styles.closeButton}
@@ -145,6 +136,27 @@ export function SearchResultMarker({ markers, onConfirm }: Props) {
 }
 
 const styles = StyleSheet.create({
+  markerColumn: {
+    alignItems: 'center',
+  },
+  markerLabel: {
+    maxWidth: 120,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  markerLabelText: {
+    ...Typography.caption,
+    color: Colors.neutral[900],
+    fontWeight: '600',
+  },
   pinWrap: {
     width: PIN_SIZE,
     height: PIN_SIZE,
@@ -219,11 +231,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textDecorationLine: 'underline',
   },
+  directionsButton: {
+    width: '100%',
+    marginTop: Spacing.s12,
+    paddingVertical: Spacing.s8,
+    borderRadius: Radii.sm,
+    borderWidth: 1,
+    borderColor: Colors.brand.primary,
+    alignItems: 'center',
+  },
+  directionsButtonText: {
+    ...Typography.caption,
+    color: Colors.brand.primary,
+    fontWeight: '600',
+  },
   calloutActions: {
     flexDirection: 'row',
     width: '100%',
     gap: Spacing.s8,
-    marginTop: Spacing.s12,
+    marginTop: Spacing.s8,
   },
   closeButton: {
     flex: 1,

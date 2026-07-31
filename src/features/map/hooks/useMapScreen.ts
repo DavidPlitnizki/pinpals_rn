@@ -1,4 +1,4 @@
-import { Camera } from '@rnmapbox/maps';
+import { Camera, MapView } from '@rnmapbox/maps';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -11,11 +11,20 @@ import { MapboxSearchResult } from '../../../services/mapboxSearch';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from '../constants';
-import { AddPlaceState, PendingSearchMarker, QuickAddPlaceState } from '../types';
+import { AddPlaceState, NativePoiMarker, PendingSearchMarker, QuickAddPlaceState } from '../types';
+
+type ScreenPointFeature = GeoJSON.Feature<GeoJSON.Point, { screenPointX: number; screenPointY: number }>;
+
+// A tap that lands on one of our own PointAnnotations (place/search-result markers) also
+// fires MapView's onPress — the annotation's onSelected calls this to suppress the
+// resulting native-POI query, cleared shortly after so a genuine later tap still works.
+const ANNOTATION_TAP_GUARD_MS = 300;
 
 export function useMapScreen() {
   const router = useRouter();
   const cameraRef = useRef<Camera>(null);
+  const mapViewRef = useRef<MapView>(null);
+  const annotationTapRef = useRef(false);
   const { places, addPlace, deletePlace, addNote } = usePlacesStore();
   const { profile } = useProfileStore();
 
@@ -44,7 +53,7 @@ export function useMapScreen() {
   });
 
   const [searchResultMarkers, setSearchResultMarkers] = useState<PendingSearchMarker[]>([]);
-  const [mutedSearchMarkers, setMutedSearchMarkers] = useState<PendingSearchMarker[]>([]);
+  const [nativePoiMarker, setNativePoiMarker] = useState<NativePoiMarker | null>(null);
 
   const toastAnim = useRef(new Animated.Value(0)).current;
   const [toastMsg, setToastMsg] = useState('');
@@ -143,6 +152,51 @@ export function useMapScreen() {
     setShowQuickAddSheet(true);
   }
 
+  function markAnnotationTapped() {
+    annotationTapRef.current = true;
+    setTimeout(() => {
+      annotationTapRef.current = false;
+    }, ANNOTATION_TAP_GUARD_MS);
+  }
+
+  async function handleMapPress(feature: ScreenPointFeature) {
+    if (annotationTapRef.current) return;
+    const { screenPointX, screenPointY } = feature.properties;
+    if (screenPointX == null || screenPointY == null) return;
+
+    const collection = await mapViewRef.current?.queryRenderedFeaturesAtPoint([
+      screenPointX,
+      screenPointY,
+    ]);
+    const poiFeature = collection?.features.find(
+      (f) => typeof f.properties?.name === 'string' && f.properties.name.trim().length > 0,
+    );
+    if (!poiFeature) return;
+
+    const [longitude, latitude] =
+      poiFeature.geometry.type === 'Point'
+        ? (poiFeature.geometry.coordinates as [number, number])
+        : feature.geometry.coordinates;
+
+    setNativePoiMarker({
+      id: `poi-${longitude}-${latitude}-${Date.now()}`,
+      name: poiFeature.properties!.name as string,
+      maki: typeof poiFeature.properties?.maki === 'string' ? poiFeature.properties.maki : undefined,
+      category: typeof poiFeature.properties?.class === 'string' ? poiFeature.properties.class : undefined,
+      coordinates: { latitude, longitude },
+    });
+  }
+
+  function handleCloseNativePoiMarker() {
+    setNativePoiMarker(null);
+  }
+
+  function handleConfirmNativePoiMarker(marker: NativePoiMarker) {
+    setQuickAddState(makeQuickAddState(marker.name, marker.coordinates));
+    setNativePoiMarker(null);
+    setShowQuickAddSheet(true);
+  }
+
   function handleCloseQuickAddSheet() {
     setShowQuickAddSheet(false);
   }
@@ -161,7 +215,6 @@ export function useMapScreen() {
   }
 
   function handleClearSearchResultMarkers() {
-    setMutedSearchMarkers((prev) => [...prev, ...searchResultMarkers]);
     setSearchResultMarkers([]);
   }
 
@@ -275,6 +328,7 @@ export function useMapScreen() {
 
   return {
     cameraRef,
+    mapViewRef,
     places,
     profile,
     locationGranted,
@@ -285,7 +339,7 @@ export function useMapScreen() {
     showQuickAddSheet,
     quickAddState,
     searchResultMarkers,
-    mutedSearchMarkers,
+    nativePoiMarker,
     toastAnim,
     toastMsg,
     toastGPS,
@@ -293,6 +347,10 @@ export function useMapScreen() {
     currentZoom,
     handleCenterGPS,
     handleLongPress,
+    handleMapPress,
+    markAnnotationTapped,
+    handleCloseNativePoiMarker,
+    handleConfirmNativePoiMarker,
     handleAddAtCurrentLocation,
     handleCloseModal,
     handleSavePlace,
