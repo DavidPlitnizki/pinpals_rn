@@ -45,30 +45,45 @@ export function MapMarkers({ places, onMarkerPress, onDeleteMarker }: Props) {
     return CATEGORY_COLORS[place.category];
   }
 
+  const selectedMood = selectedPlace ? getLatestMoodForPlace(selectedPlace.id) : undefined;
+
+  // Keying the whole annotation set on place composition forces PointAnnotation to fully
+  // remount on add/remove — @rnmapbox/maps can otherwise leave a stale native annotation
+  // behind when the array shrinks (e.g. deleting a place after filtering).
+  const annotationsKey = places.map((p) => p.id).join(',');
+
   return (
-    <>
+    <React.Fragment key={annotationsKey}>
       {places.map((place) => {
         const preview = getFootprintPreview(place.id, notes);
         return (
           <PointAnnotation
-            key={`${place.id}-${preview ? 'photo' : 'plain'}`}
+            key={place.id}
             id={place.id}
             coordinate={[place.coordinates.longitude, place.coordinates.latitude]}
+            anchor={{ x: 0.5, y: 1 }}
             onSelected={() => setSelectedId(place.id)}
             onDeselected={() => setSelectedId(null)}
           >
-            {preview ? (
-              <View style={styles.footprint}>
-                <Image source={{ uri: preview.photoUri }} style={styles.footprintPhoto} />
-                {preview.mood && (
-                  <View style={styles.moodBadge}>
-                    <Text style={styles.moodBadgeEmoji}>{preview.mood.emoji}</Text>
-                  </View>
-                )}
+            <View style={styles.markerColumn}>
+              <View style={styles.markerLabel}>
+                <Text style={styles.markerLabelText} numberOfLines={1}>
+                  {place.name}
+                </Text>
               </View>
-            ) : (
-              <View style={[styles.pin, { backgroundColor: getPinColor(place) }]} />
-            )}
+              {preview ? (
+                <View style={styles.footprint}>
+                  <Image source={{ uri: preview.photoUri }} style={styles.footprintPhoto} />
+                  {preview.mood && (
+                    <View style={styles.moodBadge}>
+                      <Text style={styles.moodBadgeEmoji}>{preview.mood.emoji}</Text>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <View style={[styles.pin, { backgroundColor: getPinColor(place) }]} />
+              )}
+            </View>
           </PointAnnotation>
         );
       })}
@@ -82,18 +97,11 @@ export function MapMarkers({ places, onMarkerPress, onDeleteMarker }: Props) {
             <TouchableOpacity onPress={() => onMarkerPress(selectedPlace.id)}>
               <Text style={styles.calloutName}>{selectedPlace.name}</Text>
               <Text style={styles.calloutCategory}>{CATEGORY_LABELS[selectedPlace.category]}</Text>
-              {(() => {
-                const mood = getLatestMoodForPlace(selectedPlace.id);
-                if (mood) {
-                  const cfg = MOOD_CONFIG[mood];
-                  return (
-                    <Text style={styles.calloutMood}>
-                      {cfg.emoji} {cfg.label}
-                    </Text>
-                  );
-                }
-                return null;
-              })()}
+              {selectedMood && (
+                <Text style={styles.calloutMood}>
+                  {MOOD_CONFIG[selectedMood].emoji} {MOOD_CONFIG[selectedMood].label}
+                </Text>
+              )}
               <Text style={styles.calloutTap}>Details →</Text>
             </TouchableOpacity>
             <View style={styles.calloutDivider} />
@@ -108,11 +116,32 @@ export function MapMarkers({ places, onMarkerPress, onDeleteMarker }: Props) {
           </View>
         </MarkerView>
       )}
-    </>
+    </React.Fragment>
   );
 }
 
 const styles = StyleSheet.create({
+  markerColumn: {
+    alignItems: 'center',
+  },
+  markerLabel: {
+    maxWidth: 120,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  markerLabelText: {
+    ...Typography.caption,
+    color: Colors.neutral[900],
+    fontWeight: '600',
+  },
   pin: {
     width: 20,
     height: 20,

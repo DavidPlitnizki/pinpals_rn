@@ -22,7 +22,7 @@ import { Colors, Radii, Spacing, Typography } from '../../../design-system/token
 import { Place, PlaceCategory } from '../../../models/types';
 import { MapboxSearchResult } from '../../../services/mapboxSearch';
 import { CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS } from '../constants';
-import { formatRadius, SpecialFilter } from '../hooks/useSearchSheet';
+import { formatRadius, MIN_EXTERNAL_QUERY_LENGTH, SpecialFilter } from '../hooks/useSearchSheet';
 
 const SHEET_HEIGHT = Dimensions.get('window').height * 0.75;
 const ANIMATION_DURATION = 280;
@@ -282,10 +282,10 @@ export function SearchSheet({
             <TouchableOpacity
               style={[
                 styles.searchButton,
-                query.trim().length < 2 && activeCategories.size === 0 && styles.searchButtonDisabled,
+                query.trim().length < MIN_EXTERNAL_QUERY_LENGTH && activeCategories.size === 0 && styles.searchButtonDisabled,
               ]}
               onPress={onSearchExternal}
-              disabled={query.trim().length < 2 && activeCategories.size === 0}
+              disabled={query.trim().length < MIN_EXTERNAL_QUERY_LENGTH && activeCategories.size === 0}
               activeOpacity={0.85}
             >
               {externalLoading ? (
@@ -345,7 +345,7 @@ function ExternalEmptyState({
   searched: boolean;
 }) {
   const message =
-    query.trim().length < 2 && !hasCategory
+    query.trim().length < MIN_EXTERNAL_QUERY_LENGTH && !hasCategory
       ? 'Type at least 2 characters or pick a category, then tap Search'
       : searched
         ? 'No results found'

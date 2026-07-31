@@ -6,7 +6,7 @@ import { MapboxSearchResult, searchMapboxPlaces } from '../../../services/mapbox
 
 export type SpecialFilter = 'mine' | 'favorites';
 
-const MIN_EXTERNAL_QUERY_LENGTH = 2;
+export const MIN_EXTERNAL_QUERY_LENGTH = 2;
 
 const DEFAULT_RADIUS_M = 5000;
 const MAX_RADIUS_M = 50000;
