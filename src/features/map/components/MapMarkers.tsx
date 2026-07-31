@@ -51,7 +51,7 @@ export function MapMarkers({ places, onMarkerPress, onDeleteMarker }: Props) {
         const preview = getFootprintPreview(place.id, notes);
         return (
           <PointAnnotation
-            key={place.id}
+            key={`${place.id}-${preview ? 'photo' : 'plain'}`}
             id={place.id}
             coordinate={[place.coordinates.longitude, place.coordinates.latitude]}
             onSelected={() => setSelectedId(place.id)}
