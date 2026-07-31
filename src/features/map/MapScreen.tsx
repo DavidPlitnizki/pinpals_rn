@@ -1,21 +1,25 @@
 import { Camera, MapView, UserLocation } from '@rnmapbox/maps';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AddPlaceModal } from './components/AddPlaceModal';
+import { ClearSearchResultsButton } from './components/ClearSearchResultsButton';
 import { FriendsButton } from './components/FriendsButton';
 import { FriendsSheet } from './components/FriendsSheet';
 import { MapControls } from './components/MapControls';
 import { MapMarkers } from './components/MapMarkers';
 import { MapToast } from './components/MapToast';
+import { MutedSearchMarker } from './components/MutedSearchMarker';
 import { QuickAddPlaceSheet } from './components/QuickAddPlaceSheet';
+import { SearchResultMarker } from './components/SearchResultMarker';
 import { SearchSheet } from './components/SearchSheet';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from './constants';
 import { useFriendsSheet } from './hooks/useFriendsSheet';
 import { useMapScreen } from './hooks/useMapScreen';
 import { useSearchSheet } from './hooks/useSearchSheet';
 import { AddPlaceState, QuickAddPlaceState } from './types';
+import { MapboxSearchResult } from '../../services/mapboxSearch';
 
 export default function MapScreen() {
   const router = useRouter();
@@ -28,6 +32,8 @@ export default function MapScreen() {
     addPlaceState,
     showQuickAddSheet,
     quickAddState,
+    searchResultMarkers,
+    mutedSearchMarkers,
     toastAnim,
     toastMsg,
     toastGPS,
@@ -42,6 +48,10 @@ export default function MapScreen() {
     handlePickQuickAddPhotos,
     handleRemoveQuickAddPhoto,
     handleSaveQuickAddPlace,
+    handleSelectSearchResult,
+    handleShowSearchResultsOnMap,
+    handleClearSearchResultMarkers,
+    handleConfirmSearchResultMarker,
     handleMarkerPress,
     handleDeleteMarker,
     setAddPlaceState,
@@ -50,6 +60,20 @@ export default function MapScreen() {
 
   const search = useSearchSheet(places, gpsCoords);
   const friends = useFriendsSheet();
+  const resultWasTappedRef = useRef(false);
+
+  function onExternalResultPress(result: MapboxSearchResult) {
+    resultWasTappedRef.current = true;
+    handleSelectSearchResult(result);
+  }
+
+  function onSearchClose() {
+    if (!resultWasTappedRef.current && search.externalResults.length > 0) {
+      handleShowSearchResultsOnMap(search.externalResults);
+    }
+    resultWasTappedRef.current = false;
+    search.close();
+  }
 
   function onLongPress(feature: unknown) {
     handleLongPress(feature as { geometry: { coordinates: [number, number] } });
@@ -84,15 +108,29 @@ export default function MapScreen() {
         />
         {locationGranted && <UserLocation visible />}
         <MapMarkers
-          places={places}
+          places={search.mapPlaces}
           onMarkerPress={handleMarkerPress}
           onDeleteMarker={handleDeleteMarker}
         />
+        {searchResultMarkers.length > 0 && (
+          <SearchResultMarker
+            markers={searchResultMarkers}
+            onConfirm={handleConfirmSearchResultMarker}
+          />
+        )}
+        {mutedSearchMarkers.length > 0 && <MutedSearchMarker markers={mutedSearchMarkers} />}
       </MapView>
 
       <MapToast toastAnim={toastAnim} toastMsg={toastMsg} toastGPS={toastGPS} />
 
       <FriendsButton onPress={friends.open} hasUnread={friends.hasUnread} />
+
+      {searchResultMarkers.length > 0 && (
+        <ClearSearchResultsButton
+          count={searchResultMarkers.length}
+          onPress={handleClearSearchResultMarkers}
+        />
+      )}
 
       <MapControls
         gpsCoords={gpsCoords}
@@ -133,16 +171,26 @@ export default function MapScreen() {
         visible={search.visible}
         query={search.query}
         radiusM={search.radiusM}
+        radiusEnabled={search.radiusEnabled}
         maxRadiusM={search.maxRadiusM}
         activeCategories={search.activeCategories}
         specialFilters={search.specialFilters}
+        alwaysShowFavorites={search.alwaysShowFavorites}
         filteredPlaces={search.filteredPlaces}
+        showExternal={search.showExternal}
+        externalResults={search.externalResults}
+        externalLoading={search.externalLoading}
+        externalSearched={search.externalSearched}
         onChangeQuery={search.setQuery}
         onRadiusChange={search.setRadiusM}
+        onToggleRadiusEnabled={search.setRadiusEnabled}
         onToggleCategory={search.toggleCategory}
         onToggleSpecial={search.toggleSpecial}
+        onToggleAlwaysShowFavorites={search.setAlwaysShowFavorites}
         onPlacePress={onSearchPlacePress}
-        onClose={search.close}
+        onExternalResultPress={onExternalResultPress}
+        onSearchExternal={search.searchExternal}
+        onClose={onSearchClose}
       />
     </View>
   );

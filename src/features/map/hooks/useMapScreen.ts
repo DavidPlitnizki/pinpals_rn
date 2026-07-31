@@ -7,10 +7,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Animated } from 'react-native';
 
 import { Coordinates } from '../../../models/types';
+import { MapboxSearchResult } from '../../../services/mapboxSearch';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from '../constants';
-import { AddPlaceState, QuickAddPlaceState } from '../types';
+import { AddPlaceState, PendingSearchMarker, QuickAddPlaceState } from '../types';
 
 export function useMapScreen() {
   const router = useRouter();
@@ -41,6 +42,9 @@ export function useMapScreen() {
     coordinates: null,
     createdAt: new Date().toISOString(),
   });
+
+  const [searchResultMarkers, setSearchResultMarkers] = useState<PendingSearchMarker[]>([]);
+  const [mutedSearchMarkers, setMutedSearchMarkers] = useState<PendingSearchMarker[]>([]);
 
   const toastAnim = useRef(new Animated.Value(0)).current;
   const [toastMsg, setToastMsg] = useState('');
@@ -137,6 +141,51 @@ export function useMapScreen() {
 
   function handleCloseQuickAddSheet() {
     setShowQuickAddSheet(false);
+  }
+
+  function toPendingMarker(result: MapboxSearchResult): PendingSearchMarker {
+    return {
+      id: result.id,
+      name: result.name,
+      fullAddress: result.fullAddress,
+      imageUrl: result.imageUrl,
+      category: result.category,
+      maki: result.maki,
+      website: result.website,
+      coordinates: result.coordinates,
+    };
+  }
+
+  function handleSelectSearchResult(result: MapboxSearchResult) {
+    cameraRef.current?.setCamera({
+      centerCoordinate: [result.coordinates.longitude, result.coordinates.latitude],
+      zoomLevel: 16,
+      animationDuration: 600,
+    });
+    setSearchResultMarkers([toPendingMarker(result)]);
+  }
+
+  function handleShowSearchResultsOnMap(results: MapboxSearchResult[]) {
+    setSearchResultMarkers(results.map(toPendingMarker));
+  }
+
+  function handleClearSearchResultMarkers() {
+    setMutedSearchMarkers((prev) => [...prev, ...searchResultMarkers]);
+    setSearchResultMarkers([]);
+  }
+
+  function handleConfirmSearchResultMarker(marker: PendingSearchMarker) {
+    setQuickAddState({
+      name: marker.name,
+      rating: 5,
+      description: '',
+      photoUris: [],
+      mood: undefined,
+      coordinates: marker.coordinates,
+      createdAt: new Date().toISOString(),
+    });
+    setSearchResultMarkers((prev) => prev.filter((m) => m.id !== marker.id));
+    setShowQuickAddSheet(true);
   }
 
   async function handlePickQuickAddPhotos() {
@@ -252,6 +301,8 @@ export function useMapScreen() {
     addPlaceState,
     showQuickAddSheet,
     quickAddState,
+    searchResultMarkers,
+    mutedSearchMarkers,
     toastAnim,
     toastMsg,
     toastGPS,
@@ -266,6 +317,10 @@ export function useMapScreen() {
     handlePickQuickAddPhotos,
     handleRemoveQuickAddPhoto,
     handleSaveQuickAddPlace,
+    handleSelectSearchResult,
+    handleShowSearchResultsOnMap,
+    handleClearSearchResultMarkers,
+    handleConfirmSearchResultMarker,
     handleMarkerPress,
     handleDeleteMarker,
     setShowProfileMenu,

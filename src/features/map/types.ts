@@ -17,3 +17,14 @@ export interface QuickAddPlaceState {
   coordinates: Coordinates | null;
   createdAt: string;
 }
+
+export interface PendingSearchMarker {
+  id: string;
+  name: string;
+  fullAddress?: string;
+  imageUrl?: string;
+  category?: string;
+  maki?: string;
+  website?: string;
+  coordinates: Coordinates;
+}
