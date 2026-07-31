@@ -50,6 +50,37 @@ function formatCategory(feature: MapboxFeature): string | undefined {
     .join(' ');
 }
 
+// Mapbox sometimes returns a third-party listing/aggregator page (Yelp, TripAdvisor, Google
+// Maps, social profiles) as `metadata.website` instead of the place's own site — filter those out.
+const THIRD_PARTY_WEBSITE_HOSTS = [
+  'yelp.',
+  'tripadvisor.',
+  'facebook.com',
+  'instagram.com',
+  'foursquare.com',
+  'google.com',
+  'goo.gl',
+  'maps.app.goo.gl',
+  'zomato.com',
+  'opentable.com',
+  'ubereats.com',
+  'doordash.com',
+  'grubhub.com',
+  'linktr.ee',
+];
+
+function getOwnWebsite(feature: MapboxFeature): string | undefined {
+  const website = feature.properties?.metadata?.website;
+  if (!website) return undefined;
+  try {
+    const host = new URL(website).hostname.replace(/^www\./, '');
+    if (THIRD_PARTY_WEBSITE_HOSTS.some((blocked) => host.includes(blocked))) return undefined;
+    return website;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function searchMapboxPlaces(
   query: string,
   proximity: Coordinates | null,
@@ -91,7 +122,7 @@ export async function searchMapboxPlaces(
     imageUrl: extractImageUrl(feature),
     category: formatCategory(feature),
     maki: feature.properties?.maki,
-    website: feature.properties?.metadata?.website,
+    website: getOwnWebsite(feature),
     coordinates: {
       longitude: feature.geometry.coordinates[0],
       latitude: feature.geometry.coordinates[1],

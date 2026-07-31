@@ -119,6 +119,18 @@ export function useMapScreen() {
     });
   }
 
+  function makeQuickAddState(name: string, coordinates: Coordinates): QuickAddPlaceState {
+    return {
+      name,
+      rating: 5,
+      description: '',
+      photoUris: [],
+      mood: undefined,
+      coordinates,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
   function handleLongPress(feature: { geometry: { coordinates: [number, number] } }) {
     const [longitude, latitude] = feature.geometry.coordinates;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -127,33 +139,12 @@ export function useMapScreen() {
       zoomLevel: currentZoom.current,
       animationDuration: 600,
     });
-    setQuickAddState({
-      name: '',
-      rating: 5,
-      description: '',
-      photoUris: [],
-      mood: undefined,
-      coordinates: { latitude, longitude },
-      createdAt: new Date().toISOString(),
-    });
+    setQuickAddState(makeQuickAddState('', { latitude, longitude }));
     setShowQuickAddSheet(true);
   }
 
   function handleCloseQuickAddSheet() {
     setShowQuickAddSheet(false);
-  }
-
-  function toPendingMarker(result: MapboxSearchResult): PendingSearchMarker {
-    return {
-      id: result.id,
-      name: result.name,
-      fullAddress: result.fullAddress,
-      imageUrl: result.imageUrl,
-      category: result.category,
-      maki: result.maki,
-      website: result.website,
-      coordinates: result.coordinates,
-    };
   }
 
   function handleSelectSearchResult(result: MapboxSearchResult) {
@@ -162,11 +153,11 @@ export function useMapScreen() {
       zoomLevel: 16,
       animationDuration: 600,
     });
-    setSearchResultMarkers([toPendingMarker(result)]);
+    setSearchResultMarkers([result]);
   }
 
   function handleShowSearchResultsOnMap(results: MapboxSearchResult[]) {
-    setSearchResultMarkers(results.map(toPendingMarker));
+    setSearchResultMarkers(results);
   }
 
   function handleClearSearchResultMarkers() {
@@ -175,15 +166,7 @@ export function useMapScreen() {
   }
 
   function handleConfirmSearchResultMarker(marker: PendingSearchMarker) {
-    setQuickAddState({
-      name: marker.name,
-      rating: 5,
-      description: '',
-      photoUris: [],
-      mood: undefined,
-      coordinates: marker.coordinates,
-      createdAt: new Date().toISOString(),
-    });
+    setQuickAddState(makeQuickAddState(marker.name, marker.coordinates));
     setSearchResultMarkers((prev) => prev.filter((m) => m.id !== marker.id));
     setShowQuickAddSheet(true);
   }

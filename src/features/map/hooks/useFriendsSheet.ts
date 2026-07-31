@@ -1,6 +1,4 @@
-import { useMemo, useState } from 'react';
-
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { useState } from 'react';
 
 export interface Friend {
   id: string;
@@ -25,30 +23,15 @@ export interface Recent {
   unread: number;
 }
 
-const FRIENDS: Friend[] = [];
-
-const RECENTS: Recent[] = [];
-
-const GROUPS: Group[] = [];
-
+// No friends/groups data source yet (Phase 2) — sheet renders empty until then.
 export function useFriendsSheet() {
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
-  const debouncedQuery = useDebouncedValue(query);
 
-  const filteredFriends = useMemo(() => {
-    if (!debouncedQuery.trim()) return FRIENDS;
-    const lower = debouncedQuery.toLowerCase();
-    return FRIENDS.filter((f) => f.name.toLowerCase().includes(lower));
-  }, [debouncedQuery]);
-
-  const filteredGroups = useMemo(() => {
-    if (!debouncedQuery.trim()) return GROUPS;
-    const lower = debouncedQuery.toLowerCase();
-    return GROUPS.filter((g) => g.name.toLowerCase().includes(lower));
-  }, [debouncedQuery]);
-
-  const hasUnread = FRIENDS.some((f) => f.unread > 0) || GROUPS.some((g) => g.unread > 0);
+  const filteredFriends: Friend[] = [];
+  const filteredGroups: Group[] = [];
+  const recents: Recent[] = [];
+  const hasUnread = false;
 
   function open() {
     setVisible(true);
@@ -65,7 +48,7 @@ export function useFriendsSheet() {
     setQuery,
     filteredFriends,
     filteredGroups,
-    recents: RECENTS,
+    recents,
     hasUnread,
     open,
     close,
