@@ -3,21 +3,19 @@ import { useRouter } from 'expo-router';
 import React, { useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AddPlaceModal } from './components/AddPlaceModal';
 import { ClearRouteButton } from './components/ClearRouteButton';
 import { ClearSearchResultsButton } from './components/ClearSearchResultsButton';
+import { ComingSoonSheet } from './components/ComingSoonSheet';
 import { FriendsButton } from './components/FriendsButton';
 import { FriendsSheet } from './components/FriendsSheet';
 import { MapControls } from './components/MapControls';
 import { MapMarkers } from './components/MapMarkers';
 import { MapToast } from './components/MapToast';
 import { NativePoiMarker } from './components/NativePoiMarker';
-import { QuickAddPlaceSheet } from './components/QuickAddPlaceSheet';
 import { QuickAddPreviewMarker } from './components/QuickAddPreviewMarker';
 import { RouteInfoCard } from './components/RouteInfoCard';
 import { RouteLineLayer } from './components/RouteLineLayer';
 import { RouteModePicker } from './components/RouteModePicker';
-import { RouteOriginPlacePicker } from './components/RouteOriginPlacePicker';
 import { SearchResultMarker } from './components/SearchResultMarker';
 import { SearchSheet } from './components/SearchSheet';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from './constants';
@@ -25,7 +23,7 @@ import { useFriendsSheet } from './hooks/useFriendsSheet';
 import { useMapScreen } from './hooks/useMapScreen';
 import { useRouteDirections } from './hooks/useRouteDirections';
 import { useSearchSheet } from './hooks/useSearchSheet';
-import { AddPlaceState, NativePoiMarker as NativePoiMarkerData, QuickAddPlaceState } from './types';
+import { NativePoiMarker as NativePoiMarkerData } from './types';
 import { Place } from '../../models/types';
 import { MapboxSearchResult } from '../../services/mapboxSearch';
 
@@ -37,10 +35,8 @@ export default function MapScreen() {
     places,
     locationGranted,
     gpsCoords,
-    showAddModal,
-    addPlaceState,
     showQuickAddSheet,
-    quickAddState,
+    pendingPlaceCoords,
     searchResultMarkers,
     nativePoiMarker,
     toastAnim,
@@ -55,26 +51,24 @@ export default function MapScreen() {
     handleCloseNativePoiMarker,
     handleConfirmNativePoiMarker,
     handleAddAtCurrentLocation,
-    handleCloseModal,
-    handleSavePlace,
     handleCloseQuickAddSheet,
-    handlePickQuickAddPhotos,
-    handleRemoveQuickAddPhoto,
-    handleSaveQuickAddPlace,
     handleSelectSearchResult,
     handleShowSearchResultsOnMap,
     handleClearSearchResultMarkers,
     handleConfirmSearchResultMarker,
     handleMarkerPress,
     handleDeleteMarker,
-    setAddPlaceState,
-    setQuickAddState,
   } = useMapScreen();
 
   const search = useSearchSheet(places, gpsCoords);
   const friends = useFriendsSheet();
   const route = useRouteDirections(gpsCoords, locationGranted);
   const resultWasTappedRef = useRef(false);
+
+  // Every Modal presented over the MapView can drop PointAnnotation bitmaps (see
+  // usePointAnnotationRefresh), so markers must re-register whenever any of them opens
+  // or closes — not just the route picker.
+  const annotationRefreshSignal = `${route.pickerVisible}|${showQuickAddSheet}|${search.visible}`;
 
   function onExternalResultPress(result: MapboxSearchResult) {
     resultWasTappedRef.current = true;
@@ -104,14 +98,6 @@ export default function MapScreen() {
     currentZoom.current = state.properties.zoom;
   }
 
-  function onAddPlaceChange(update: Partial<AddPlaceState>) {
-    setAddPlaceState((s) => ({ ...s, ...update }));
-  }
-
-  function onQuickAddChange(update: Partial<QuickAddPlaceState>) {
-    setQuickAddState((s) => ({ ...s, ...update }));
-  }
-
   function onSearchPlacePress(placeId: string) {
     router.push({ pathname: '/place/[id]', params: { id: placeId } } as any);
   }
@@ -119,6 +105,10 @@ export default function MapScreen() {
   function onClearSearchResults() {
     handleClearSearchResultMarkers();
     search.resetFilters();
+    // The route (if any) was built to one of these markers — once the marker's gone,
+    // a route pointing at it doesn't make sense either. Clearing the route alone
+    // (ClearRouteButton) must NOT touch these markers — that direction stays one-way.
+    route.clearRoute();
   }
 
   function onPlaceDirections(place: Place) {
@@ -127,11 +117,6 @@ export default function MapScreen() {
 
   function onSearchResultDirections(marker: MapboxSearchResult) {
     route.openModePicker(marker.coordinates, marker.name);
-  }
-
-  function onQuickAddDirections() {
-    if (!quickAddState.coordinates) return;
-    route.openModePicker(quickAddState.coordinates, quickAddState.name.trim() || 'New Pin');
   }
 
   function onNativePoiDirections(marker: NativePoiMarkerData) {
@@ -163,7 +148,7 @@ export default function MapScreen() {
           onMarkerPress={handleMarkerPress}
           onDeleteMarker={handleDeleteMarker}
           onDirections={onPlaceDirections}
-          refreshSignal={route.pickerVisible}
+          refreshSignal={annotationRefreshSignal}
           onAnnotationSelected={markAnnotationTapped}
         />
         {searchResultMarkers.length > 0 && (
@@ -171,7 +156,7 @@ export default function MapScreen() {
             markers={searchResultMarkers}
             onConfirm={handleConfirmSearchResultMarker}
             onDirections={onSearchResultDirections}
-            refreshSignal={route.pickerVisible}
+            refreshSignal={annotationRefreshSignal}
             onAnnotationSelected={markAnnotationTapped}
           />
         )}
@@ -181,14 +166,14 @@ export default function MapScreen() {
             onClose={handleCloseNativePoiMarker}
             onDirections={onNativePoiDirections}
             onAddPlace={handleConfirmNativePoiMarker}
-            refreshSignal={route.pickerVisible}
+            refreshSignal={annotationRefreshSignal}
             onAnnotationSelected={markAnnotationTapped}
           />
         )}
-        {showQuickAddSheet && quickAddState.coordinates && (
+        {showQuickAddSheet && pendingPlaceCoords && (
           <QuickAddPreviewMarker
-            coordinates={quickAddState.coordinates}
-            refreshSignal={route.pickerVisible}
+            coordinates={pendingPlaceCoords}
+            refreshSignal={annotationRefreshSignal}
           />
         )}
       </MapView>
@@ -228,47 +213,19 @@ export default function MapScreen() {
         onSearch={search.open}
       />
 
-      <AddPlaceModal
-        visible={showAddModal}
-        state={addPlaceState}
-        onChange={onAddPlaceChange}
-        onSave={handleSavePlace}
-        onClose={handleCloseModal}
-      />
-
-      <QuickAddPlaceSheet
-        visible={showQuickAddSheet}
-        state={quickAddState}
-        onChange={onQuickAddChange}
-        onPickPhotos={handlePickQuickAddPhotos}
-        onRemovePhoto={handleRemoveQuickAddPhoto}
-        onSave={handleSaveQuickAddPlace}
-        onClose={handleCloseQuickAddSheet}
-        onDirections={onQuickAddDirections}
-      />
+      <ComingSoonSheet visible={showQuickAddSheet} onClose={handleCloseQuickAddSheet} />
 
       <RouteModePicker
         visible={route.pickerVisible}
         destinationLabel={route.pendingLabel}
         selectedProfile={route.selectedProfile}
         onSelectProfile={route.setSelectedProfile}
-        originMode={route.originMode}
-        originLabel={route.originLabel}
-        onSelectGpsOrigin={route.selectGpsOrigin}
-        onOpenPlacePicker={route.openPlacePicker}
+        previews={route.previews}
         hasLocation={route.hasLocation}
-        hasOrigin={route.hasOrigin}
         loading={route.activeRoute?.status === 'loading'}
         errorMessage={route.activeRoute?.status === 'error' ? route.activeRoute.error : null}
         onConfirm={() => route.confirmRoute(route.selectedProfile)}
         onClose={route.closeModePicker}
-      />
-
-      <RouteOriginPlacePicker
-        visible={route.placePickerVisible}
-        places={places}
-        onSelect={(place) => route.selectOriginPlace(place.coordinates, place.name)}
-        onClose={route.closePlacePicker}
       />
 
       <FriendsSheet

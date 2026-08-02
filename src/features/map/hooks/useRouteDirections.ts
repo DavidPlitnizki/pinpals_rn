@@ -3,15 +3,19 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
 import { Coordinates } from '../../../models/types';
-import { getDirections } from '../../../services/directions';
+import { DirectionsResult, getDirections } from '../../../services/directions';
 import { findNearestStepIndex } from '../../../shared/geo';
 import { useRouteStore } from '../../../store/useRouteStore';
-import { RouteOriginMode, RouteProfile } from '../types';
+import { RouteProfile, RoutePreview } from '../types';
 
 const WATCH_DISTANCE_INTERVAL_M = 25;
 const WATCH_TIME_INTERVAL_MS = 10000;
+const PREVIEW_PROFILES: RouteProfile[] = ['walking', 'driving', 'cycling'];
 
-export function useRouteDirections(gpsCoords: Coordinates | null, locationGranted: boolean = false) {
+export function useRouteDirections(
+  gpsCoords: Coordinates | null,
+  locationGranted: boolean = false,
+) {
   const activeRoute = useRouteStore((s) => s.activeRoute);
   const setRoute = useRouteStore((s) => s.setRoute);
   const clearStoredRoute = useRouteStore((s) => s.clearRoute);
@@ -20,24 +24,55 @@ export function useRouteDirections(gpsCoords: Coordinates | null, locationGrante
   const [pendingDestination, setPendingDestination] = useState<Coordinates | null>(null);
   const [pendingLabel, setPendingLabel] = useState('');
   const [selectedProfile, setSelectedProfile] = useState<RouteProfile>('walking');
-  const [originMode, setOriginMode] = useState<RouteOriginMode>('gps');
-  const [originPlace, setOriginPlace] = useState<{ coordinates: Coordinates; label: string } | null>(null);
-  const [placePickerVisible, setPlacePickerVisible] = useState(false);
   const [nearestStepIndex, setNearestStepIndex] = useState<number | null>(null);
+  const [previews, setPreviews] = useState<Partial<Record<RouteProfile, RoutePreview>>>({});
 
   // Guards against a stale in-flight request (e.g. a slow first request, or a
   // superseded live-tracking refresh) overwriting the store after a newer
   // request has already started, resolved, or been cleared.
   const requestIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
+  const previewResultsRef = useRef<Partial<Record<RouteProfile, DirectionsResult>>>({});
+  const previewRequestIdRef = useRef(0);
 
   function openModePicker(destination: Coordinates, label: string) {
     setPendingDestination(destination);
     setPendingLabel(label);
     setSelectedProfile('walking');
-    setOriginMode('gps');
-    setOriginPlace(null);
     setPickerVisible(true);
+
+    previewResultsRef.current = {};
+    const previewRequestId = ++previewRequestIdRef.current;
+    if (!gpsCoords) {
+      setPreviews({});
+      return;
+    }
+
+    setPreviews({
+      walking: { status: 'loading' },
+      driving: { status: 'loading' },
+      cycling: { status: 'loading' },
+    });
+
+    PREVIEW_PROFILES.forEach((profile) => {
+      getDirections(gpsCoords, destination, profile)
+        .then((result) => {
+          if (previewRequestIdRef.current !== previewRequestId) return;
+          previewResultsRef.current[profile] = result;
+          setPreviews((prev) => ({
+            ...prev,
+            [profile]: {
+              status: 'success',
+              distanceMeters: result.distanceMeters,
+              durationSeconds: result.durationSeconds,
+            },
+          }));
+        })
+        .catch(() => {
+          if (previewRequestIdRef.current !== previewRequestId) return;
+          setPreviews((prev) => ({ ...prev, [profile]: { status: 'error' } }));
+        });
+    });
   }
 
   function closeModePicker() {
@@ -53,39 +88,33 @@ export function useRouteDirections(gpsCoords: Coordinates | null, locationGrante
     }
   }
 
-  function selectGpsOrigin() {
-    setOriginMode('gps');
-    setOriginPlace(null);
-  }
-
-  function openPlacePicker() {
-    setOriginMode('place');
-    setPlacePickerVisible(true);
-  }
-
-  function closePlacePicker() {
-    setPlacePickerVisible(false);
-  }
-
-  function selectOriginPlace(coordinates: Coordinates, label: string) {
-    setOriginPlace({ coordinates, label });
-    setOriginMode('place');
-    setPlacePickerVisible(false);
-  }
-
   async function confirmRoute(profile: RouteProfile) {
-    const origin =
-      originMode === 'gps'
-        ? gpsCoords
-          ? { mode: 'gps' as const, coordinates: gpsCoords, label: 'Your location' }
-          : null
-        : originPlace
-          ? { mode: 'place' as const, coordinates: originPlace.coordinates, label: originPlace.label }
-          : null;
-    if (!origin || !pendingDestination) return;
+    if (!gpsCoords || !pendingDestination) return;
+    const origin = { mode: 'gps' as const, coordinates: gpsCoords, label: 'Your location' };
+
+    setSelectedProfile(profile);
+
+    const cached = previewResultsRef.current[profile];
+    if (cached) {
+      requestIdRef.current++; // invalidate any in-flight confirm request
+      abortRef.current?.abort();
+      setRoute({
+        profile,
+        origin,
+        destination: pendingDestination,
+        destinationLabel: pendingLabel,
+        geometry: cached.geometry,
+        distanceMeters: cached.distanceMeters,
+        durationSeconds: cached.durationSeconds,
+        steps: cached.steps,
+        status: 'success',
+        error: null,
+      });
+      setPickerVisible(false);
+      return;
+    }
 
     const requestId = ++requestIdRef.current;
-    setSelectedProfile(profile);
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -104,7 +133,12 @@ export function useRouteDirections(gpsCoords: Coordinates | null, locationGrante
     });
 
     try {
-      const result = await getDirections(origin.coordinates, pendingDestination, profile, controller.signal);
+      const result = await getDirections(
+        origin.coordinates,
+        pendingDestination,
+        profile,
+        controller.signal,
+      );
       if (requestIdRef.current !== requestId) return; // superseded by a newer request
       setRoute({
         profile,
@@ -156,7 +190,12 @@ export function useRouteDirections(gpsCoords: Coordinates | null, locationGrante
     abortRef.current = controller;
 
     try {
-      const result = await getDirections(coords, current.destination, current.profile, controller.signal);
+      const result = await getDirections(
+        coords,
+        current.destination,
+        current.profile,
+        controller.signal,
+      );
       if (requestIdRef.current !== requestId) return;
       const latest = useRouteStore.getState().activeRoute;
       if (!latest || latest.origin.mode !== 'gps' || latest.status !== 'success') return;
@@ -257,19 +296,12 @@ export function useRouteDirections(gpsCoords: Coordinates | null, locationGrante
     pendingLabel,
     selectedProfile,
     hasLocation: !!gpsCoords,
-    hasOrigin: originMode === 'gps' ? !!gpsCoords : !!originPlace,
-    originMode,
-    originLabel: originMode === 'place' ? (originPlace?.label ?? 'Choose a place') : 'My location',
-    placePickerVisible,
+    previews,
     nearestStepIndex,
     setSelectedProfile,
     openModePicker,
     closeModePicker,
     confirmRoute,
     clearRoute,
-    selectGpsOrigin,
-    openPlacePicker,
-    closePlacePicker,
-    selectOriginPlace,
   };
 }

@@ -24,8 +24,7 @@ const CATEGORY_SEARCH_KEYWORDS: Record<PlaceCategory, string> = {
 
 function radiusToBbox(center: Coordinates, radiusM: number): [number, number, number, number] {
   const latDelta = radiusM / METERS_PER_DEGREE_LAT;
-  const lonDelta =
-    radiusM / (METERS_PER_DEGREE_LAT * Math.cos((center.latitude * Math.PI) / 180));
+  const lonDelta = radiusM / (METERS_PER_DEGREE_LAT * Math.cos((center.latitude * Math.PI) / 180));
   return [
     center.longitude - lonDelta,
     center.latitude - latDelta,
@@ -143,7 +142,15 @@ export function useSearchSheet(places: Place[], userLocation: Coordinates | null
         return false;
       return true;
     });
-  }, [places, debouncedQuery, activeCategories, specialFilters, userLocation, radiusM, radiusEnabled]);
+  }, [
+    places,
+    debouncedQuery,
+    activeCategories,
+    specialFilters,
+    userLocation,
+    radiusM,
+    radiusEnabled,
+  ]);
 
   const hasActiveFilters =
     debouncedQuery.trim().length > 0 ||

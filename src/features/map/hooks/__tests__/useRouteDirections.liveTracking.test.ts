@@ -32,18 +32,31 @@ import { useRouteDirections } from '../useRouteDirections';
 // eslint-disable-next-line import/first
 import { useRouteStore } from '../../../../store/useRouteStore';
 
-jest.spyOn(AppState, 'addEventListener').mockImplementation(((_event: string, cb: (state: string) => void) => {
+jest.spyOn(AppState, 'addEventListener').mockImplementation(((
+  _event: string,
+  cb: (state: string) => void,
+) => {
   appStateListener = cb;
   return { remove: mockAppStateRemove };
 }) as typeof AppState.addEventListener);
-Object.defineProperty(AppState, 'currentState', { value: 'active', writable: true, configurable: true });
+Object.defineProperty(AppState, 'currentState', {
+  value: 'active',
+  writable: true,
+  configurable: true,
+});
 
 const GPS = { latitude: 55.75, longitude: 37.62 };
 const DESTINATION = { latitude: 55.76, longitude: 37.64 };
 
 function makeDirectionsResult() {
   return {
-    geometry: { type: 'LineString' as const, coordinates: [[1, 1], [2, 2]] },
+    geometry: {
+      type: 'LineString' as const,
+      coordinates: [
+        [1, 1],
+        [2, 2],
+      ],
+    },
     distanceMeters: 400,
     durationSeconds: 200,
     steps: [],

@@ -84,6 +84,7 @@ src/
 - `StyleSheet.create()` in every screen/component
 - `SafeAreaView edges={['top']}` for tabs; `edges={['top','bottom']}` for auth/modal screens
 - `KeyboardAvoidingView + ScrollView` for forms
+- No inline object/array literals or inline arrow functions as props (`style={{...}}`, `onPress={() => ...}`, `hitSlop={{...}}`) — they're re-created every render, defeating memoization and adding GC pressure. Use `StyleSheet.create()` entries, module-level constants (e.g. a shared `hitSlop` object), or `useCallback` for handlers that need closed-over values
 
 ## Auth Flow
 

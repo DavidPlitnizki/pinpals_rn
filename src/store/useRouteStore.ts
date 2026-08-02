@@ -38,7 +38,9 @@ export const useRouteStore = create<RouteState>()(
       storage: createJSONStorage(() => AsyncStorage),
       merge: (persistedState, currentState) => ({
         ...currentState,
-        activeRoute: sanitizeRoute((persistedState as Partial<RouteState> | undefined)?.activeRoute),
+        activeRoute: sanitizeRoute(
+          (persistedState as Partial<RouteState> | undefined)?.activeRoute,
+        ),
       }),
     },
   ),

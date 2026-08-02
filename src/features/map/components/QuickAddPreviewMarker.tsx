@@ -7,6 +7,8 @@ import { Colors } from '../../../design-system/tokens';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { Coordinates } from '../../../models/types';
 
+const PIN_SIZE = 40;
+
 interface Props {
   coordinates: Coordinates;
   // Bump this (e.g. with route.pickerVisible) to force the marker to re-register its
@@ -24,16 +26,29 @@ export function QuickAddPreviewMarker({ coordinates, refreshSignal }: Props) {
       coordinate={[coordinates.longitude, coordinates.latitude]}
       anchor={{ x: 0.5, y: 1 }}
     >
-      <View style={styles.flagWrap}>
-        <Ionicons name="flag" size={30} color={Colors.brand.primary} />
+      <View style={styles.pinWrap}>
+        <Ionicons name="location-sharp" size={PIN_SIZE} color={Colors.brand.primary} />
+        <View style={styles.pinBadge} />
       </View>
     </PointAnnotation>
   );
 }
 
 const styles = StyleSheet.create({
-  flagWrap: {
+  pinWrap: {
+    width: PIN_SIZE,
+    height: PIN_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Same drop-pin silhouette as SearchResultMarker/NativePoiMarker, in brand green —
+  // reads as "your new pin will land here", not as a different kind of object.
+  pinBadge: {
+    position: 'absolute',
+    top: 9,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.white,
   },
 });

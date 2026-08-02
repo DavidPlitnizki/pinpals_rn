@@ -1,10 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
 
 import { PinButton } from '../../../design-system/components/PinButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { RouteOriginMode, RouteProfile } from '../types';
+import { formatDistance, formatDuration } from '../../../shared/format';
+import { RoutePreview, RouteProfile } from '../types';
 
 interface ModeOption {
   profile: RouteProfile;
@@ -23,12 +32,8 @@ interface Props {
   destinationLabel: string;
   selectedProfile: RouteProfile;
   onSelectProfile: (profile: RouteProfile) => void;
-  originMode: RouteOriginMode;
-  originLabel: string;
-  onSelectGpsOrigin: () => void;
-  onOpenPlacePicker: () => void;
+  previews: Partial<Record<RouteProfile, RoutePreview>>;
   hasLocation: boolean;
-  hasOrigin: boolean;
   loading: boolean;
   errorMessage: string | null;
   onConfirm: () => void;
@@ -40,17 +45,34 @@ export function RouteModePicker({
   destinationLabel,
   selectedProfile,
   onSelectProfile,
-  originMode,
-  originLabel,
-  onSelectGpsOrigin,
-  onOpenPlacePicker,
+  previews,
   hasLocation,
-  hasOrigin,
   loading,
   errorMessage,
   onConfirm,
   onClose,
 }: Props) {
+  // Only mark a "fastest" mode once every option has resolved — otherwise the badge would
+  // flicker onto whichever mode happens to respond first from the network.
+  const successPreviews = MODE_OPTIONS.map((o) => previews[o.profile]).filter(
+    (p): p is RoutePreview & { status: 'success' } => p?.status === 'success',
+  );
+  const allResolved = successPreviews.length === MODE_OPTIONS.length;
+  const fastestProfile = allResolved
+    ? MODE_OPTIONS.reduce((fastest, option) => {
+        const current = previews[option.profile];
+        const best = previews[fastest.profile];
+        if (
+          current?.status === 'success' &&
+          (best?.status !== 'success' ||
+            (current.durationSeconds ?? Infinity) < (best.durationSeconds ?? Infinity))
+        ) {
+          return option;
+        }
+        return fastest;
+      }, MODE_OPTIONS[0]).profile
+    : null;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
@@ -65,6 +87,8 @@ export function RouteModePicker({
               <View style={styles.modeRow}>
                 {MODE_OPTIONS.map((option) => {
                   const selected = option.profile === selectedProfile;
+                  const preview = previews[option.profile];
+                  const isFastest = fastestProfile === option.profile;
                   return (
                     <TouchableOpacity
                       key={option.profile}
@@ -72,64 +96,50 @@ export function RouteModePicker({
                       onPress={() => onSelectProfile(option.profile)}
                       activeOpacity={0.8}
                     >
-                      <Ionicons
-                        name={option.icon}
-                        size={22}
-                        color={selected ? Colors.white : Colors.brand.primary}
-                      />
+                      <View style={styles.modeIconRow}>
+                        <Ionicons
+                          name={option.icon}
+                          size={22}
+                          color={selected ? Colors.white : Colors.brand.primary}
+                        />
+                        {isFastest && (
+                          <View style={styles.fastestBadge}>
+                            <Ionicons name="flash" size={10} color={Colors.white} />
+                          </View>
+                        )}
+                      </View>
                       <Text style={[styles.modeLabel, selected && styles.modeLabelSelected]}>
                         {option.label}
                       </Text>
+                      {/* Fixed-height slot so the row doesn't reflow as each mode's preview
+                          resolves independently (loading spinner and success text are the
+                          same height, and this reserves the same space while still loading). */}
+                      <View style={styles.previewSlot}>
+                        {preview?.status === 'loading' && (
+                          <ActivityIndicator
+                            size="small"
+                            color={selected ? Colors.white : Colors.brand.primary}
+                          />
+                        )}
+                        {preview?.status === 'success' &&
+                          preview.durationSeconds !== undefined &&
+                          preview.distanceMeters !== undefined && (
+                            <Text
+                              style={[styles.previewText, selected && styles.previewTextSelected]}
+                              numberOfLines={1}
+                            >
+                              {formatDuration(preview.durationSeconds)} ·{' '}
+                              {formatDistance(preview.distanceMeters)}
+                            </Text>
+                          )}
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
               </View>
 
-              <Text style={styles.originHeader}>Start from</Text>
-              <View style={styles.originRow}>
-                <TouchableOpacity
-                  style={[styles.originOption, originMode === 'gps' && styles.originOptionSelected]}
-                  onPress={onSelectGpsOrigin}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons
-                    name="navigate"
-                    size={16}
-                    color={originMode === 'gps' ? Colors.white : Colors.brand.primary}
-                  />
-                  <Text
-                    style={[styles.originLabel, originMode === 'gps' && styles.originLabelSelected]}
-                    numberOfLines={1}
-                  >
-                    My location
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.originOption, originMode === 'place' && styles.originOptionSelected]}
-                  onPress={onOpenPlacePicker}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons
-                    name="location"
-                    size={16}
-                    color={originMode === 'place' ? Colors.white : Colors.brand.primary}
-                  />
-                  <Text
-                    style={[styles.originLabel, originMode === 'place' && styles.originLabelSelected]}
-                    numberOfLines={1}
-                  >
-                    {originMode === 'place' ? originLabel : 'Choose a place'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {originMode === 'gps' && !hasLocation && (
-                <Text style={styles.error}>Enable location to get directions</Text>
-              )}
-              {originMode === 'place' && !hasOrigin && (
-                <Text style={styles.error}>Choose a place to start from</Text>
-              )}
-              {hasOrigin && errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
+              {!hasLocation && <Text style={styles.error}>Enable location to get directions</Text>}
+              {hasLocation && errorMessage && <Text style={styles.error}>{errorMessage}</Text>}
 
               <View style={styles.actions}>
                 <View style={styles.actionButton}>
@@ -139,7 +149,7 @@ export function RouteModePicker({
                   <PinButton
                     title={errorMessage ? 'Try again' : 'OK'}
                     onPress={onConfirm}
-                    disabled={!hasOrigin || loading}
+                    disabled={!hasLocation || loading}
                     loading={loading}
                     fullWidth
                   />
@@ -199,40 +209,34 @@ const styles = StyleSheet.create({
   modeLabelSelected: {
     color: Colors.white,
   },
-  originHeader: {
-    ...Typography.caption,
-    color: Colors.neutral[500],
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    marginTop: Spacing.s16,
-    marginBottom: Spacing.s8,
-  },
-  originRow: {
-    flexDirection: 'row',
-    gap: Spacing.s12,
-  },
-  originOption: {
-    flex: 1,
+  modeIconRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  // Uses the accent (orange) token rather than brand green or Colors.success — the map
+  // screen already uses green for brand/route/mood affordances, amber for native POIs, red
+  // for search/clear pills, and blue for the route line, so a highlight badge needs a color
+  // outside that set to avoid implying a different meaning.
+  fastestBadge: {
+    marginLeft: Spacing.s4,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: Colors.accent.primary,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.s4,
-    paddingVertical: Spacing.s8,
-    paddingHorizontal: Spacing.s8,
-    borderRadius: Radii.md,
-    borderWidth: 1.5,
-    borderColor: Colors.brand.primary,
   },
-  originOptionSelected: {
-    backgroundColor: Colors.brand.primary,
+  // Matches the caption line-height (16) so loading/success/empty states all reserve the
+  // same row height and the buttons never resize as previews resolve.
+  previewSlot: {
+    height: Typography.caption.lineHeight,
+    justifyContent: 'center',
   },
-  originLabel: {
+  previewText: {
     ...Typography.caption,
     color: Colors.brand.primary,
-    fontWeight: '600',
-    flexShrink: 1,
   },
-  originLabelSelected: {
+  previewTextSelected: {
     color: Colors.white,
   },
   error: {

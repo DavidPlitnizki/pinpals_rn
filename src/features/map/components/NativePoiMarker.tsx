@@ -4,6 +4,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { HIT_SLOP_8 } from '../constants';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { NativePoiMarker as NativePoiMarkerData } from '../types';
 import { iconForMaki } from '../utils/mapboxIcons';
@@ -72,14 +73,22 @@ export function NativePoiMarker({
           </Text>
           {marker.category && <Text style={styles.calloutCategory}>{marker.category}</Text>}
 
-          <TouchableOpacity style={styles.directionsButton} onPress={() => onDirections(marker)}>
+          <TouchableOpacity
+            style={styles.directionsButton}
+            onPress={() => onDirections(marker)}
+            hitSlop={HIT_SLOP_8}
+          >
             <Text style={styles.directionsButtonText}>Directions</Text>
           </TouchableOpacity>
           <View style={styles.calloutActions}>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose} hitSlop={HIT_SLOP_8}>
               <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.addButton} onPress={() => onAddPlace(marker)}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => onAddPlace(marker)}
+              hitSlop={HIT_SLOP_8}
+            >
               <Text style={styles.addButtonText}>Add place</Text>
             </TouchableOpacity>
           </View>

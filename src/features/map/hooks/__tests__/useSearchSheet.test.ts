@@ -43,7 +43,10 @@ beforeEach(async () => {
 
 describe('activeCategories / specialFilters Set round-trip', () => {
   it('toggleCategory persists as an array and is exposed as a working Set', async () => {
-    const places = [makePlace({ id: 'coffee-1', category: 'coffee' }), makePlace({ id: 'food-1', category: 'food' })];
+    const places = [
+      makePlace({ id: 'coffee-1', category: 'coffee' }),
+      makePlace({ id: 'food-1', category: 'food' }),
+    ];
     const { result } = renderHook(() => useSearchSheet(places, null));
 
     await act(async () => result.current.toggleCategory('coffee'));
@@ -72,7 +75,10 @@ describe('activeCategories / specialFilters Set round-trip', () => {
     );
     await useSearchFiltersStore.persist.rehydrate();
 
-    const places = [makePlace({ id: 'coffee-1', category: 'coffee' }), makePlace({ id: 'food-1', category: 'food' })];
+    const places = [
+      makePlace({ id: 'coffee-1', category: 'coffee' }),
+      makePlace({ id: 'food-1', category: 'food' }),
+    ];
     const { result } = renderHook(() => useSearchSheet(places, null));
 
     expect(result.current.activeCategories.has('food')).toBe(true);

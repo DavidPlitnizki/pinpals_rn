@@ -198,9 +198,7 @@ function DateStep({ date, onChangeDate }: { date: Date; onChangeDate: (d: Date) 
           style={[styles.dateOption, isToday && styles.dateOptionActive]}
           onPress={() => onChangeDate(new Date())}
         >
-          <Text style={[styles.dateOptionText, isToday && styles.dateOptionTextActive]}>
-            Today
-          </Text>
+          <Text style={[styles.dateOptionText, isToday && styles.dateOptionTextActive]}>Today</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.dateOption, !isToday && styles.dateOptionActive]}

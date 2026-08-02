@@ -1,23 +1,5 @@
-import { Coordinates, MemoryMood, PlaceCategory } from '../../models/types';
+import { Coordinates } from '../../models/types';
 import { MapboxSearchResult } from '../../services/mapboxSearch';
-
-export interface AddPlaceState {
-  name: string;
-  category: PlaceCategory;
-  rating: number;
-  description: string;
-  coordinates: Coordinates | null;
-}
-
-export interface QuickAddPlaceState {
-  name: string;
-  rating: number;
-  description: string;
-  photoUris: string[];
-  mood?: MemoryMood;
-  coordinates: Coordinates | null;
-  createdAt: string;
-}
 
 export type PendingSearchMarker = MapboxSearchResult;
 
@@ -48,6 +30,12 @@ export interface RouteStep {
   instruction: string;
   distanceMeters: number;
   maneuverLocation: Coordinates;
+}
+
+export interface RoutePreview {
+  status: 'loading' | 'success' | 'error';
+  distanceMeters?: number;
+  durationSeconds?: number;
 }
 
 export interface ActiveRoute {
