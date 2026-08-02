@@ -80,14 +80,27 @@ export function useSearchSheet(places: Place[], userLocation: Coordinates | null
   async function runExternalSearch(categories: Set<PlaceCategory>, textQuery: string) {
     if (specialFilters.has('mine')) return;
     const trimmed = textQuery.trim();
-    const categoryKeywords = Array.from(categories).map((cat) => CATEGORY_SEARCH_KEYWORDS[cat]);
-    const effectiveQuery = [trimmed, ...categoryKeywords].filter(Boolean).join(' ').trim();
-    if (!effectiveQuery) return;
+    // Category chips are single-select (see toggleCategory), so this is 0 or 1 category —
+    // never a set that needs its own OR handling or multiple requests.
+    const category = categories.size > 0 ? Array.from(categories)[0] : undefined;
+
+    // Nothing left to search for (the chip just got unselected, or the text was cleared) —
+    // clear any stale results instead of leaving the previous search's results on screen.
+    if (!category && trimmed.length < MIN_EXTERNAL_QUERY_LENGTH) {
+      setExternalResults([]);
+      setExternalSearched(false);
+      return;
+    }
 
     const bbox =
       radiusEnabled && userLocation && radiusM < MAX_RADIUS_M
         ? radiusToBbox(userLocation, radiusM)
         : undefined;
+
+    const effectiveQuery = [trimmed, category ? CATEGORY_SEARCH_KEYWORDS[category] : undefined]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
 
     setExternalLoading(true);
     setExternalSearched(true);
@@ -102,16 +115,15 @@ export function useSearchSheet(places: Place[], userLocation: Coordinates | null
   }
 
   function searchExternal() {
-    if (query.trim().length < MIN_EXTERNAL_QUERY_LENGTH && activeCategories.size === 0) return;
     void runExternalSearch(activeCategories, query);
   }
 
+  // Category chips are single-select: picking one deselects any other, tapping the active
+  // one clears it. "Mine only" / "Want to visit" (toggleSpecial) stay independent multi-
+  // select — they read from local storage and render in a separate results column, so they
+  // never compete for the same external-search query the way category keywords did.
   function toggleCategory(cat: PlaceCategory) {
-    const next = new Set(activeCategories);
-    if (next.has(cat)) next.delete(cat);
-    else next.add(cat);
-    setActiveCategoriesList(Array.from(next));
-    void runExternalSearch(next, query);
+    setActiveCategoriesList(activeCategories.has(cat) ? [] : [cat]);
   }
 
   function toggleSpecial(filter: SpecialFilter) {
