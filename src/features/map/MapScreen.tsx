@@ -5,13 +5,13 @@ import { StyleSheet, View } from 'react-native';
 
 import { ClearRouteButton } from './components/ClearRouteButton';
 import { ClearSearchResultsButton } from './components/ClearSearchResultsButton';
-import { ComingSoonSheet } from './components/ComingSoonSheet';
 import { FriendsButton } from './components/FriendsButton';
 import { FriendsSheet } from './components/FriendsSheet';
 import { MapControls } from './components/MapControls';
 import { MapMarkers } from './components/MapMarkers';
 import { MapToast } from './components/MapToast';
 import { NativePoiMarker } from './components/NativePoiMarker';
+import { QuickAddPlaceSheet } from './components/QuickAddPlaceSheet';
 import { QuickAddPreviewMarker } from './components/QuickAddPreviewMarker';
 import { RouteInfoCard } from './components/RouteInfoCard';
 import { RouteLineLayer } from './components/RouteLineLayer';
@@ -52,6 +52,7 @@ export default function MapScreen() {
     handleConfirmNativePoiMarker,
     handleAddAtCurrentLocation,
     handleCloseQuickAddSheet,
+    handleSaveQuickAddPlace,
     handleSelectSearchResult,
     handleShowSearchResultsOnMap,
     handleClearSearchResultMarkers,
@@ -121,6 +122,11 @@ export default function MapScreen() {
 
   function onNativePoiDirections(marker: NativePoiMarkerData) {
     route.openModePicker(marker.coordinates, marker.name);
+  }
+
+  function onQuickAddDirections(name: string) {
+    if (!pendingPlaceCoords) return;
+    route.openModePicker(pendingPlaceCoords, name.trim() || 'New Pin');
   }
 
   return (
@@ -213,7 +219,13 @@ export default function MapScreen() {
         onSearch={search.open}
       />
 
-      <ComingSoonSheet visible={showQuickAddSheet} onClose={handleCloseQuickAddSheet} />
+      <QuickAddPlaceSheet
+        visible={showQuickAddSheet}
+        coordinates={pendingPlaceCoords}
+        onSave={handleSaveQuickAddPlace}
+        onClose={handleCloseQuickAddSheet}
+        onDirections={onQuickAddDirections}
+      />
 
       <RouteModePicker
         visible={route.pickerVisible}

@@ -8,6 +8,7 @@ interface PinTextFieldProps extends TextInputProps {
   onChangeText: (text: string) => void;
   placeholder?: string;
   multiline?: boolean;
+  minHeight?: number;
   errorMessage?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
@@ -20,6 +21,7 @@ export function PinTextField({
   onChangeText,
   placeholder,
   multiline = false,
+  minHeight,
   errorMessage,
   leftIcon,
   rightIcon,
@@ -47,6 +49,7 @@ export function PinTextField({
           style={[
             styles.input,
             multiline && styles.multilineInput,
+            multiline && minHeight != null ? { minHeight } : null,
             leftIcon ? styles.inputWithLeftIcon : null,
             rightIcon ? styles.inputWithRightIcon : null,
           ]}

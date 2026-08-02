@@ -5,12 +5,20 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Animated } from 'react-native';
 
-import { Coordinates } from '../../../models/types';
+import { Coordinates, MemoryMood } from '../../../models/types';
 import { MapboxSearchResult } from '../../../services/mapboxSearch';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from '../constants';
 import { NativePoiMarker, PendingSearchMarker } from '../types';
+
+export interface QuickAddSaveData {
+  name: string;
+  description: string;
+  photoUris: string[];
+  mood?: MemoryMood;
+  rating: number;
+}
 
 type ScreenPointFeature = GeoJSON.Feature<
   GeoJSON.Point,
@@ -27,7 +35,7 @@ export function useMapScreen() {
   const cameraRef = useRef<Camera>(null);
   const mapViewRef = useRef<MapView>(null);
   const annotationTapRef = useRef(false);
-  const { places, deletePlace } = usePlacesStore();
+  const { places, addPlace, deletePlace, addNote } = usePlacesStore();
   const { profile } = useProfileStore();
 
   const currentCenter = useRef<[number, number]>(DEFAULT_CENTER);
@@ -193,6 +201,36 @@ export function useMapScreen() {
 
   function handleCloseQuickAddSheet() {
     setShowQuickAddSheet(false);
+    setPendingPlaceCoords(null);
+  }
+
+  function handleSaveQuickAddPlace(data: QuickAddSaveData) {
+    if (!pendingPlaceCoords) return;
+    const name = data.name.trim() || 'New Pin';
+    const description = data.description.trim();
+    const placeId = addPlace({
+      name,
+      description: description || undefined,
+      coordinates: pendingPlaceCoords,
+      category: 'nature',
+      rating: data.rating,
+      isFavorite: false,
+    });
+
+    if (description || data.photoUris.length > 0 || data.mood) {
+      addNote({
+        placeId,
+        text: description,
+        photoUri: data.photoUris[0],
+        photoUris: data.photoUris.length > 0 ? data.photoUris : undefined,
+        mood: data.mood,
+        companions: [],
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    setShowQuickAddSheet(false);
+    setPendingPlaceCoords(null);
   }
 
   function handleSelectSearchResult(result: MapboxSearchResult) {
@@ -269,6 +307,7 @@ export function useMapScreen() {
     handleConfirmNativePoiMarker,
     handleAddAtCurrentLocation,
     handleCloseQuickAddSheet,
+    handleSaveQuickAddPlace,
     handleSelectSearchResult,
     handleShowSearchResultsOnMap,
     handleClearSearchResultMarkers,
