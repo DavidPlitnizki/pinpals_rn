@@ -1,6 +1,5 @@
 import { Camera, MapView } from '@rnmapbox/maps';
 import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -11,9 +10,12 @@ import { MapboxSearchResult } from '../../../services/mapboxSearch';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from '../constants';
-import { AddPlaceState, NativePoiMarker, PendingSearchMarker, QuickAddPlaceState } from '../types';
+import { NativePoiMarker, PendingSearchMarker } from '../types';
 
-type ScreenPointFeature = GeoJSON.Feature<GeoJSON.Point, { screenPointX: number; screenPointY: number }>;
+type ScreenPointFeature = GeoJSON.Feature<
+  GeoJSON.Point,
+  { screenPointX: number; screenPointY: number }
+>;
 
 // A tap that lands on one of our own PointAnnotations (place/search-result markers) also
 // fires MapView's onPress — the annotation's onSelected calls this to suppress the
@@ -25,7 +27,7 @@ export function useMapScreen() {
   const cameraRef = useRef<Camera>(null);
   const mapViewRef = useRef<MapView>(null);
   const annotationTapRef = useRef(false);
-  const { places, addPlace, deletePlace, addNote } = usePlacesStore();
+  const { places, deletePlace } = usePlacesStore();
   const { profile } = useProfileStore();
 
   const currentCenter = useRef<[number, number]>(DEFAULT_CENTER);
@@ -33,24 +35,11 @@ export function useMapScreen() {
 
   const [locationGranted, setLocationGranted] = useState(false);
   const [gpsCoords, setGpsCoords] = useState<Coordinates | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [addPlaceState, setAddPlaceState] = useState<AddPlaceState>({
-    name: '',
-    category: 'nature',
-    rating: 3,
-    description: '',
-    coordinates: null,
-  });
+  // The add-place form was removed; this now only drives the "will be soon" placeholder
+  // sheet and the green preview pin at the chosen point.
   const [showQuickAddSheet, setShowQuickAddSheet] = useState(false);
-  const [quickAddState, setQuickAddState] = useState<QuickAddPlaceState>({
-    name: '',
-    rating: 5,
-    description: '',
-    photoUris: [],
-    coordinates: null,
-    createdAt: new Date().toISOString(),
-  });
+  const [pendingPlaceCoords, setPendingPlaceCoords] = useState<Coordinates | null>(null);
 
   const [searchResultMarkers, setSearchResultMarkers] = useState<PendingSearchMarker[]>([]);
   const [nativePoiMarker, setNativePoiMarker] = useState<NativePoiMarker | null>(null);
@@ -128,27 +117,18 @@ export function useMapScreen() {
     });
   }
 
-  function makeQuickAddState(name: string, coordinates: Coordinates): QuickAddPlaceState {
-    return {
-      name,
-      rating: 5,
-      description: '',
-      photoUris: [],
-      mood: undefined,
-      coordinates,
-      createdAt: new Date().toISOString(),
-    };
-  }
-
   function handleLongPress(feature: { geometry: { coordinates: [number, number] } }) {
     const [longitude, latitude] = feature.geometry.coordinates;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Instant, not a 600ms animation: the sheet opens at full height and covers the map
+    // anyway, so the animation bought nothing while flooding the native map with camera
+    // work (and onCameraChanged callbacks) exactly as the form was mounting.
     cameraRef.current?.setCamera({
       centerCoordinate: [longitude, latitude],
       zoomLevel: currentZoom.current,
-      animationDuration: 600,
+      animationDuration: 0,
     });
-    setQuickAddState(makeQuickAddState('', { latitude, longitude }));
+    setPendingPlaceCoords({ latitude, longitude });
     setShowQuickAddSheet(true);
   }
 
@@ -164,10 +144,22 @@ export function useMapScreen() {
     const { screenPointX, screenPointY } = feature.properties;
     if (screenPointX == null || screenPointY == null) return;
 
-    const collection = await mapViewRef.current?.queryRenderedFeaturesAtPoint([
-      screenPointX,
-      screenPointY,
-    ]);
+    let collection;
+    try {
+      collection = await mapViewRef.current?.queryRenderedFeaturesAtPoint([
+        screenPointX,
+        screenPointY,
+      ]);
+    } catch {
+      // Native query can fail transiently (e.g. style still loading) — a tap that
+      // can't be resolved to a POI should just be a no-op, not an unhandled rejection.
+      return;
+    }
+
+    // A tap on one of our own annotations may have landed while the native query was
+    // in flight — don't surface a native-POI card on top of/instead of it.
+    if (annotationTapRef.current) return;
+
     const poiFeature = collection?.features.find(
       (f) => typeof f.properties?.name === 'string' && f.properties.name.trim().length > 0,
     );
@@ -181,8 +173,10 @@ export function useMapScreen() {
     setNativePoiMarker({
       id: `poi-${longitude}-${latitude}-${Date.now()}`,
       name: poiFeature.properties!.name as string,
-      maki: typeof poiFeature.properties?.maki === 'string' ? poiFeature.properties.maki : undefined,
-      category: typeof poiFeature.properties?.class === 'string' ? poiFeature.properties.class : undefined,
+      maki:
+        typeof poiFeature.properties?.maki === 'string' ? poiFeature.properties.maki : undefined,
+      category:
+        typeof poiFeature.properties?.class === 'string' ? poiFeature.properties.class : undefined,
       coordinates: { latitude, longitude },
     });
   }
@@ -192,7 +186,7 @@ export function useMapScreen() {
   }
 
   function handleConfirmNativePoiMarker(marker: NativePoiMarker) {
-    setQuickAddState(makeQuickAddState(marker.name, marker.coordinates));
+    setPendingPlaceCoords(marker.coordinates);
     setNativePoiMarker(null);
     setShowQuickAddSheet(true);
   }
@@ -219,96 +213,20 @@ export function useMapScreen() {
   }
 
   function handleConfirmSearchResultMarker(marker: PendingSearchMarker) {
-    setQuickAddState(makeQuickAddState(marker.name, marker.coordinates));
+    setPendingPlaceCoords(marker.coordinates);
     setSearchResultMarkers((prev) => prev.filter((m) => m.id !== marker.id));
     setShowQuickAddSheet(true);
   }
 
-  async function handlePickQuickAddPhotos() {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to the photo library.');
-      return;
-    }
-    const remaining = 5 - quickAddState.photoUris.length;
-    if (remaining <= 0) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      selectionLimit: remaining,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      const newUris = result.assets.map((a) => a.uri);
-      setQuickAddState((s) => ({ ...s, photoUris: [...s.photoUris, ...newUris].slice(0, 5) }));
-    }
-  }
-
-  function handleRemoveQuickAddPhoto(uri: string) {
-    setQuickAddState((s) => ({ ...s, photoUris: s.photoUris.filter((u) => u !== uri) }));
-  }
-
-  function handleSaveQuickAddPlace() {
-    if (!quickAddState.coordinates) return;
-    const name = quickAddState.name.trim() || 'New Pin';
-    const placeId = addPlace({
-      name,
-      coordinates: quickAddState.coordinates,
-      category: 'nature',
-      rating: quickAddState.rating,
-      isFavorite: false,
-    });
-
-    const description = quickAddState.description.trim();
-    if (description || quickAddState.photoUris.length > 0 || quickAddState.mood) {
-      addNote({
-        placeId,
-        text: description,
-        photoUri: quickAddState.photoUris[0],
-        photoUris: quickAddState.photoUris.length > 0 ? quickAddState.photoUris : undefined,
-        mood: quickAddState.mood,
-        companions: [],
-        createdAt: quickAddState.createdAt,
-      });
-    }
-
-    setShowQuickAddSheet(false);
-  }
-
+  // The "+" button has no map point to work from, so it falls back to the user's current
+  // position (or the map centre).
   function handleAddAtCurrentLocation() {
     const coords = gpsCoords ?? {
       latitude: currentCenter.current[1],
       longitude: currentCenter.current[0],
     };
-    setAddPlaceState({
-      name: '',
-      category: 'nature',
-      rating: 3,
-      description: '',
-      coordinates: coords,
-    });
-    setShowAddModal(true);
-  }
-
-  function handleCloseModal() {
-    setShowAddModal(false);
-  }
-
-  function handleSavePlace() {
-    if (!addPlaceState.name.trim()) {
-      Alert.alert('Name required', 'Please enter a name for this place.');
-      return;
-    }
-    if (!addPlaceState.coordinates) return;
-    addPlace({
-      name: addPlaceState.name.trim(),
-      description: addPlaceState.description.trim() || undefined,
-      coordinates: addPlaceState.coordinates,
-      category: addPlaceState.category,
-      rating: addPlaceState.rating,
-      isFavorite: false,
-    });
-    setShowAddModal(false);
+    setPendingPlaceCoords(coords);
+    setShowQuickAddSheet(true);
   }
 
   function handleMarkerPress(placeId: string) {
@@ -333,11 +251,9 @@ export function useMapScreen() {
     profile,
     locationGranted,
     gpsCoords,
-    showAddModal,
     showProfileMenu,
-    addPlaceState,
     showQuickAddSheet,
-    quickAddState,
+    pendingPlaceCoords,
     searchResultMarkers,
     nativePoiMarker,
     toastAnim,
@@ -352,12 +268,7 @@ export function useMapScreen() {
     handleCloseNativePoiMarker,
     handleConfirmNativePoiMarker,
     handleAddAtCurrentLocation,
-    handleCloseModal,
-    handleSavePlace,
     handleCloseQuickAddSheet,
-    handlePickQuickAddPhotos,
-    handleRemoveQuickAddPhoto,
-    handleSaveQuickAddPlace,
     handleSelectSearchResult,
     handleShowSearchResultsOnMap,
     handleClearSearchResultMarkers,
@@ -365,7 +276,5 @@ export function useMapScreen() {
     handleMarkerPress,
     handleDeleteMarker,
     setShowProfileMenu,
-    setAddPlaceState,
-    setQuickAddState,
   };
 }

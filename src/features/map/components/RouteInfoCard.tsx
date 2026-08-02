@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { formatDistance, formatDuration } from '../../../shared/format';
+import { HIT_SLOP_16 } from '../constants';
 import { RouteProfile, RouteStep } from '../types';
 
 interface Props {
@@ -27,21 +29,6 @@ const PROFILE_ICON: Record<RouteProfile, React.ComponentProps<typeof Ionicons>['
 const FRIENDS_BUTTON_CLEARANCE = Spacing.s16 + 44 + Spacing.s12;
 const STEPS_LIST_MAX_HEIGHT = 220;
 
-function formatDistance(meters: number): string {
-  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
-  return `${Math.round(meters)} m`;
-}
-
-function formatDuration(seconds: number): string {
-  const totalMinutes = Math.round(seconds / 60);
-  if (totalMinutes >= 60) {
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return minutes > 0 ? `${hours} h ${minutes} min` : `${hours} h`;
-  }
-  return `${totalMinutes} min`;
-}
-
 export function RouteInfoCard({
   destinationLabel,
   profile,
@@ -51,6 +38,7 @@ export function RouteInfoCard({
   nearestStepIndex,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const toggleExpanded = useCallback(() => setExpanded((e) => !e), []);
 
   return (
     <SafeAreaView style={styles.wrap} pointerEvents="box-none" edges={['top']}>
@@ -66,7 +54,7 @@ export function RouteInfoCard({
             </Text>
           </View>
           {steps.length > 0 && (
-            <TouchableOpacity onPress={() => setExpanded((e) => !e)} hitSlop={8}>
+            <TouchableOpacity onPress={toggleExpanded} hitSlop={HIT_SLOP_16}>
               <Ionicons
                 name={expanded ? 'chevron-up' : 'chevron-down'}
                 size={18}
@@ -84,7 +72,10 @@ export function RouteInfoCard({
                 style={[styles.stepRow, idx === nearestStepIndex && styles.stepRowActive]}
               >
                 <Text
-                  style={[styles.stepInstruction, idx === nearestStepIndex && styles.stepInstructionActive]}
+                  style={[
+                    styles.stepInstruction,
+                    idx === nearestStepIndex && styles.stepInstructionActive,
+                  ]}
                   numberOfLines={2}
                 >
                   {step.instruction}

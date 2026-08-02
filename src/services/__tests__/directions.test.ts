@@ -20,7 +20,9 @@ describe('getDirections', () => {
     mockFetchOnce({
       ok: true,
       json: async () => ({
-        routes: [{ geometry: { type: 'LineString', coordinates: [] }, distance: 100, duration: 60 }],
+        routes: [
+          { geometry: { type: 'LineString', coordinates: [] }, distance: 100, duration: 60 },
+        ],
       }),
     } as Response);
 
@@ -63,7 +65,10 @@ describe('getDirections', () => {
             legs: [
               {
                 steps: [
-                  { distance: 50, maneuver: { instruction: 'Turn left', location: [37.63, 55.755] } },
+                  {
+                    distance: 50,
+                    maneuver: { instruction: 'Turn left', location: [37.63, 55.755] },
+                  },
                   { distance: 50, maneuver: { instruction: 'Arrive', location: [37.64, 55.76] } },
                 ],
               },
@@ -78,8 +83,16 @@ describe('getDirections', () => {
     const calledUrl = (fetch as jest.Mock).mock.calls[0][0] as string;
     expect(calledUrl).toContain('steps=true');
     expect(result.steps).toEqual([
-      { instruction: 'Turn left', distanceMeters: 50, maneuverLocation: { longitude: 37.63, latitude: 55.755 } },
-      { instruction: 'Arrive', distanceMeters: 50, maneuverLocation: { longitude: 37.64, latitude: 55.76 } },
+      {
+        instruction: 'Turn left',
+        distanceMeters: 50,
+        maneuverLocation: { longitude: 37.63, latitude: 55.755 },
+      },
+      {
+        instruction: 'Arrive',
+        distanceMeters: 50,
+        maneuverLocation: { longitude: 37.64, latitude: 55.76 },
+      },
     ]);
   });
 

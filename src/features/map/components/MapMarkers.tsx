@@ -3,10 +3,10 @@ import { Image } from 'expo-image';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { Colors, Spacing, Typography } from '../../../design-system/tokens';
+import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { Place, PlaceNote, MOOD_CONFIG } from '../../../models/types';
 import { usePlacesStore } from '../../../store/usePlacesStore';
-import { CATEGORY_COLORS, CATEGORY_LABELS } from '../constants';
+import { CATEGORY_COLORS, CATEGORY_LABELS, HIT_SLOP_8 } from '../constants';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 
 interface Props {
@@ -127,7 +127,7 @@ export function MapMarkers({
             <View style={styles.calloutDivider} />
             <TouchableOpacity
               style={styles.calloutActionButton}
-              hitSlop={{ top: Spacing.s8, bottom: Spacing.s8, left: Spacing.s8, right: Spacing.s8 }}
+              hitSlop={HIT_SLOP_8}
               onPress={() => {
                 setSelectedId(null);
                 onDirections(selectedPlace);
@@ -138,7 +138,7 @@ export function MapMarkers({
             <View style={styles.calloutDivider} />
             <TouchableOpacity
               style={styles.calloutActionButton}
-              hitSlop={{ top: Spacing.s8, bottom: Spacing.s8, left: Spacing.s8, right: Spacing.s8 }}
+              hitSlop={HIT_SLOP_8}
               onPress={() => {
                 setSelectedId(null);
                 onDeleteMarker(selectedPlace.id, selectedPlace.name);
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   },
   callout: {
     backgroundColor: Colors.white,
-    borderRadius: 8,
+    borderRadius: Radii.sm,
     padding: Spacing.s8,
     minWidth: 150,
     shadowColor: '#000',

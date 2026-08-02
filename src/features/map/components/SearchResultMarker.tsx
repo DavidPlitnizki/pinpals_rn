@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { HIT_SLOP_8 } from '../constants';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { PendingSearchMarker } from '../types';
 import { iconForMaki } from '../utils/mapboxIcons';
@@ -77,7 +78,11 @@ export function SearchResultMarker({
                 <Image source={{ uri: selected.imageUrl }} style={styles.calloutImage} />
               ) : (
                 <View style={styles.calloutImagePlaceholder}>
-                  <Ionicons name={iconForMaki(selected.maki)} size={26} color={Colors.neutral[400]} />
+                  <Ionicons
+                    name={iconForMaki(selected.maki)}
+                    size={26}
+                    color={Colors.neutral[400]}
+                  />
                 </View>
               )}
             </View>
@@ -86,9 +91,7 @@ export function SearchResultMarker({
               <Text style={styles.calloutName} numberOfLines={1}>
                 {selected.name}
               </Text>
-              {selected.category && (
-                <Text style={styles.calloutCategory}>{selected.category}</Text>
-              )}
+              {selected.category && <Text style={styles.calloutCategory}>{selected.category}</Text>}
               {selected.fullAddress && (
                 <Text style={styles.calloutAddress} numberOfLines={2}>
                   {selected.fullAddress}
@@ -107,6 +110,7 @@ export function SearchResultMarker({
                   setSelectedId(null);
                   onDirections(selected);
                 }}
+                hitSlop={HIT_SLOP_8}
               >
                 <Text style={styles.directionsButtonText}>Directions</Text>
               </TouchableOpacity>
@@ -114,6 +118,7 @@ export function SearchResultMarker({
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={() => setSelectedId(null)}
+                  hitSlop={HIT_SLOP_8}
                 >
                   <Text style={styles.closeButtonText}>Close</Text>
                 </TouchableOpacity>
@@ -123,6 +128,7 @@ export function SearchResultMarker({
                     setSelectedId(null);
                     onConfirm(selected);
                   }}
+                  hitSlop={HIT_SLOP_8}
                 >
                   <Text style={styles.addButtonText}>Add place</Text>
                 </TouchableOpacity>
@@ -211,12 +217,15 @@ const styles = StyleSheet.create({
     color: Colors.neutral[900],
     textAlign: 'center',
   },
+  // Matches the neutral (not brand-green) category color used by MapMarkers' and
+  // NativePoiMarker's callouts — brand-primary here would visually compete with the
+  // "Directions" button below, which is the one green/brand-colored element per callout.
   calloutCategory: {
     ...Typography.caption,
-    color: Colors.brand.primary,
-    fontWeight: '600',
+    color: Colors.neutral[500],
     marginTop: 2,
     textAlign: 'center',
+    textTransform: 'capitalize',
   },
   calloutAddress: {
     ...Typography.caption,

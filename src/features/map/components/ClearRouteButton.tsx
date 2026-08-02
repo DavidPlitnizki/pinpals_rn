@@ -7,6 +7,8 @@ import { Colors, Radii, Spacing, Typography } from '../../../design-system/token
 
 interface Props {
   onPress: () => void;
+  // True when ClearSearchResultsButton is also showing in the same bottom-right slot —
+  // shifts this pill up so the two don't overlap.
   stacked?: boolean;
 }
 
@@ -17,10 +19,7 @@ const PILL_STACK_OFFSET = 52;
 
 export function ClearRouteButton({ onPress, stacked }: Props) {
   return (
-    <SafeAreaView
-      style={[styles.wrap, stacked && styles.wrapStacked]}
-      pointerEvents="box-none"
-    >
+    <SafeAreaView style={[styles.wrap, stacked && styles.wrapStacked]} pointerEvents="box-none">
       <TouchableOpacity style={styles.btn} onPress={onPress} activeOpacity={0.85}>
         <Ionicons name="close-circle" size={18} color={Colors.white} />
         <Text style={styles.label}>Clear route</Text>
@@ -30,6 +29,7 @@ export function ClearRouteButton({ onPress, stacked }: Props) {
 }
 
 const styles = StyleSheet.create({
+  // Bottom-right, same slot/style as ClearSearchResultsButton (red pill, mirrors "N results").
   wrap: {
     position: 'absolute',
     bottom: 0,

@@ -12,7 +12,13 @@ function makeRoute(overrides: Partial<ActiveRoute> = {}): ActiveRoute {
     origin: { mode: 'gps', coordinates: { latitude: 1, longitude: 1 }, label: 'Your location' },
     destination: { latitude: 2, longitude: 2 },
     destinationLabel: 'Test Place',
-    geometry: { type: 'LineString', coordinates: [[1, 1], [2, 2]] },
+    geometry: {
+      type: 'LineString',
+      coordinates: [
+        [1, 1],
+        [2, 2],
+      ],
+    },
     distanceMeters: 500,
     durationSeconds: 300,
     steps: [],
@@ -24,7 +30,9 @@ function makeRoute(overrides: Partial<ActiveRoute> = {}): ActiveRoute {
 
 // Access the `merge` option directly, the way persist middleware invokes it.
 function callMerge(persistedState: unknown) {
-  const options = (useRouteStore as unknown as { persist: { getOptions: () => any } }).persist.getOptions();
+  const options = (
+    useRouteStore as unknown as { persist: { getOptions: () => any } }
+  ).persist.getOptions();
   return options.merge(persistedState, useRouteStore.getState());
 }
 
@@ -36,7 +44,12 @@ describe('useRouteStore merge (rehydration sanitizing)', () => {
   });
 
   it('discards a route with status "loading"', () => {
-    const route = makeRoute({ status: 'loading', geometry: null, distanceMeters: null, durationSeconds: null });
+    const route = makeRoute({
+      status: 'loading',
+      geometry: null,
+      distanceMeters: null,
+      durationSeconds: null,
+    });
     const merged = callMerge({ activeRoute: route });
     expect(merged.activeRoute).toBeNull();
   });
@@ -71,7 +84,9 @@ describe('useRouteStore merge (rehydration sanitizing)', () => {
     };
     const merged = callMerge({ activeRoute: legacyRoute });
     expect(merged.activeRoute).toEqual(
-      makeRoute({ origin: { mode: 'gps', coordinates: { latitude: 1, longitude: 1 }, label: 'Your location' } }),
+      makeRoute({
+        origin: { mode: 'gps', coordinates: { latitude: 1, longitude: 1 }, label: 'Your location' },
+      }),
     );
   });
 });

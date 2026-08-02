@@ -243,7 +243,9 @@ export function SearchSheet({
           <View style={styles.sliderRow}>
             <View style={styles.sliderHeader}>
               <Text style={styles.sliderLabel}>
-                {radiusEnabled ? `Radius: ${formatRadius(radiusM)}` : 'Radius: off (search anywhere)'}
+                {radiusEnabled
+                  ? `Radius: ${formatRadius(radiusM)}`
+                  : 'Radius: off (search anywhere)'}
               </Text>
               <Switch
                 value={radiusEnabled}
@@ -282,10 +284,14 @@ export function SearchSheet({
             <TouchableOpacity
               style={[
                 styles.searchButton,
-                query.trim().length < MIN_EXTERNAL_QUERY_LENGTH && activeCategories.size === 0 && styles.searchButtonDisabled,
+                query.trim().length < MIN_EXTERNAL_QUERY_LENGTH &&
+                  activeCategories.size === 0 &&
+                  styles.searchButtonDisabled,
               ]}
               onPress={onSearchExternal}
-              disabled={query.trim().length < MIN_EXTERNAL_QUERY_LENGTH && activeCategories.size === 0}
+              disabled={
+                query.trim().length < MIN_EXTERNAL_QUERY_LENGTH && activeCategories.size === 0
+              }
               activeOpacity={0.85}
             >
               {externalLoading ? (
