@@ -197,9 +197,7 @@ describe('handleMapPress', () => {
   });
 });
 
-// The add-place form was removed; every entry point now just parks a coordinate for the
-// green preview pin and shows the "will be soon" placeholder sheet.
-describe('placeholder add-place sheet', () => {
+describe('add-place sheet', () => {
   it("opens from a native-POI confirm, seeded with that POI's coordinates", () => {
     const { result } = renderHook(() => useMapScreen());
 
@@ -228,12 +226,81 @@ describe('placeholder add-place sheet', () => {
     expect(result.current.pendingPlaceCoords).not.toBeNull();
   });
 
-  it('no longer writes anything to the places store', () => {
+  it('closing without saving clears the pending coordinates too', () => {
     const { result } = renderHook(() => useMapScreen());
     act(() => {
       result.current.handleAddAtCurrentLocation();
     });
+    act(() => {
+      result.current.handleCloseQuickAddSheet();
+    });
+    expect(result.current.showQuickAddSheet).toBe(false);
+    expect(result.current.pendingPlaceCoords).toBeNull();
+  });
+});
+
+describe('handleSaveQuickAddPlace', () => {
+  it('creates a place + note at the pending coordinates and closes the sheet', () => {
+    const { result } = renderHook(() => useMapScreen());
+
+    act(() => {
+      result.current.handleConfirmNativePoiMarker({
+        id: 'poi-1',
+        name: 'Original Name',
+        coordinates: { latitude: 3, longitude: 4 },
+      });
+    });
+
+    act(() => {
+      result.current.handleSaveQuickAddPlace({
+        name: 'New Spot',
+        description: 'Great place',
+        photoUris: ['file://photo.jpg'],
+        mood: 'happy',
+        rating: 4,
+      });
+    });
+
+    expect(mockAddPlace).toHaveBeenCalledTimes(1);
+    expect(mockAddPlace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'New Spot',
+        description: 'Great place',
+        coordinates: { latitude: 3, longitude: 4 },
+        rating: 4,
+      }),
+    );
+    expect(mockAddNote).toHaveBeenCalledTimes(1);
+    expect(result.current.showQuickAddSheet).toBe(false);
+    expect(result.current.pendingPlaceCoords).toBeNull();
+  });
+
+  it('falls back to "New Pin" when the name is left blank', () => {
+    const { result } = renderHook(() => useMapScreen());
+    act(() => {
+      result.current.handleAddAtCurrentLocation();
+    });
+    act(() => {
+      result.current.handleSaveQuickAddPlace({
+        name: '   ',
+        description: '',
+        photoUris: [],
+        rating: 5,
+      });
+    });
+    expect(mockAddPlace).toHaveBeenCalledWith(expect.objectContaining({ name: 'New Pin' }));
+  });
+
+  it('does nothing when there are no pending coordinates', () => {
+    const { result } = renderHook(() => useMapScreen());
+    act(() => {
+      result.current.handleSaveQuickAddPlace({
+        name: 'New Spot',
+        description: '',
+        photoUris: [],
+        rating: 5,
+      });
+    });
     expect(mockAddPlace).not.toHaveBeenCalled();
-    expect(mockAddNote).not.toHaveBeenCalled();
   });
 });
