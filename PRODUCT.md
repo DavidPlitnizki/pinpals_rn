@@ -284,6 +284,7 @@ Features/Ask/
 - [ ] **Profile** — статистика, bubble chart вкусов, паттерны
 - [ ] «Год назад» кнопка на карте
 - [ ] Onboarding (3 экрана: что такое Pinpals, создай первый пин, настрой теги)
+- [ ] Кешировать сетевые запросы (Mapbox Search, Directions) — повторные/идентичные запросы сейчас каждый раз идут в сеть; нужен in-memory (и/или на диск) кеш с TTL, чтобы не дёргать API повторно при том же query/маршруте
 
 **Маршруты и персистентность карты — ✅ ЗАВЕРШЕНО (сдвинуто вперёд из общего плана):**
 - [x] **Маршрут до места (Directions)** — единый mode-picker submenu (walking / driving / cycling) с **четырёх** входных точек: long-press "New Pin" quick-add sheet, callout сохранённого пина, callout Mapbox search-result маркера, callout нативного POI карты
