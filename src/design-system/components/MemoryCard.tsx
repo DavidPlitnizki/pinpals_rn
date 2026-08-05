@@ -1,5 +1,14 @@
 import React, { useCallback } from 'react';
-import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  StyleProp,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from 'react-native';
 import { Colors, Radii, Spacing, Typography } from '../tokens';
 import { PlaceNote, MOOD_CONFIG } from '../../models/types';
 
@@ -9,6 +18,48 @@ interface MemoryCardProps {
   onPhotoPress?: (photoUris: string[], index: number) => void;
   onDeletePhoto?: (photoUri: string) => void;
 }
+
+interface PhotoTileProps {
+  uri: string;
+  index: number;
+  photoUris: string[];
+  style?: StyleProp<ViewStyle>;
+  overlayCount?: number;
+  onPhotoPress?: (photoUris: string[], index: number) => void;
+  onLongPressPhoto: (uri: string) => void;
+}
+
+const PhotoTile = React.memo(function PhotoTile({
+  uri,
+  index,
+  photoUris,
+  style,
+  overlayCount,
+  onPhotoPress,
+  onLongPressPhoto,
+}: PhotoTileProps) {
+  const handlePress = useCallback(
+    () => onPhotoPress?.(photoUris, index),
+    [onPhotoPress, photoUris, index],
+  );
+  const handleLongPress = useCallback(() => onLongPressPhoto(uri), [onLongPressPhoto, uri]);
+
+  return (
+    <TouchableOpacity
+      style={style}
+      activeOpacity={0.85}
+      onPress={handlePress}
+      onLongPress={overlayCount ? undefined : handleLongPress}
+    >
+      <Image source={{ uri }} style={style ? styles.photoGridImage : styles.photo} />
+      {overlayCount ? (
+        <View style={styles.photoMoreOverlay}>
+          <Text style={styles.photoMoreText}>+{overlayCount}</Text>
+        </View>
+      ) : null}
+    </TouchableOpacity>
+  );
+});
 
 export function MemoryCard({ note, onPress, onPhotoPress, onDeletePhoto }: MemoryCardProps) {
   const moodConfig = note.mood ? MOOD_CONFIG[note.mood] : null;
@@ -33,52 +84,51 @@ export function MemoryCard({ note, onPress, onPhotoPress, onDeletePhoto }: Memor
       ]}
     >
       {photoUris.length === 1 && (
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => onPhotoPress?.(photoUris, 0)}
-          onLongPress={() => handleLongPressPhoto(photoUris[0])}
-        >
-          <Image source={{ uri: photoUris[0] }} style={styles.photo} />
-        </TouchableOpacity>
+        <PhotoTile
+          uri={photoUris[0]}
+          index={0}
+          photoUris={photoUris}
+          onPhotoPress={onPhotoPress}
+          onLongPressPhoto={handleLongPressPhoto}
+        />
       )}
       {photoUris.length > 1 && photoUris.length <= 3 && (
         <View style={styles.photoGrid}>
           {photoUris.map((uri, index) => (
-            <TouchableOpacity
+            <PhotoTile
               key={uri}
+              uri={uri}
+              index={index}
+              photoUris={photoUris}
               style={styles.photoGridItem}
-              activeOpacity={0.85}
-              onPress={() => onPhotoPress?.(photoUris, index)}
-              onLongPress={() => handleLongPressPhoto(uri)}
-            >
-              <Image source={{ uri }} style={styles.photoGridImage} />
-            </TouchableOpacity>
+              onPhotoPress={onPhotoPress}
+              onLongPressPhoto={handleLongPressPhoto}
+            />
           ))}
         </View>
       )}
       {photoUris.length > 3 && (
         <View style={styles.photoGrid}>
           {photoUris.slice(0, 2).map((uri, index) => (
-            <TouchableOpacity
+            <PhotoTile
               key={uri}
+              uri={uri}
+              index={index}
+              photoUris={photoUris}
               style={styles.photoGridItem}
-              activeOpacity={0.85}
-              onPress={() => onPhotoPress?.(photoUris, index)}
-              onLongPress={() => handleLongPressPhoto(uri)}
-            >
-              <Image source={{ uri }} style={styles.photoGridImage} />
-            </TouchableOpacity>
+              onPhotoPress={onPhotoPress}
+              onLongPressPhoto={handleLongPressPhoto}
+            />
           ))}
-          <TouchableOpacity
+          <PhotoTile
+            uri={photoUris[2]}
+            index={2}
+            photoUris={photoUris}
             style={styles.photoGridItem}
-            activeOpacity={0.85}
-            onPress={() => onPhotoPress?.(photoUris, 2)}
-          >
-            <Image source={{ uri: photoUris[2] }} style={styles.photoGridImage} />
-            <View style={styles.photoMoreOverlay}>
-              <Text style={styles.photoMoreText}>+{photoUris.length - 2}</Text>
-            </View>
-          </TouchableOpacity>
+            overlayCount={photoUris.length - 2}
+            onPhotoPress={onPhotoPress}
+            onLongPressPhoto={handleLongPressPhoto}
+          />
         </View>
       )}
 

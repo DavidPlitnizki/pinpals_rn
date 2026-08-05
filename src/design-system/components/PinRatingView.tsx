@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors, Spacing } from '../tokens';
+
+const HIT_SLOP = { top: 8, bottom: 8, left: 4, right: 4 };
 
 interface PinRatingViewProps {
   rating: number;
@@ -8,6 +10,28 @@ interface PinRatingViewProps {
   size?: number;
   maxRating?: number;
 }
+
+interface StarProps {
+  star: number;
+  color: string;
+  size: number;
+  onRatingChange?: (rating: number) => void;
+}
+
+const Star = React.memo(function Star({ star, color, size, onRatingChange }: StarProps) {
+  const handlePress = useCallback(() => onRatingChange?.(star), [onRatingChange, star]);
+  const textStyle = { fontSize: size, color, lineHeight: size + 4 };
+
+  if (onRatingChange) {
+    return (
+      <TouchableOpacity onPress={handlePress} hitSlop={HIT_SLOP} activeOpacity={0.7}>
+        <Text style={textStyle}>{'★'}</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  return <Text style={textStyle}>{'★'}</Text>;
+});
 
 export function PinRatingView({
   rating,
@@ -19,29 +43,15 @@ export function PinRatingView({
 
   return (
     <View style={styles.container}>
-      {stars.map((star) => {
-        const filled = star <= Math.round(rating);
-        const color = filled ? Colors.warning : Colors.neutral[300];
-
-        if (onRatingChange) {
-          return (
-            <TouchableOpacity
-              key={star}
-              onPress={() => onRatingChange(star)}
-              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-              activeOpacity={0.7}
-            >
-              <Text style={{ fontSize: size, color, lineHeight: size + 4 }}>{'★'}</Text>
-            </TouchableOpacity>
-          );
-        }
-
-        return (
-          <Text key={star} style={{ fontSize: size, color, lineHeight: size + 4 }}>
-            {'★'}
-          </Text>
-        );
-      })}
+      {stars.map((star) => (
+        <Star
+          key={star}
+          star={star}
+          color={star <= Math.round(rating) ? Colors.warning : Colors.neutral[300]}
+          size={size}
+          onRatingChange={onRatingChange}
+        />
+      ))}
     </View>
   );
 }

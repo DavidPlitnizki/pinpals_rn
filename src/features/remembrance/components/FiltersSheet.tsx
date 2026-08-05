@@ -1,11 +1,43 @@
-import React from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback } from 'react';
+import {
+  Modal,
+  ScrollView,
+  StyleProp,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { MEMORY_MOODS, MOOD_CONFIG } from '../../../models/types';
 import { FilterPeriod, PlaceFilters, SortOption } from '../types';
+
+const HIT_SLOP_8 = { top: 8, bottom: 8, left: 8, right: 8 };
+
+interface FilterChipProps<T> {
+  value: T;
+  label: string;
+  active: boolean;
+  onSelect: (value: T) => void;
+  activeStyle?: StyleProp<ViewStyle>;
+}
+
+function FilterChipInner<T>({ value, label, active, onSelect, activeStyle }: FilterChipProps<T>) {
+  const handlePress = useCallback(() => onSelect(value), [onSelect, value]);
+  return (
+    <TouchableOpacity
+      style={[styles.chip, active && (activeStyle ?? styles.chipActive)]}
+      onPress={handlePress}
+    >
+      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+const FilterChip = React.memo(FilterChipInner) as typeof FilterChipInner;
 
 interface Props {
   visible: boolean;
@@ -70,7 +102,7 @@ export function FiltersSheet({
         {/* Header */}
         <View style={styles.header}>
           {activeFilterCount > 0 ? (
-            <TouchableOpacity onPress={onClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity onPress={onClear} hitSlop={HIT_SLOP_8}>
               <Text style={styles.clear}>Clear all</Text>
             </TouchableOpacity>
           ) : (
@@ -85,20 +117,15 @@ export function FiltersSheet({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Sort By</Text>
             <View style={styles.chips}>
-              {SORT_OPTIONS.map((opt) => {
-                const active = filters.sortBy === opt.value;
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[styles.chip, active && styles.chipActive]}
-                    onPress={() => onSetSortBy(opt.value)}
-                  >
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+              {SORT_OPTIONS.map((opt) => (
+                <FilterChip
+                  key={opt.value}
+                  value={opt.value}
+                  label={opt.label}
+                  active={filters.sortBy === opt.value}
+                  onSelect={onSetSortBy}
+                />
+              ))}
             </View>
           </View>
 
@@ -118,20 +145,15 @@ export function FiltersSheet({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Period</Text>
             <View style={styles.chips}>
-              {PERIOD_OPTIONS.map((opt) => {
-                const active = filters.period === opt.value;
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[styles.chip, active && styles.chipActive]}
-                    onPress={() => onSetPeriod(opt.value)}
-                  >
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+              {PERIOD_OPTIONS.map((opt) => (
+                <FilterChip
+                  key={opt.value}
+                  value={opt.value}
+                  label={opt.label}
+                  active={filters.period === opt.value}
+                  onSelect={onSetPeriod}
+                />
+              ))}
             </View>
           </View>
 
@@ -142,20 +164,15 @@ export function FiltersSheet({
               <View style={styles.chips}>
                 {moodsToShow.map((mood) => {
                   const cfg = MOOD_CONFIG[mood];
-                  const active = filters.moods.includes(mood);
                   return (
-                    <TouchableOpacity
+                    <FilterChip
                       key={mood}
-                      style={[
-                        styles.chip,
-                        active && { backgroundColor: cfg.color, borderColor: cfg.color },
-                      ]}
-                      onPress={() => onToggleMood(mood)}
-                    >
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                        {cfg.emoji} {cfg.label}
-                      </Text>
-                    </TouchableOpacity>
+                      value={mood}
+                      label={`${cfg.emoji} ${cfg.label}`}
+                      active={filters.moods.includes(mood)}
+                      onSelect={onToggleMood}
+                      activeStyle={{ backgroundColor: cfg.color, borderColor: cfg.color }}
+                    />
                   );
                 })}
               </View>
@@ -167,18 +184,15 @@ export function FiltersSheet({
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Tags</Text>
               <View style={styles.chips}>
-                {allTags.map((tag) => {
-                  const active = filters.tags.includes(tag);
-                  return (
-                    <TouchableOpacity
-                      key={tag}
-                      style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => onToggleTag(tag)}
-                    >
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>#{tag}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                {allTags.map((tag) => (
+                  <FilterChip
+                    key={tag}
+                    value={tag}
+                    label={`#${tag}`}
+                    active={filters.tags.includes(tag)}
+                    onSelect={onToggleTag}
+                  />
+                ))}
               </View>
             </View>
           )}

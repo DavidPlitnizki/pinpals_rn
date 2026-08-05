@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
@@ -11,6 +11,8 @@ import { CATEGORY_COLORS, CATEGORY_LABELS } from '../../../shared/constants';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { InlineTags } from './InlineTags';
 
+function noop() {}
+
 interface Props {
   place: Place;
   onPress: (id: string) => void;
@@ -21,19 +23,31 @@ interface Props {
 export function PlaceRow({ place, onPress, onDelete, allTags = [] }: Props) {
   const { addTagToPlace, removeTagFromPlace } = usePlacesStore();
 
+  const handlePress = useCallback(() => onPress(place.id), [onPress, place.id]);
+  const handleDelete = useCallback(
+    () => onDelete(place.id, place.name),
+    [onDelete, place.id, place.name],
+  );
+  const handleAddTag = useCallback(
+    (tag: string) => addTagToPlace(place.id, tag),
+    [addTagToPlace, place.id],
+  );
+  const handleRemoveTag = useCallback(
+    (tag: string) => removeTagFromPlace(place.id, tag),
+    [removeTagFromPlace, place.id],
+  );
+  const renderRightActions = useCallback(
+    () => (
+      <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}>
+        <Text style={styles.deleteActionText}>Delete</Text>
+      </TouchableOpacity>
+    ),
+    [handleDelete],
+  );
+
   return (
-    <Swipeable
-      renderRightActions={() => (
-        <TouchableOpacity
-          style={styles.deleteAction}
-          onPress={() => onDelete(place.id, place.name)}
-        >
-          <Text style={styles.deleteActionText}>Delete</Text>
-        </TouchableOpacity>
-      )}
-      overshootRight={false}
-    >
-      <TouchableOpacity onPress={() => onPress(place.id)} activeOpacity={0.75}>
+    <Swipeable renderRightActions={renderRightActions} overshootRight={false}>
+      <TouchableOpacity onPress={handlePress} activeOpacity={0.75}>
         <PinCard style={styles.card}>
           <View style={styles.row}>
             <View style={styles.info}>
@@ -57,12 +71,12 @@ export function PlaceRow({ place, onPress, onDelete, allTags = [] }: Props) {
           </View>
 
           {/* Inline tags — stop propagation so tapping chips doesn't open detail */}
-          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+          <TouchableOpacity activeOpacity={1} onPress={noop}>
             <InlineTags
               tags={place.tags ?? []}
               allTags={allTags}
-              onAdd={(tag) => addTagToPlace(place.id, tag)}
-              onRemove={(tag) => removeTagFromPlace(place.id, tag)}
+              onAdd={handleAddTag}
+              onRemove={handleRemoveTag}
             />
           </TouchableOpacity>
         </PinCard>

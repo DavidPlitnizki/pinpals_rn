@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,7 +10,14 @@ import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
 
 type PlanId = 'monthly' | 'yearly';
 
-const PLANS: { id: PlanId; label: string; price: string; badge?: string }[] = [
+interface Plan {
+  id: PlanId;
+  label: string;
+  price: string;
+  badge?: string;
+}
+
+const PLANS: Plan[] = [
   { id: 'yearly', label: 'Yearly', price: '$29.99 / year', badge: 'Best value' },
   { id: 'monthly', label: 'Monthly', price: '$3.99 / month' },
 ];
@@ -22,22 +29,57 @@ const PERKS = [
   'Early access to new features',
 ];
 
+function handleSubscribe() {
+  Alert.alert('Coming soon', 'Payments are not available yet — check back soon!');
+}
+
+function handleRestore() {
+  Alert.alert('Coming soon', 'Restoring purchases is not available yet.');
+}
+
+interface PlanCardProps {
+  plan: Plan;
+  active: boolean;
+  onSelect: (id: PlanId) => void;
+}
+
+const PlanCard = React.memo(function PlanCard({ plan, active, onSelect }: PlanCardProps) {
+  const handlePress = useCallback(() => onSelect(plan.id), [onSelect, plan.id]);
+
+  return (
+    <TouchableOpacity
+      style={[styles.planCard, active && styles.planCardActive]}
+      onPress={handlePress}
+    >
+      <View style={styles.planTextGroup}>
+        <View style={styles.planLabelRow}>
+          <Text style={styles.planLabel}>{plan.label}</Text>
+          {plan.badge && (
+            <View style={styles.planBadge}>
+              <Text style={styles.planBadgeText}>{plan.badge}</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.planPrice}>{plan.price}</Text>
+      </View>
+      <Ionicons
+        name={active ? 'radio-button-on' : 'radio-button-off'}
+        size={22}
+        color={active ? Colors.brand.primary : Colors.neutral[300]}
+      />
+    </TouchableOpacity>
+  );
+});
+
 export default function PaywallScreen() {
   const router = useRouter();
   const [selected, setSelected] = useState<PlanId>('yearly');
-
-  function handleSubscribe() {
-    Alert.alert('Coming soon', 'Payments are not available yet — check back soon!');
-  }
-
-  function handleRestore() {
-    Alert.alert('Coming soon', 'Restoring purchases is not available yet.');
-  }
+  const handleClose = useCallback(() => router.back(), [router]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <CircleCloseButton onPress={() => router.back()} />
+        <CircleCloseButton onPress={handleClose} />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Ionicons name="sparkles" size={40} color={Colors.brand.primary} />
@@ -54,33 +96,14 @@ export default function PaywallScreen() {
         </View>
 
         <View style={styles.plans}>
-          {PLANS.map((plan) => {
-            const active = selected === plan.id;
-            return (
-              <TouchableOpacity
-                key={plan.id}
-                style={[styles.planCard, active && styles.planCardActive]}
-                onPress={() => setSelected(plan.id)}
-              >
-                <View style={styles.planTextGroup}>
-                  <View style={styles.planLabelRow}>
-                    <Text style={styles.planLabel}>{plan.label}</Text>
-                    {plan.badge && (
-                      <View style={styles.planBadge}>
-                        <Text style={styles.planBadgeText}>{plan.badge}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.planPrice}>{plan.price}</Text>
-                </View>
-                <Ionicons
-                  name={active ? 'radio-button-on' : 'radio-button-off'}
-                  size={22}
-                  color={active ? Colors.brand.primary : Colors.neutral[300]}
-                />
-              </TouchableOpacity>
-            );
-          })}
+          {PLANS.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              active={selected === plan.id}
+              onSelect={setSelected}
+            />
+          ))}
         </View>
 
         <PinButton title="Subscribe" onPress={handleSubscribe} fullWidth size="lg" />

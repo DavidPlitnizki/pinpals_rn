@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
@@ -32,12 +32,10 @@ export function DayMemoryWidget({ memory, onPress }: Props) {
   const photoUri =
     note?.photoUri ?? (note?.photoUris && note.photoUris.length > 0 ? note.photoUris[0] : null);
 
+  const handlePress = useCallback(() => onPress(place.id), [onPress, place.id]);
+
   return (
-    <TouchableOpacity
-      style={styles.container}
-      onPress={() => onPress(place.id)}
-      activeOpacity={0.82}
-    >
+    <TouchableOpacity style={styles.container} onPress={handlePress} activeOpacity={0.82}>
       {/* Left accent bar */}
       <Animated.View style={[styles.accentBar, { backgroundColor: accentColor, opacity: pulse }]} />
 

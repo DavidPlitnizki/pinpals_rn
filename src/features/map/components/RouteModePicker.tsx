@@ -88,7 +88,10 @@ function ModeOptionButton({
         {preview?.status === 'success' &&
           preview.durationSeconds !== undefined &&
           preview.distanceMeters !== undefined && (
-            <Text style={[styles.previewText, selected && styles.previewTextSelected]} numberOfLines={1}>
+            <Text
+              style={[styles.previewText, selected && styles.previewTextSelected]}
+              numberOfLines={1}
+            >
               {formatDuration(preview.durationSeconds)} · {formatDistance(preview.distanceMeters)}
             </Text>
           )}

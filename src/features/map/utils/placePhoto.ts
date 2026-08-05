@@ -18,7 +18,10 @@ export function getPlacePhotoPreview(place: Place, notes: PlaceNote[]): PlacePho
     for (const note of placeNotes) {
       const uris = note.photoUris ?? (note.photoUri ? [note.photoUri] : []);
       if (uris.includes(place.mainPhotoUri)) {
-        return { photoUri: place.mainPhotoUri, mood: note.mood ? MOOD_CONFIG[note.mood] : undefined };
+        return {
+          photoUri: place.mainPhotoUri,
+          mood: note.mood ? MOOD_CONFIG[note.mood] : undefined,
+        };
       }
     }
   }

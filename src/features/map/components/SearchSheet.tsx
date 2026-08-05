@@ -37,6 +37,7 @@ const ROUTE_PROFILE_ICON: Record<RouteProfile, React.ComponentProps<typeof Ionic
 
 const SHEET_HEIGHT = Dimensions.get('window').height * 0.75;
 const ANIMATION_DURATION = 280;
+const HIT_SLOP_8 = { top: 8, bottom: 8, left: 8, right: 8 };
 
 function formatSavedAt(createdAt: string): string {
   const date = new Date(createdAt);
@@ -44,6 +45,133 @@ function formatSavedAt(createdAt: string): string {
   const timeStr = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
   return `${dateStr}, ${timeStr}`;
 }
+
+interface SearchPlaceRowProps {
+  place: Place;
+  photoUri: string | undefined;
+  onPress: (id: string) => void;
+}
+
+const SearchPlaceRow = React.memo(function SearchPlaceRow({
+  place,
+  photoUri,
+  onPress,
+}: SearchPlaceRowProps) {
+  const handlePress = useCallback(() => onPress(place.id), [onPress, place.id]);
+
+  return (
+    <TouchableOpacity style={styles.placeRow} onPress={handlePress} activeOpacity={0.7}>
+      {photoUri ? (
+        <Image source={{ uri: photoUri }} style={styles.rowThumb} contentFit="cover" />
+      ) : (
+        <View style={[styles.categoryDot, { backgroundColor: CATEGORY_COLORS[place.category] }]} />
+      )}
+      <View style={styles.placeInfo}>
+        <Text style={styles.placeName} numberOfLines={1}>
+          {place.name}
+        </Text>
+        <Text style={styles.placeMeta}>
+          {CATEGORY_LABELS[place.category]}
+          {'  '}
+          {'★'.repeat(place.rating)}
+          {place.isFavorite ? '  ⭐' : ''}
+        </Text>
+        <Text style={styles.placeSavedAt}>Saved {formatSavedAt(place.createdAt)}</Text>
+      </View>
+      <Text style={styles.chevron}>›</Text>
+    </TouchableOpacity>
+  );
+});
+
+interface ExternalPlaceRowProps {
+  result: MapboxSearchResult;
+  onPress: (result: MapboxSearchResult) => void;
+}
+
+const ExternalPlaceRow = React.memo(function ExternalPlaceRow({
+  result,
+  onPress,
+}: ExternalPlaceRowProps) {
+  const handlePress = useCallback(() => onPress(result), [onPress, result]);
+
+  return (
+    <TouchableOpacity style={styles.placeRow} onPress={handlePress} activeOpacity={0.7}>
+      {result.imageUrl ? (
+        <Image source={{ uri: result.imageUrl }} style={styles.rowThumb} contentFit="cover" />
+      ) : (
+        <Ionicons name="location-outline" size={20} color={Colors.brand.primary} />
+      )}
+      <View style={styles.placeInfo}>
+        <Text style={styles.placeName} numberOfLines={1}>
+          {result.name}
+        </Text>
+        {result.fullAddress && (
+          <Text style={styles.placeMeta} numberOfLines={1}>
+            {result.fullAddress}
+          </Text>
+        )}
+      </View>
+      <Text style={styles.chevron}>›</Text>
+    </TouchableOpacity>
+  );
+});
+
+interface SavedRouteRowProps {
+  route: SavedRoute;
+  onPress: (route: SavedRoute) => void;
+  onDelete: (id: string) => void;
+}
+
+const SavedRouteRow = React.memo(function SavedRouteRow({
+  route,
+  onPress,
+  onDelete,
+}: SavedRouteRowProps) {
+  const handlePress = useCallback(() => onPress(route), [onPress, route]);
+  const handleDelete = useCallback(() => onDelete(route.id), [onDelete, route.id]);
+
+  return (
+    <TouchableOpacity style={styles.placeRow} onPress={handlePress} activeOpacity={0.7}>
+      <View style={styles.routeIconWrap}>
+        <Ionicons name={ROUTE_PROFILE_ICON[route.profile]} size={18} color={Colors.brand.primary} />
+      </View>
+      <View style={styles.placeInfo}>
+        <Text style={styles.placeName} numberOfLines={1}>
+          {route.name}
+        </Text>
+        <Text style={styles.placeMeta}>
+          {route.waypoints.length} {route.waypoints.length === 1 ? 'stop' : 'stops'}
+        </Text>
+        <Text style={styles.placeSavedAt}>Saved {formatSavedAt(route.createdAt)}</Text>
+      </View>
+      <TouchableOpacity onPress={handleDelete} hitSlop={HIT_SLOP_8}>
+        <Ionicons name="trash-outline" size={18} color={Colors.neutral[400]} />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+});
+
+interface CategoryChipProps {
+  category: PlaceCategory;
+  active: boolean;
+  onSelect: (category: PlaceCategory) => void;
+}
+
+const CategoryChip = React.memo(function CategoryChip({
+  category,
+  active,
+  onSelect,
+}: CategoryChipProps) {
+  const handlePress = useCallback(() => onSelect(category), [onSelect, category]);
+  return (
+    <PinChip
+      label={CATEGORY_LABELS[category]}
+      color={CATEGORY_COLORS[category]}
+      selected={active}
+      onPress={handlePress}
+    />
+  );
+});
 
 interface Props {
   visible: boolean;
@@ -140,7 +268,7 @@ export function SearchSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  function handleClose() {
+  const handleClose = useCallback(() => {
     Animated.parallel([
       Animated.timing(backdropOpacity, {
         toValue: 0,
@@ -153,105 +281,35 @@ export function SearchSheet({
         useNativeDriver: true,
       }),
     ]).start(onClose);
-  }
+  }, [backdropOpacity, translateY, onClose]);
 
-  function renderPlace(item: Place) {
-    const photoUri = photoPreviews.get(item.id);
-    return (
-      <TouchableOpacity
-        key={item.id}
-        style={styles.placeRow}
-        onPress={() => {
-          handleClose();
-          onPlacePress(item.id);
-        }}
-        activeOpacity={0.7}
-      >
-        {photoUri ? (
-          <Image source={{ uri: photoUri }} style={styles.rowThumb} contentFit="cover" />
-        ) : (
-          <View style={[styles.categoryDot, { backgroundColor: CATEGORY_COLORS[item.category] }]} />
-        )}
-        <View style={styles.placeInfo}>
-          <Text style={styles.placeName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text style={styles.placeMeta}>
-            {CATEGORY_LABELS[item.category]}
-            {'  '}
-            {'★'.repeat(item.rating)}
-            {item.isFavorite ? '  ⭐' : ''}
-          </Text>
-          <Text style={styles.placeSavedAt}>Saved {formatSavedAt(item.createdAt)}</Text>
-        </View>
-        <Text style={styles.chevron}>›</Text>
-      </TouchableOpacity>
-    );
-  }
+  const handleSelectPlace = useCallback(
+    (id: string) => {
+      handleClose();
+      onPlacePress(id);
+    },
+    [handleClose, onPlacePress],
+  );
 
-  function renderExternalPlace(item: MapboxSearchResult) {
-    return (
-      <TouchableOpacity
-        key={item.id}
-        style={styles.placeRow}
-        onPress={() => {
-          handleClose();
-          onExternalResultPress(item);
-        }}
-        activeOpacity={0.7}
-      >
-        {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.rowThumb} contentFit="cover" />
-        ) : (
-          <Ionicons name="location-outline" size={20} color={Colors.brand.primary} />
-        )}
-        <View style={styles.placeInfo}>
-          <Text style={styles.placeName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          {item.fullAddress && (
-            <Text style={styles.placeMeta} numberOfLines={1}>
-              {item.fullAddress}
-            </Text>
-          )}
-        </View>
-        <Text style={styles.chevron}>›</Text>
-      </TouchableOpacity>
-    );
-  }
+  const handleSelectExternal = useCallback(
+    (result: MapboxSearchResult) => {
+      handleClose();
+      onExternalResultPress(result);
+    },
+    [handleClose, onExternalResultPress],
+  );
 
-  function renderSavedRoute(item: SavedRoute) {
-    return (
-      <TouchableOpacity
-        key={item.id}
-        style={styles.placeRow}
-        onPress={() => {
-          handleClose();
-          onSelectSavedRoute(item);
-        }}
-        activeOpacity={0.7}
-      >
-        <View style={styles.routeIconWrap}>
-          <Ionicons name={ROUTE_PROFILE_ICON[item.profile]} size={18} color={Colors.brand.primary} />
-        </View>
-        <View style={styles.placeInfo}>
-          <Text style={styles.placeName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text style={styles.placeMeta}>
-            {item.waypoints.length} {item.waypoints.length === 1 ? 'stop' : 'stops'}
-          </Text>
-          <Text style={styles.placeSavedAt}>Saved {formatSavedAt(item.createdAt)}</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => onDeleteSavedRoute(item.id)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="trash-outline" size={18} color={Colors.neutral[400]} />
-        </TouchableOpacity>
-      </TouchableOpacity>
-    );
-  }
+  const handleSelectSavedRoute = useCallback(
+    (route: SavedRoute) => {
+      handleClose();
+      onSelectSavedRoute(route);
+    },
+    [handleClose, onSelectSavedRoute],
+  );
+
+  const handleToggleMine = useCallback(() => onToggleSpecial('mine'), [onToggleSpecial]);
+  const handleToggleFavorites = useCallback(() => onToggleSpecial('favorites'), [onToggleSpecial]);
+  const handleToggleFavorite = useCallback(() => onToggleSpecial('favorite'), [onToggleSpecial]);
 
   return (
     <Modal
@@ -317,27 +375,26 @@ export function SearchSheet({
               label="Mine only"
               color={Colors.brand.primary}
               selected={specialFilters.has('mine')}
-              onPress={() => onToggleSpecial('mine')}
+              onPress={handleToggleMine}
             />
             <PinChip
               label="⭐ Want to visit"
               color={Colors.warning}
               selected={specialFilters.has('favorites')}
-              onPress={() => onToggleSpecial('favorites')}
+              onPress={handleToggleFavorites}
             />
             <PinChip
               label="❤️ Favorite"
               color={Colors.error}
               selected={specialFilters.has('favorite')}
-              onPress={() => onToggleSpecial('favorite')}
+              onPress={handleToggleFavorite}
             />
             {CATEGORIES.map((cat) => (
-              <PinChip
+              <CategoryChip
                 key={cat}
-                label={CATEGORY_LABELS[cat]}
-                color={CATEGORY_COLORS[cat]}
-                selected={activeCategories.has(cat)}
-                onPress={() => onToggleCategory(cat)}
+                category={cat}
+                active={activeCategories.has(cat)}
+                onSelect={onToggleCategory}
               />
             ))}
           </ScrollView>
@@ -422,7 +479,14 @@ export function SearchSheet({
               <>
                 <Text style={styles.sectionHeader}>My Routes</Text>
                 {savedRoutes.length > 0 ? (
-                  savedRoutes.map(renderSavedRoute)
+                  savedRoutes.map((route) => (
+                    <SavedRouteRow
+                      key={route.id}
+                      route={route}
+                      onPress={handleSelectSavedRoute}
+                      onDelete={onDeleteSavedRoute}
+                    />
+                  ))
                 ) : (
                   <Text style={styles.emptyText}>
                     No saved routes yet. Tap the bookmark on an active route to save it.
@@ -433,7 +497,14 @@ export function SearchSheet({
               <>
                 <Text style={styles.sectionHeader}>My Places</Text>
                 {filteredPlaces.length > 0 ? (
-                  filteredPlaces.map(renderPlace)
+                  filteredPlaces.map((place) => (
+                    <SearchPlaceRow
+                      key={place.id}
+                      place={place}
+                      photoUri={photoPreviews.get(place.id)}
+                      onPress={handleSelectPlace}
+                    />
+                  ))
                 ) : (
                   <Text style={styles.emptyText}>No places match your filters</Text>
                 )}
@@ -447,7 +518,13 @@ export function SearchSheet({
                         color={Colors.brand.primary}
                       />
                     ) : externalResults.length > 0 ? (
-                      externalResults.map(renderExternalPlace)
+                      externalResults.map((result) => (
+                        <ExternalPlaceRow
+                          key={result.id}
+                          result={result}
+                          onPress={handleSelectExternal}
+                        />
+                      ))
                     ) : (
                       <ExternalEmptyState
                         query={query}

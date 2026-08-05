@@ -80,10 +80,7 @@ export default function RootLayout() {
               name="create-memory"
               options={{ title: 'New Memory', presentation: 'modal', headerShown: false }}
             />
-            <Stack.Screen
-              name="legal"
-              options={{ title: '', presentation: 'modal' }}
-            />
+            <Stack.Screen name="legal" options={{ title: '', presentation: 'modal' }} />
             <Stack.Screen
               name="paywall"
               options={{ title: '', presentation: 'modal', headerShown: false }}

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Alert,
   Animated,
@@ -34,6 +34,102 @@ interface Props {
   onClose: () => void;
 }
 
+function alertComingSoon(name: string, kind: 'chat' | 'group chat') {
+  Alert.alert(name, `Open ${kind} (Phase 2)`);
+}
+
+const RecentItem = React.memo(function RecentItem({ item }: { item: Recent }) {
+  const handlePress = useCallback(
+    () => alertComingSoon(item.name, item.type === 'group' ? 'group chat' : 'chat'),
+    [item.name, item.type],
+  );
+
+  return (
+    <TouchableOpacity style={styles.recentItem} activeOpacity={0.75} onPress={handlePress}>
+      <View style={[styles.recentAvatar, item.type === 'group' ? styles.groupAvatar : undefined]}>
+        {item.type === 'group' ? (
+          <Ionicons name="people" size={16} color={Colors.accent.primary} />
+        ) : (
+          <Text style={styles.recentAvatarText}>{getInitials(item.name)}</Text>
+        )}
+        {item.unread > 0 && <View style={styles.recentBadge} />}
+      </View>
+      <Text style={styles.recentName} numberOfLines={1}>
+        {item.name}
+      </Text>
+    </TouchableOpacity>
+  );
+});
+
+const GroupRow = React.memo(function GroupRow({
+  group,
+  isLast,
+}: {
+  group: Group;
+  isLast: boolean;
+}) {
+  const handlePress = useCallback(() => alertComingSoon(group.name, 'group chat'), [group.name]);
+
+  return (
+    <View>
+      <TouchableOpacity style={styles.row} onPress={handlePress} activeOpacity={0.7}>
+        <View style={[styles.avatar, styles.groupAvatar]}>
+          <Ionicons name="people" size={16} color={Colors.accent.primary} />
+        </View>
+        <View style={styles.rowInfo}>
+          <Text style={styles.rowName}>{group.name}</Text>
+          <Text style={styles.rowMeta} numberOfLines={1}>
+            {group.membersCount} members
+            {group.lastMessage ? `  ·  ${group.lastMessage}` : ''}
+          </Text>
+        </View>
+        {group.unread > 0 && (
+          <View style={styles.unreadBadge}>
+            <Text style={styles.unreadText}>{group.unread}</Text>
+          </View>
+        )}
+        <Ionicons name="chevron-forward" size={16} color={Colors.neutral[300]} />
+      </TouchableOpacity>
+      {!isLast && <View style={styles.separator} />}
+    </View>
+  );
+});
+
+const FriendRow = React.memo(function FriendRow({
+  friend,
+  isLast,
+}: {
+  friend: Friend;
+  isLast: boolean;
+}) {
+  const handlePress = useCallback(() => alertComingSoon(friend.name, 'chat'), [friend.name]);
+
+  return (
+    <View>
+      <TouchableOpacity style={styles.row} onPress={handlePress} activeOpacity={0.7}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{getInitials(friend.name)}</Text>
+        </View>
+        <View style={styles.rowInfo}>
+          <Text style={styles.rowName}>{friend.name}</Text>
+          {friend.lastMessage ? (
+            <Text style={styles.rowMeta} numberOfLines={1}>
+              {friend.lastMessage}
+            </Text>
+          ) : null}
+        </View>
+        {friend.unread > 0 && (
+          <View style={styles.unreadBadge}>
+            <Text style={styles.unreadText}>{friend.unread}</Text>
+          </View>
+        )}
+        <Ionicons name="chevron-forward" size={16} color={Colors.neutral[300]} />
+      </TouchableOpacity>
+      {!isLast && <View style={styles.separator} />}
+    </View>
+  );
+});
+
 export function FriendsSheet({
   visible,
   query,
@@ -66,7 +162,7 @@ export function FriendsSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  function handleClose() {
+  const handleClose = useCallback(() => {
     Animated.parallel([
       Animated.timing(backdropOpacity, {
         toValue: 0,
@@ -79,19 +175,11 @@ export function FriendsSheet({
         useNativeDriver: true,
       }),
     ]).start(onClose);
-  }
+  }, [backdropOpacity, translateY, onClose]);
 
-  function handleFriendPress(friend: Friend) {
-    Alert.alert(friend.name, 'Open chat (Phase 2)');
-  }
-
-  function handleGroupPress(group: Group) {
-    Alert.alert(group.name, 'Open group chat (Phase 2)');
-  }
-
-  function handleInvitePress() {
+  const handleInvitePress = useCallback(() => {
     Alert.alert('Add friends / Create chat', 'Coming in Phase 2');
-  }
+  }, []);
 
   return (
     <Modal
@@ -168,34 +256,7 @@ export function FriendsSheet({
               </TouchableOpacity>
 
               {recents.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.recentItem}
-                  activeOpacity={0.75}
-                  onPress={() =>
-                    Alert.alert(
-                      item.name,
-                      `Open ${item.type === 'group' ? 'group chat' : 'chat'} (Phase 2)`,
-                    )
-                  }
-                >
-                  <View
-                    style={[
-                      styles.recentAvatar,
-                      item.type === 'group' ? styles.groupAvatar : undefined,
-                    ]}
-                  >
-                    {item.type === 'group' ? (
-                      <Ionicons name="people" size={16} color={Colors.accent.primary} />
-                    ) : (
-                      <Text style={styles.recentAvatarText}>{getInitials(item.name)}</Text>
-                    )}
-                    {item.unread > 0 && <View style={styles.recentBadge} />}
-                  </View>
-                  <Text style={styles.recentName} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                </TouchableOpacity>
+                <RecentItem key={item.id} item={item} />
               ))}
             </ScrollView>
 
@@ -204,31 +265,7 @@ export function FriendsSheet({
             {/* Group Chats */}
             <Text style={styles.sectionLabel}>Group Chats</Text>
             {filteredGroups.map((group, index) => (
-              <View key={group.id}>
-                <TouchableOpacity
-                  style={styles.row}
-                  onPress={() => handleGroupPress(group)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.avatar, styles.groupAvatar]}>
-                    <Ionicons name="people" size={16} color={Colors.accent.primary} />
-                  </View>
-                  <View style={styles.rowInfo}>
-                    <Text style={styles.rowName}>{group.name}</Text>
-                    <Text style={styles.rowMeta} numberOfLines={1}>
-                      {group.membersCount} members
-                      {group.lastMessage ? `  ·  ${group.lastMessage}` : ''}
-                    </Text>
-                  </View>
-                  {group.unread > 0 && (
-                    <View style={styles.unreadBadge}>
-                      <Text style={styles.unreadText}>{group.unread}</Text>
-                    </View>
-                  )}
-                  <Ionicons name="chevron-forward" size={16} color={Colors.neutral[300]} />
-                </TouchableOpacity>
-                {index < filteredGroups.length - 1 && <View style={styles.separator} />}
-              </View>
+              <GroupRow key={group.id} group={group} isLast={index === filteredGroups.length - 1} />
             ))}
 
             <View style={styles.divider} />
@@ -236,32 +273,11 @@ export function FriendsSheet({
             {/* Friends */}
             <Text style={styles.sectionLabel}>Friends</Text>
             {filteredFriends.map((friend, index) => (
-              <View key={friend.id}>
-                <TouchableOpacity
-                  style={styles.row}
-                  onPress={() => handleFriendPress(friend)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{getInitials(friend.name)}</Text>
-                  </View>
-                  <View style={styles.rowInfo}>
-                    <Text style={styles.rowName}>{friend.name}</Text>
-                    {friend.lastMessage ? (
-                      <Text style={styles.rowMeta} numberOfLines={1}>
-                        {friend.lastMessage}
-                      </Text>
-                    ) : null}
-                  </View>
-                  {friend.unread > 0 && (
-                    <View style={styles.unreadBadge}>
-                      <Text style={styles.unreadText}>{friend.unread}</Text>
-                    </View>
-                  )}
-                  <Ionicons name="chevron-forward" size={16} color={Colors.neutral[300]} />
-                </TouchableOpacity>
-                {index < filteredFriends.length - 1 && <View style={styles.separator} />}
-              </View>
+              <FriendRow
+                key={friend.id}
+                friend={friend}
+                isLast={index === filteredFriends.length - 1}
+              />
             ))}
           </ScrollView>
         </Animated.View>

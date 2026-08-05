@@ -278,9 +278,9 @@ Features/Ask/
 ### PHASE 1D — Поиск на карте + Profile (1 неделя)
 *Цель: убрать дублирование Apple Maps, добавить личную аналитику*
 
-- [ ] Убрать таб Explore, встроить поиск в Map как pull-up sheet
-- [ ] MapKit Search внутри sheet → результат → «Сохранить пин»
-- [ ] Поиск по своим местам (теги, mood, companions) внутри того же sheet
+- [x] Убрать таб Explore, встроить поиск в Map как pull-up sheet — таб-бар это уже Map / Remembrance / Profile, Explore нет
+- [x] MapKit Search внутри sheet → результат → «Сохранить пин» — на RN это Mapbox Search (`SearchSheet` + `useSearchSheet`), результат подтверждается в пин
+- [ ] Поиск по своим местам (теги, mood, companions) внутри того же sheet — в Map-поиске сейчас только категории/favorites; полноценные фильтры по тегам/mood/companions реализованы отдельно в Remembrance (`FiltersSheet`), не в самом Map sheet
 - [ ] **Profile** — статистика, bubble chart вкусов, паттерны
 - [ ] «Год назад» кнопка на карте
 - [ ] Onboarding (3 экрана: что такое Pinpals, создай первый пин, настрой теги)
@@ -305,8 +305,8 @@ Features/Ask/
 ### PHASE 1E — Meeting Negotiation (2 недели)
 *Цель: сделать встречи процессом, а не формой*
 
-- [ ] `MeetingStatus` enum + миграция модели
-- [ ] `proposedPlaces` — список кандидатов
+- [x] `MeetingStatus` enum + миграция модели — `MeetingStatus` + `proposedPlaceIds`/`participants` в модели, store на version 2 с миграцией
+- [ ] `proposedPlaces` — список кандидатов — поле `proposedPlaceIds` есть в модели/сторе, но нигде не заполняется и не используется в UI (CreateMeeting — обычная одноэтапная форма)
 - [ ] Переделать **CreateMeeting** под step-by-step flow
 - [ ] Экран **MeetingDetail** — карточки мест-кандидатов, статус
 - [ ] Share Sheet интеграция — поделиться встречей как текстом/ссылкой
@@ -367,4 +367,4 @@ Explore как отдельный таб — упраздняется. Поис�
 
 ---
 
-*Последнее обновление: маршруты до места дополнены выбором произвольного origin (не только GPS), живой навигацией пока приложение открыто (авто-пересчёт по GPS, пауза в фоне) и пошаговыми инструкциями (Phase 1D); граница scope сдвинута — фоновая навигация с уведомлениями остаётся в Phase 2. Ранее: добавлены и отмечены как завершённые маршруты до места (Mapbox Directions, walking/driving/cycling) и персистентность маршрута + фильтров поиска между запусками (Phase 1D), плюс сопутствующая полировка карты (preview-маркер, resizable quick-add sheet, подписи search-маркеров, сброс фильтров при очистке поиска). Ранее: Ask перенесён на Phase 1C, Meeting Negotiation сдвинут на Phase 1E, поиск перенесён в карту, Explore упразднён*
+*Последнее обновление: аудит кода vs чек-листа — отмечены как завершённые «убрать Explore, поиск в Map sheet» и «MapKit/Mapbox Search → сохранить пин» (Phase 1D), а также модель `MeetingStatus`/`proposedPlaceIds` + миграция стора (Phase 1E); остальные пункты этих фаз (фильтры по тегам/mood в Map-поиске, bubble chart профиля, «Год назад» на карте, Onboarding, step-by-step CreateMeeting, MeetingDetail, Share Sheet, особый пин встречи на карте) подтверждены как не реализованные. Ранее: маршруты до места дополнены выбором произвольного origin (не только GPS), живой навигацией пока приложение открыто (авто-пересчёт по GPS, пауза в фоне) и пошаговыми инструкциями (Phase 1D); граница scope сдвинута — фоновая навигация с уведомлениями остаётся в Phase 2. Ранее: добавлены и отмечены как завершённые маршруты до места (Mapbox Directions, walking/driving/cycling) и персистентность маршрута + фильтров поиска между запусками (Phase 1D), плюс сопутствующая полировка карты (preview-маркер, resizable quick-add sheet, подписи search-маркеров, сброс фильтров при очистке поиска). Ранее: Ask перенесён на Phase 1C, Meeting Negotiation сдвинут на Phase 1E, поиск перенесён в карту, Explore упразднён*

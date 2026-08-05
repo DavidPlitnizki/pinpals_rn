@@ -1,9 +1,30 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { HOURS, MINUTES, MONTHS } from '../constants';
+
+interface PickerItemProps {
+  value: number;
+  label: string;
+  selected: boolean;
+  onSelect: (value: number) => void;
+}
+
+const PickerItem = React.memo(function PickerItem({
+  value,
+  label,
+  selected,
+  onSelect,
+}: PickerItemProps) {
+  const handlePress = useCallback(() => onSelect(value), [onSelect, value]);
+  return (
+    <TouchableOpacity style={[styles.item, selected && styles.itemSelected]} onPress={handlePress}>
+      <Text style={[styles.itemText, selected && styles.itemTextSelected]}>{label}</Text>
+    </TouchableOpacity>
+  );
+});
 
 interface Props {
   visible: boolean;
@@ -46,6 +67,15 @@ export function DatePickerModal({
   const daysInMonth = getDaysInMonth(tempMonth, tempYear);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
+  const handleSelectMonth = useCallback(
+    (idx: number) => {
+      onChangeMonth(idx);
+      const maxDays = getDaysInMonth(idx, tempYear);
+      if (tempDay > maxDays) onChangeDay(maxDays);
+    },
+    [onChangeMonth, onChangeDay, getDaysInMonth, tempYear, tempDay],
+  );
+
   return (
     <Modal
       visible={visible}
@@ -71,19 +101,13 @@ export function DatePickerModal({
               <Text style={styles.columnLabel}>Month</Text>
               <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
                 {MONTHS.map((m, idx) => (
-                  <TouchableOpacity
+                  <PickerItem
                     key={m}
-                    style={[styles.item, tempMonth === idx && styles.itemSelected]}
-                    onPress={() => {
-                      onChangeMonth(idx);
-                      const maxDays = getDaysInMonth(idx, tempYear);
-                      if (tempDay > maxDays) onChangeDay(maxDays);
-                    }}
-                  >
-                    <Text style={[styles.itemText, tempMonth === idx && styles.itemTextSelected]}>
-                      {m}
-                    </Text>
-                  </TouchableOpacity>
+                    value={idx}
+                    label={m}
+                    selected={tempMonth === idx}
+                    onSelect={handleSelectMonth}
+                  />
                 ))}
               </ScrollView>
             </View>
@@ -92,15 +116,13 @@ export function DatePickerModal({
               <Text style={styles.columnLabel}>Day</Text>
               <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
                 {days.map((d) => (
-                  <TouchableOpacity
+                  <PickerItem
                     key={d}
-                    style={[styles.item, tempDay === d && styles.itemSelected]}
-                    onPress={() => onChangeDay(d)}
-                  >
-                    <Text style={[styles.itemText, tempDay === d && styles.itemTextSelected]}>
-                      {d}
-                    </Text>
-                  </TouchableOpacity>
+                    value={d}
+                    label={String(d)}
+                    selected={tempDay === d}
+                    onSelect={onChangeDay}
+                  />
                 ))}
               </ScrollView>
             </View>
@@ -109,15 +131,13 @@ export function DatePickerModal({
               <Text style={styles.columnLabel}>Year</Text>
               <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
                 {years.map((y) => (
-                  <TouchableOpacity
+                  <PickerItem
                     key={y}
-                    style={[styles.item, tempYear === y && styles.itemSelected]}
-                    onPress={() => onChangeYear(y)}
-                  >
-                    <Text style={[styles.itemText, tempYear === y && styles.itemTextSelected]}>
-                      {y}
-                    </Text>
-                  </TouchableOpacity>
+                    value={y}
+                    label={String(y)}
+                    selected={tempYear === y}
+                    onSelect={onChangeYear}
+                  />
                 ))}
               </ScrollView>
             </View>
@@ -129,15 +149,13 @@ export function DatePickerModal({
               <Text style={styles.columnLabel}>Hour</Text>
               <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
                 {HOURS.map((h) => (
-                  <TouchableOpacity
+                  <PickerItem
                     key={h}
-                    style={[styles.item, tempHour === h && styles.itemSelected]}
-                    onPress={() => onChangeHour(h)}
-                  >
-                    <Text style={[styles.itemText, tempHour === h && styles.itemTextSelected]}>
-                      {h.toString().padStart(2, '0')}
-                    </Text>
-                  </TouchableOpacity>
+                    value={h}
+                    label={h.toString().padStart(2, '0')}
+                    selected={tempHour === h}
+                    onSelect={onChangeHour}
+                  />
                 ))}
               </ScrollView>
             </View>
@@ -146,15 +164,13 @@ export function DatePickerModal({
               <Text style={styles.columnLabel}>Minute</Text>
               <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
                 {MINUTES.map((m) => (
-                  <TouchableOpacity
+                  <PickerItem
                     key={m}
-                    style={[styles.item, tempMinute === m && styles.itemSelected]}
-                    onPress={() => onChangeMinute(m)}
-                  >
-                    <Text style={[styles.itemText, tempMinute === m && styles.itemTextSelected]}>
-                      {m.toString().padStart(2, '0')}
-                    </Text>
-                  </TouchableOpacity>
+                    value={m}
+                    label={m.toString().padStart(2, '0')}
+                    selected={tempMinute === m}
+                    onSelect={onChangeMinute}
+                  />
                 ))}
               </ScrollView>
             </View>

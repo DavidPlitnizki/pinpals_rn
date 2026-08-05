@@ -1,10 +1,10 @@
 import Mapbox, { Camera, MapView, MarkerView, PointAnnotation } from '@rnmapbox/maps';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { MOOD_CONFIG, Place } from '../../../models/types';
+import { MemoryMood, MOOD_CONFIG, Place } from '../../../models/types';
 import { CATEGORY_COLORS } from '../../../shared/constants';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 
@@ -13,6 +13,41 @@ interface Props {
 }
 
 const DEFAULT_CENTER: [number, number] = [-73.9857, 40.7484];
+
+function getPinColor(
+  place: Place,
+  getLatestMoodForPlace: (placeId: string) => MemoryMood | undefined,
+): string {
+  const mood = getLatestMoodForPlace(place.id);
+  return mood ? MOOD_CONFIG[mood].color : CATEGORY_COLORS[place.category];
+}
+
+interface MiniMapPinProps {
+  place: Place;
+  color: string;
+  onSelect: (id: string) => void;
+  onDeselect: () => void;
+}
+
+const MiniMapPin = React.memo(function MiniMapPin({
+  place,
+  color,
+  onSelect,
+  onDeselect,
+}: MiniMapPinProps) {
+  const handleSelected = useCallback(() => onSelect(place.id), [onSelect, place.id]);
+
+  return (
+    <PointAnnotation
+      id={`mini-${place.id}`}
+      coordinate={[place.coordinates.longitude, place.coordinates.latitude]}
+      onSelected={handleSelected}
+      onDeselected={onDeselect}
+    >
+      <View style={[styles.pin, { backgroundColor: color }]} />
+    </PointAnnotation>
+  );
+});
 
 export function PlacesMiniMap({ places }: Props) {
   const router = useRouter();
@@ -32,21 +67,22 @@ export function PlacesMiniMap({ places }: Props) {
         ]
       : DEFAULT_CENTER;
 
-  function getPinColor(place: Place): string {
-    const mood = getLatestMoodForPlace(place.id);
-    return mood ? MOOD_CONFIG[mood].color : CATEGORY_COLORS[place.category];
-  }
+  const handleLayout = useCallback((e: LayoutChangeEvent) => {
+    setContainerSize({
+      width: e.nativeEvent.layout.width,
+      height: e.nativeEvent.layout.height,
+    });
+  }, []);
+
+  const handleDeselect = useCallback(() => setSelectedId(null), []);
+
+  const handleOpenSelectedPlace = useCallback(() => {
+    if (!selectedPlace) return;
+    router.push({ pathname: '/place/[id]', params: { id: selectedPlace.id } } as any);
+  }, [router, selectedPlace]);
 
   return (
-    <View
-      style={styles.container}
-      onLayout={(e) =>
-        setContainerSize({
-          width: e.nativeEvent.layout.width,
-          height: e.nativeEvent.layout.height,
-        })
-      }
-    >
+    <View style={styles.container} onLayout={handleLayout}>
       {containerSize && (
         <MapView
           styleURL={Mapbox.StyleURL.Street}
@@ -57,30 +93,20 @@ export function PlacesMiniMap({ places }: Props) {
         >
           <Camera centerCoordinate={centerCoordinate} zoomLevel={11} animationDuration={0} />
           {places.map((place) => (
-            <PointAnnotation
+            <MiniMapPin
               key={place.id}
-              id={`mini-${place.id}`}
-              coordinate={[place.coordinates.longitude, place.coordinates.latitude]}
-              onSelected={() => setSelectedId(place.id)}
-              onDeselected={() => setSelectedId(null)}
-            >
-              <View style={[styles.pin, { backgroundColor: getPinColor(place) }]} />
-            </PointAnnotation>
+              place={place}
+              color={getPinColor(place, getLatestMoodForPlace)}
+              onSelect={setSelectedId}
+              onDeselect={handleDeselect}
+            />
           ))}
           {selectedPlace && (
             <MarkerView
               coordinate={[selectedPlace.coordinates.longitude, selectedPlace.coordinates.latitude]}
               anchor={{ x: 0.5, y: 1.3 }}
             >
-              <TouchableOpacity
-                style={styles.callout}
-                onPress={() =>
-                  router.push({
-                    pathname: '/place/[id]',
-                    params: { id: selectedPlace.id },
-                  } as any)
-                }
-              >
+              <TouchableOpacity style={styles.callout} onPress={handleOpenSelectedPlace}>
                 <Text style={styles.calloutName}>{selectedPlace.name}</Text>
                 <Text style={styles.calloutHint}>Details →</Text>
               </TouchableOpacity>

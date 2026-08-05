@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors, Radii, Spacing, Typography } from '../tokens';
+
+const HIT_SLOP_8 = { top: 8, bottom: 8, left: 8, right: 8 };
 
 interface CompanionInputProps {
   companions: string[];
@@ -8,6 +10,24 @@ interface CompanionInputProps {
   onRemove: (name: string) => void;
   placeholder?: string;
 }
+
+interface CompanionChipProps {
+  name: string;
+  onRemove: (name: string) => void;
+}
+
+const CompanionChip = React.memo(function CompanionChip({ name, onRemove }: CompanionChipProps) {
+  const handleRemove = useCallback(() => onRemove(name), [onRemove, name]);
+
+  return (
+    <View style={styles.chip}>
+      <Text style={styles.chipText}>{name}</Text>
+      <TouchableOpacity onPress={handleRemove} hitSlop={HIT_SLOP_8}>
+        <Text style={styles.chipRemove}>✕</Text>
+      </TouchableOpacity>
+    </View>
+  );
+});
 
 export function CompanionInput({
   companions,
@@ -17,27 +37,19 @@ export function CompanionInput({
 }: CompanionInputProps) {
   const [text, setText] = useState('');
 
-  function handleSubmit() {
+  const handleSubmit = useCallback(() => {
     const name = text.trim();
     if (name && !companions.includes(name)) {
       onAdd(name);
       setText('');
     }
-  }
+  }, [text, companions, onAdd]);
 
   return (
     <View style={styles.container}>
       <View style={styles.chips}>
         {companions.map((name) => (
-          <View key={name} style={styles.chip}>
-            <Text style={styles.chipText}>{name}</Text>
-            <TouchableOpacity
-              onPress={() => onRemove(name)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={styles.chipRemove}>✕</Text>
-            </TouchableOpacity>
-          </View>
+          <CompanionChip key={name} name={name} onRemove={onRemove} />
         ))}
       </View>
       <View style={styles.inputRow}>
