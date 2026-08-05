@@ -6,7 +6,7 @@ import { Place, PlaceCategory, PlaceNote } from '../../../models/types';
 import { CATEGORY_LABELS } from '../../../shared/constants';
 import { useMeetingsStore } from '../../../store/useMeetingsStore';
 import { usePlacesStore } from '../../../store/usePlacesStore';
-import { EMPTY_FILTERS, FilterPeriod, PlaceFilters, Tab, ViewMode } from '../types';
+import { EMPTY_FILTERS, FilterPeriod, PlaceFilters, SortOption, Tab, ViewMode } from '../types';
 
 export interface PlaceStats {
   total: number;
@@ -71,6 +71,25 @@ function periodCutoff(period: FilterPeriod): Date | null {
   if (period === '3months') return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
   if (period === 'year') return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
   return null;
+}
+
+function sortPlaces(places: Place[], sortBy: SortOption): Place[] {
+  const sorted = [...places];
+  switch (sortBy) {
+    case 'oldest':
+      return sorted.sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
+    case 'name':
+      return sorted.sort((a, b) => a.name.localeCompare(b.name));
+    case 'mostVisited':
+      return sorted.sort((a, b) => (b.visitCount || 0) - (a.visitCount || 0));
+    case 'newest':
+    default:
+      return sorted.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+  }
 }
 
 function yearsAgoLabel(years: number): string {
@@ -173,12 +192,17 @@ export function useRemembranceScreen() {
   }, [notes]);
 
   const activeFilterCount =
-    filters.tags.length + filters.moods.length + (filters.period !== 'all' ? 1 : 0);
+    filters.tags.length +
+    filters.moods.length +
+    (filters.period !== 'all' ? 1 : 0) +
+    (filters.wantToVisit ? 1 : 0) +
+    (filters.sortBy !== EMPTY_FILTERS.sortBy ? 1 : 0);
 
   const displayedPlaces = useMemo(() => {
     const cutoff = periodCutoff(filters.period);
-    return places.filter((p) => {
+    const filtered = places.filter((p) => {
       if (activeTab === 'favorites' && !p.isFavorite) return false;
+      if (filters.wantToVisit && !p.isFavorite) return false;
       if (filters.tags.length > 0) {
         const hasTag = filters.tags.some((t) => (p.tags ?? []).includes(t));
         if (!hasTag) return false;
@@ -194,6 +218,7 @@ export function useRemembranceScreen() {
       }
       return true;
     });
+    return sortPlaces(filtered, filters.sortBy);
   }, [places, notes, activeTab, filters]);
 
   const dayMemory = useMemo(() => pickDayMemory(places, notes), [places, notes]);
@@ -232,6 +257,14 @@ export function useRemembranceScreen() {
     setFilters((f) => ({ ...f, period }));
   }
 
+  function toggleWantToVisit() {
+    setFilters((f) => ({ ...f, wantToVisit: !f.wantToVisit }));
+  }
+
+  function setSortBy(sortBy: SortOption) {
+    setFilters((f) => ({ ...f, sortBy }));
+  }
+
   function clearFilters() {
     setFilters(EMPTY_FILTERS);
   }
@@ -255,6 +288,8 @@ export function useRemembranceScreen() {
     toggleTag,
     toggleMood,
     setPeriod,
+    toggleWantToVisit,
+    setSortBy,
     clearFilters,
     handlePlacePress,
     handleDeletePlace,

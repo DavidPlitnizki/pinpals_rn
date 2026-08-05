@@ -14,7 +14,10 @@ export interface NativePoiMarker {
   coordinates: Coordinates;
 }
 
-export type SpecialFilter = 'mine' | 'favorites';
+// 'favorites' filters on Place.isFavorite (labeled "Want to visit" in the UI); 'favorite'
+// filters on the separate Place.favorite flag (the true "favorite" star, distinct from
+// "want to visit" — see models/types.ts).
+export type SpecialFilter = 'mine' | 'favorites' | 'favorite';
 
 export type RouteProfile = 'walking' | 'driving' | 'cycling';
 export type RouteStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -38,15 +41,31 @@ export interface RoutePreview {
   durationSeconds?: number;
 }
 
+// A stop after the origin, in visiting order. A plain A→B trip has exactly one; requesting
+// directions again while a route is already active appends another instead of starting over.
+export interface RouteWaypoint {
+  coordinates: Coordinates;
+  label: string;
+}
+
 export interface ActiveRoute {
   profile: RouteProfile;
   origin: RouteOrigin;
-  destination: Coordinates;
-  destinationLabel: string;
+  waypoints: RouteWaypoint[];
   geometry: GeoJSON.LineString | null;
   distanceMeters: number | null;
   durationSeconds: number | null;
   steps: RouteStep[];
   status: RouteStatus;
   error: string | null;
+}
+
+// A user-saved route template: just the stops and travel mode, not a snapshot of geometry
+// or an origin — reloading it always recomputes directions from wherever the user is now.
+export interface SavedRoute {
+  id: string;
+  name: string;
+  waypoints: RouteWaypoint[];
+  profile: RouteProfile;
+  createdAt: string;
 }

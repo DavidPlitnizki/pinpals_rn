@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { useProfileStore } from '../../../store/useProfileStore';
 import { Friend, Group, Recent } from '../hooks/useFriendsSheet';
@@ -115,6 +116,7 @@ export function FriendsSheet({
           {/* Handle */}
           <View style={styles.handleRow}>
             <View style={styles.handle} />
+            <CircleCloseButton onPress={handleClose} style={styles.headerCloseButton} />
           </View>
 
           {/* Search */}
@@ -288,12 +290,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: Spacing.s12,
     paddingBottom: Spacing.s8,
+    position: 'relative',
   },
   handle: {
     width: 36,
     height: 4,
     borderRadius: 2,
     backgroundColor: Colors.neutral[200],
+  },
+  headerCloseButton: {
+    position: 'absolute',
+    top: Spacing.s8,
+    right: Spacing.s16,
   },
   inputWrap: {
     flexDirection: 'row',
@@ -422,7 +430,7 @@ const styles = StyleSheet.create({
     ...Typography.callout,
     color: Colors.neutral[900],
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: Spacing.s2,
   },
   rowMeta: {
     ...Typography.caption,
@@ -435,7 +443,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.error,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 5,
+    paddingHorizontal: Spacing.s4,
   },
   unreadText: {
     ...Typography.caption,

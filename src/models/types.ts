@@ -45,7 +45,10 @@ export interface Place {
   category: PlaceCategory;
   rating: number; // 1-5 (legacy, kept for compatibility)
   createdAt: string; // ISO date
-  isFavorite: boolean;
+  isFavorite: boolean; // "Want to visit" in the UI
+  favorite: boolean; // true favorite/starred place, distinct from "want to visit" above
+  pinColor?: string; // user-chosen map pin color; falls back to Colors.myPlace when unset
+  mainPhotoUri?: string; // user-picked "main" photo (long-press in the gallery) shown on the map pin
   tags: string[];
   visitCount: number;
   lastVisited?: string; // ISO date

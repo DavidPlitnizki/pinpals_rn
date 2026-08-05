@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 
 import { MemoryMood } from '../../../models/types';
+import { copyPhotosToAppStorage } from '../../../shared/photoStorage';
+import { promptPhotoSource } from '../../../shared/photoSourcePrompt';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 
 export function useCreateMemory() {
@@ -33,10 +35,29 @@ export function useCreateMemory() {
   }
 
   async function pickPhotos() {
+    const remaining = 5 - photoUris.length;
+    if (remaining <= 0) return;
+
+    const source = await promptPhotoSource();
+    if (!source) return;
+
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow access to the camera.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
+      if (!result.canceled && result.assets.length > 0) {
+        setPhotoUris((prev) => [...prev, result.assets[0].uri].slice(0, 5));
+      }
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
-      selectionLimit: 5 - photoUris.length,
+      selectionLimit: remaining,
       quality: 0.8,
     });
 
@@ -60,17 +81,19 @@ export function useCreateMemory() {
     setCompanions(companions.filter((c) => c !== name));
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!placeId) {
       Alert.alert('Error', 'No place selected.');
       return;
     }
 
+    const copiedPhotoUris = await copyPhotosToAppStorage(photoUris);
+
     addNote({
       placeId,
       text: text.trim(),
-      photoUri: photoUris[0],
-      photoUris: photoUris.length > 0 ? photoUris : undefined,
+      photoUri: copiedPhotoUris[0],
+      photoUris: copiedPhotoUris.length > 0 ? copiedPhotoUris : undefined,
       mood,
       companions,
       colorTag: mood ? undefined : undefined,

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import RNSlider from '@react-native-community/slider';
-import React, { useEffect, useRef } from 'react';
+import { Image } from 'expo-image';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -17,15 +18,32 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { PinChip } from '../../../design-system/components/PinChip';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { Place, PlaceCategory } from '../../../models/types';
 import { MapboxSearchResult } from '../../../services/mapboxSearch';
+import { usePlacesStore } from '../../../store/usePlacesStore';
 import { CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS } from '../constants';
 import { formatRadius, MIN_EXTERNAL_QUERY_LENGTH, SpecialFilter } from '../hooks/useSearchSheet';
+import { RouteProfile, SavedRoute } from '../types';
+import { getPlacePhotoPreview } from '../utils/placePhoto';
+
+const ROUTE_PROFILE_ICON: Record<RouteProfile, React.ComponentProps<typeof Ionicons>['name']> = {
+  walking: 'walk',
+  driving: 'car',
+  cycling: 'bicycle',
+};
 
 const SHEET_HEIGHT = Dimensions.get('window').height * 0.75;
 const ANIMATION_DURATION = 280;
+
+function formatSavedAt(createdAt: string): string {
+  const date = new Date(createdAt);
+  const dateStr = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  const timeStr = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  return `${dateStr}, ${timeStr}`;
+}
 
 interface Props {
   visible: boolean;
@@ -51,6 +69,9 @@ interface Props {
   onExternalResultPress: (result: MapboxSearchResult) => void;
   onSearchExternal: () => void;
   onClose: () => void;
+  savedRoutes: SavedRoute[];
+  onSelectSavedRoute: (route: SavedRoute) => void;
+  onDeleteSavedRoute: (id: string) => void;
 }
 
 export function SearchSheet({
@@ -77,10 +98,29 @@ export function SearchSheet({
   onExternalResultPress,
   onSearchExternal,
   onClose,
+  savedRoutes,
+  onSelectSavedRoute,
+  onDeleteSavedRoute,
 }: Props) {
   const insets = useSafeAreaInsets();
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
+
+  // A view-mode toggle, not a persisted place filter — kept local rather than routed
+  // through useSearchFiltersStore's specialFilters, which drives place-list filtering logic
+  // that "show saved routes instead" doesn't belong in.
+  const [routesTabActive, setRoutesTabActive] = useState(false);
+  const toggleRoutesTab = useCallback(() => setRoutesTabActive((v) => !v), []);
+
+  const notes = usePlacesStore((s) => s.notes);
+  const photoPreviews = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const place of filteredPlaces) {
+      const preview = getPlacePhotoPreview(place, notes);
+      if (preview) map.set(place.id, preview.photoUri);
+    }
+    return map;
+  }, [filteredPlaces, notes]);
 
   useEffect(() => {
     if (visible) {
@@ -116,6 +156,7 @@ export function SearchSheet({
   }
 
   function renderPlace(item: Place) {
+    const photoUri = photoPreviews.get(item.id);
     return (
       <TouchableOpacity
         key={item.id}
@@ -126,7 +167,11 @@ export function SearchSheet({
         }}
         activeOpacity={0.7}
       >
-        <View style={[styles.categoryDot, { backgroundColor: CATEGORY_COLORS[item.category] }]} />
+        {photoUri ? (
+          <Image source={{ uri: photoUri }} style={styles.rowThumb} contentFit="cover" />
+        ) : (
+          <View style={[styles.categoryDot, { backgroundColor: CATEGORY_COLORS[item.category] }]} />
+        )}
         <View style={styles.placeInfo}>
           <Text style={styles.placeName} numberOfLines={1}>
             {item.name}
@@ -137,6 +182,7 @@ export function SearchSheet({
             {'★'.repeat(item.rating)}
             {item.isFavorite ? '  ⭐' : ''}
           </Text>
+          <Text style={styles.placeSavedAt}>Saved {formatSavedAt(item.createdAt)}</Text>
         </View>
         <Text style={styles.chevron}>›</Text>
       </TouchableOpacity>
@@ -154,7 +200,11 @@ export function SearchSheet({
         }}
         activeOpacity={0.7}
       >
-        <Ionicons name="location-outline" size={20} color={Colors.brand.primary} />
+        {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.rowThumb} contentFit="cover" />
+        ) : (
+          <Ionicons name="location-outline" size={20} color={Colors.brand.primary} />
+        )}
         <View style={styles.placeInfo}>
           <Text style={styles.placeName} numberOfLines={1}>
             {item.name}
@@ -166,6 +216,39 @@ export function SearchSheet({
           )}
         </View>
         <Text style={styles.chevron}>›</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  function renderSavedRoute(item: SavedRoute) {
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={styles.placeRow}
+        onPress={() => {
+          handleClose();
+          onSelectSavedRoute(item);
+        }}
+        activeOpacity={0.7}
+      >
+        <View style={styles.routeIconWrap}>
+          <Ionicons name={ROUTE_PROFILE_ICON[item.profile]} size={18} color={Colors.brand.primary} />
+        </View>
+        <View style={styles.placeInfo}>
+          <Text style={styles.placeName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.placeMeta}>
+            {item.waypoints.length} {item.waypoints.length === 1 ? 'stop' : 'stops'}
+          </Text>
+          <Text style={styles.placeSavedAt}>Saved {formatSavedAt(item.createdAt)}</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => onDeleteSavedRoute(item.id)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="trash-outline" size={18} color={Colors.neutral[400]} />
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   }
@@ -193,6 +276,7 @@ export function SearchSheet({
           {/* Handle */}
           <View style={styles.handleRow}>
             <View style={styles.handle} />
+            <CircleCloseButton onPress={handleClose} style={styles.headerCloseButton} />
           </View>
 
           {/* Search input */}
@@ -217,6 +301,19 @@ export function SearchSheet({
             style={styles.chipsScroll}
           >
             <PinChip
+              label="My routes"
+              color={Colors.brand.primary}
+              selected={routesTabActive}
+              onPress={toggleRoutesTab}
+              leftIcon={
+                <Ionicons
+                  name="map"
+                  size={14}
+                  color={routesTabActive ? Colors.white : Colors.brand.primary}
+                />
+              }
+            />
+            <PinChip
               label="Mine only"
               color={Colors.brand.primary}
               selected={specialFilters.has('mine')}
@@ -227,6 +324,12 @@ export function SearchSheet({
               color={Colors.warning}
               selected={specialFilters.has('favorites')}
               onPress={() => onToggleSpecial('favorites')}
+            />
+            <PinChip
+              label="❤️ Favorite"
+              color={Colors.error}
+              selected={specialFilters.has('favorite')}
+              onPress={() => onToggleSpecial('favorite')}
             />
             {CATEGORIES.map((cat) => (
               <PinChip
@@ -239,48 +342,52 @@ export function SearchSheet({
             ))}
           </ScrollView>
 
-          {/* Radius slider */}
-          <View style={styles.sliderRow}>
-            <View style={styles.sliderHeader}>
-              <Text style={styles.sliderLabel}>
-                {radiusEnabled
-                  ? `Radius: ${formatRadius(radiusM)}`
-                  : 'Radius: off (search anywhere)'}
+          {/* Radius slider — not meaningful for the saved-routes list */}
+          {!routesTabActive && (
+            <View style={styles.sliderRow}>
+              <View style={styles.sliderHeader}>
+                <Text style={styles.sliderLabel}>
+                  {radiusEnabled
+                    ? `Radius: ${formatRadius(radiusM)}`
+                    : 'Radius: off (search anywhere)'}
+                </Text>
+                <Switch
+                  value={radiusEnabled}
+                  onValueChange={onToggleRadiusEnabled}
+                  trackColor={{ false: Colors.neutral[200], true: Colors.brand.primary }}
+                  thumbColor={Colors.white}
+                />
+              </View>
+              <RNSlider
+                style={styles.sliderHost}
+                value={radiusM}
+                minimumValue={100}
+                maximumValue={maxRadiusM}
+                step={100}
+                onValueChange={onRadiusChange}
+                disabled={!radiusEnabled}
+                minimumTrackTintColor={Colors.brand.primary}
+                maximumTrackTintColor={Colors.neutral[200]}
+                thumbTintColor={Colors.brand.primary}
+              />
+            </View>
+          )}
+
+          {!routesTabActive && (
+            <View style={styles.favoritesToggleRow}>
+              <Text style={styles.favoritesToggleLabel}>
+                ⭐ Always show &quot;Want to visit&quot; on map
               </Text>
               <Switch
-                value={radiusEnabled}
-                onValueChange={onToggleRadiusEnabled}
+                value={alwaysShowFavorites}
+                onValueChange={onToggleAlwaysShowFavorites}
                 trackColor={{ false: Colors.neutral[200], true: Colors.brand.primary }}
                 thumbColor={Colors.white}
               />
             </View>
-            <RNSlider
-              style={styles.sliderHost}
-              value={radiusM}
-              minimumValue={100}
-              maximumValue={maxRadiusM}
-              step={100}
-              onValueChange={onRadiusChange}
-              disabled={!radiusEnabled}
-              minimumTrackTintColor={Colors.brand.primary}
-              maximumTrackTintColor={Colors.neutral[200]}
-              thumbTintColor={Colors.brand.primary}
-            />
-          </View>
+          )}
 
-          <View style={styles.favoritesToggleRow}>
-            <Text style={styles.favoritesToggleLabel}>
-              ⭐ Always show &quot;Want to visit&quot; on map
-            </Text>
-            <Switch
-              value={alwaysShowFavorites}
-              onValueChange={onToggleAlwaysShowFavorites}
-              trackColor={{ false: Colors.neutral[200], true: Colors.brand.primary }}
-              thumbColor={Colors.white}
-            />
-          </View>
-
-          {showExternal && (
+          {!routesTabActive && showExternal && (
             <TouchableOpacity
               style={[
                 styles.searchButton,
@@ -311,26 +418,44 @@ export function SearchSheet({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.sectionHeader}>My Places</Text>
-            {filteredPlaces.length > 0 ? (
-              filteredPlaces.map(renderPlace)
-            ) : (
-              <Text style={styles.emptyText}>No places match your filters</Text>
-            )}
-
-            {showExternal && (
+            {routesTabActive ? (
               <>
-                <Text style={styles.sectionHeader}>Find New Place</Text>
-                {externalLoading ? (
-                  <ActivityIndicator style={styles.loadingIndicator} color={Colors.brand.primary} />
-                ) : externalResults.length > 0 ? (
-                  externalResults.map(renderExternalPlace)
+                <Text style={styles.sectionHeader}>My Routes</Text>
+                {savedRoutes.length > 0 ? (
+                  savedRoutes.map(renderSavedRoute)
                 ) : (
-                  <ExternalEmptyState
-                    query={query}
-                    hasCategory={activeCategories.size > 0}
-                    searched={externalSearched}
-                  />
+                  <Text style={styles.emptyText}>
+                    No saved routes yet. Tap the bookmark on an active route to save it.
+                  </Text>
+                )}
+              </>
+            ) : (
+              <>
+                <Text style={styles.sectionHeader}>My Places</Text>
+                {filteredPlaces.length > 0 ? (
+                  filteredPlaces.map(renderPlace)
+                ) : (
+                  <Text style={styles.emptyText}>No places match your filters</Text>
+                )}
+
+                {showExternal && (
+                  <>
+                    <Text style={styles.sectionHeader}>Find New Place</Text>
+                    {externalLoading ? (
+                      <ActivityIndicator
+                        style={styles.loadingIndicator}
+                        color={Colors.brand.primary}
+                      />
+                    ) : externalResults.length > 0 ? (
+                      externalResults.map(renderExternalPlace)
+                    ) : (
+                      <ExternalEmptyState
+                        query={query}
+                        hasCategory={activeCategories.size > 0}
+                        searched={externalSearched}
+                      />
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -375,16 +500,25 @@ const styles = StyleSheet.create({
     borderTopRightRadius: Radii.lg,
     overflow: 'hidden',
   },
+  // The close button is absolutely positioned (top: s8, 28pt tall) so it doesn't sit in
+  // normal flow — handleRow needs enough paddingBottom to clear it (8 + 28 = 36, minus the
+  // paddingTop/handle already accounted for) plus a real gap before the search input below.
   handleRow: {
     alignItems: 'center',
     paddingTop: Spacing.s12,
-    paddingBottom: Spacing.s8,
+    paddingBottom: Spacing.s32,
+    position: 'relative',
   },
   handle: {
     width: 36,
     height: 4,
     borderRadius: 2,
     backgroundColor: Colors.neutral[200],
+  },
+  headerCloseButton: {
+    position: 'absolute',
+    top: Spacing.s8,
+    right: Spacing.s16,
   },
   inputWrap: {
     flexDirection: 'row',
@@ -496,6 +630,22 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     flexShrink: 0,
   },
+  rowThumb: {
+    width: 40,
+    height: 40,
+    borderRadius: Radii.sm,
+    flexShrink: 0,
+    backgroundColor: Colors.neutral[100],
+  },
+  routeIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: Radii.sm,
+    flexShrink: 0,
+    backgroundColor: Colors.brand.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   placeInfo: {
     flex: 1,
   },
@@ -503,11 +653,16 @@ const styles = StyleSheet.create({
     ...Typography.callout,
     color: Colors.neutral[900],
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: Spacing.s2,
   },
   placeMeta: {
     ...Typography.caption,
     color: Colors.neutral[500],
+  },
+  placeSavedAt: {
+    ...Typography.caption,
+    color: Colors.neutral[400],
+    marginTop: Spacing.s2,
   },
   chevron: {
     fontSize: 20,

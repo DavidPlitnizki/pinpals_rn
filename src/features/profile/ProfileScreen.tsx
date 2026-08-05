@@ -1,20 +1,53 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PinButton } from '../../design-system/components/PinButton';
 import { PinCard } from '../../design-system/components/PinCard';
 import { PinTextField } from '../../design-system/components/PinTextField';
-import { Colors, Spacing, Typography } from '../../design-system/tokens';
+import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
+import { AuthProviderId } from '../../services/firebaseAuth';
+import { FontScale, ThemePreference } from '../../store/useSettingsStore';
 import { useProfileScreen } from './hooks/useProfileScreen';
 import { getInitials } from './utils/getInitials';
 
+const PROVIDER_BADGE: Record<AuthProviderId, { icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
+  'google.com': { icon: 'logo-google' },
+  'apple.com': { icon: 'logo-apple' },
+  password: { icon: 'mail' },
+  anonymous: { icon: 'eye-off' },
+};
+
+const FONT_SCALE_OPTIONS: { value: FontScale; label: string }[] = [
+  { value: 'small', label: 'Small' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'large', label: 'Large' },
+];
+
+const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
+];
+
 export default function ProfileScreen() {
+  const router = useRouter();
   const {
     profile,
     isGuest,
+    authData,
     places,
     meetings,
     isEditing,
@@ -23,6 +56,10 @@ export default function ProfileScreen() {
     setName,
     bio,
     setBio,
+    fontScale,
+    setFontScale,
+    theme,
+    setTheme,
     handlePickAvatar,
     handleSave,
     handleCancelEdit,
@@ -31,6 +68,7 @@ export default function ProfileScreen() {
   } = useProfileScreen();
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+  const providerBadge = PROVIDER_BADGE[authData?.providerId ?? 'anonymous'];
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -38,11 +76,11 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
         {!isEditing ? (
-          <TouchableOpacity onPress={() => setIsEditing(true)}>
-            <Text style={styles.editLink}>Edit</Text>
+          <TouchableOpacity onPress={() => setIsEditing(true)} hitSlop={HIT_SLOP}>
+            <Ionicons name="create-outline" size={22} color={Colors.brand.primary} />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity onPress={handleCancelEdit}>
+          <TouchableOpacity onPress={handleCancelEdit} hitSlop={HIT_SLOP}>
             <Text style={styles.cancelLink}>Cancel</Text>
           </TouchableOpacity>
         )}
@@ -68,15 +106,23 @@ export default function ProfileScreen() {
           )}
           {!isGuest && (
             <View style={styles.avatarBadge}>
-              <Text style={styles.avatarBadgeText}>✏</Text>
+              <Ionicons name="pencil" size={13} color={Colors.neutral[700]} />
             </View>
           )}
+          <View style={styles.providerBadge}>
+            <Ionicons name={providerBadge.icon} size={12} color={Colors.white} />
+          </View>
         </TouchableOpacity>
       </View>
 
       {/* Scrollable content */}
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+      >
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <View style={styles.content}>
           {/* Profile Info */}
           <PinCard style={styles.profileCard}>
             {isEditing ? (
@@ -131,6 +177,93 @@ export default function ProfileScreen() {
             </View>
           </PinCard>
 
+          {/* Appearance */}
+          <PinCard style={styles.appearanceCard}>
+            <Text style={styles.infoTitle}>Appearance</Text>
+            <Text style={styles.appearanceLabel}>Font Size</Text>
+            <View style={styles.chips}>
+              {FONT_SCALE_OPTIONS.map((opt) => {
+                const active = fontScale === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => setFontScale(opt.value)}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={[styles.appearanceLabel, styles.appearanceLabelSpaced]}>Theme</Text>
+            <View style={styles.chips}>
+              {THEME_OPTIONS.map((opt) => {
+                const active = theme === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => setTheme(opt.value)}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </PinCard>
+
+          {/* Billing */}
+          <PinCard style={styles.accountCard}>
+            <TouchableOpacity
+              style={styles.accountRow}
+              onPress={() => router.push('/paywall' as any)}
+            >
+              <Ionicons
+                name="card-outline"
+                size={20}
+                color={Colors.neutral[700]}
+                style={styles.accountIcon}
+              />
+              <Text style={styles.accountRowText}>Payment Method & Billing</Text>
+              <Ionicons name="chevron-forward" size={18} color={Colors.neutral[300]} />
+            </TouchableOpacity>
+          </PinCard>
+
+          {/* Legal */}
+          <PinCard style={styles.accountCard}>
+            <TouchableOpacity
+              style={styles.accountRow}
+              onPress={() => router.push('/legal?type=privacy' as any)}
+            >
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={20}
+                color={Colors.neutral[700]}
+                style={styles.accountIcon}
+              />
+              <Text style={styles.accountRowText}>Privacy Policy</Text>
+              <Ionicons name="chevron-forward" size={18} color={Colors.neutral[300]} />
+            </TouchableOpacity>
+            <View style={styles.accountDivider} />
+            <TouchableOpacity
+              style={styles.accountRow}
+              onPress={() => router.push('/legal?type=terms' as any)}
+            >
+              <Ionicons
+                name="document-text-outline"
+                size={20}
+                color={Colors.neutral[700]}
+                style={styles.accountIcon}
+              />
+              <Text style={styles.accountRowText}>Terms of Service</Text>
+              <Ionicons name="chevron-forward" size={18} color={Colors.neutral[300]} />
+            </TouchableOpacity>
+          </PinCard>
+
           {/* App Info */}
           <PinCard style={styles.infoCard}>
             <Text style={styles.infoTitle}>About Pinpals</Text>
@@ -141,10 +274,6 @@ export default function ProfileScreen() {
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Platform</Text>
               <Text style={styles.infoValue}>iOS</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Phase</Text>
-              <Text style={styles.infoValue}>1 — Solo Features</Text>
             </View>
           </PinCard>
 
@@ -171,12 +300,16 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </PinCard>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
+const HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
+
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   container: { flex: 1, backgroundColor: Colors.neutral[50] },
   header: {
     flexDirection: 'row',
@@ -187,11 +320,6 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.s16,
   },
   title: { ...Typography.largeTitle, color: Colors.neutral[900] },
-  editLink: {
-    ...Typography.body,
-    color: Colors.brand.primary,
-    fontWeight: '600',
-  },
   cancelLink: { ...Typography.body, color: Colors.neutral[500] },
   avatarSection: { alignItems: 'center', paddingBottom: Spacing.s16 },
   avatarContainer: { position: 'relative' },
@@ -226,7 +354,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarBadgeText: { fontSize: 12 },
+  providerBadge: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.brand.primary,
+    borderWidth: 2,
+    borderColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   content: { padding: Spacing.s16, gap: Spacing.s16, paddingBottom: 100 },
   profileCard: { marginBottom: 0 },
   editForm: { gap: Spacing.s4 },
@@ -289,6 +429,33 @@ const styles = StyleSheet.create({
   },
   accountIcon: { marginRight: Spacing.s12 },
   accountDivider: { height: 1, backgroundColor: Colors.neutral[100] },
-  accountRowText: { ...Typography.body, color: Colors.neutral[700] },
-  accountRowTextDanger: { ...Typography.body, color: Colors.error },
+  accountRowText: { ...Typography.body, color: Colors.neutral[700], flex: 1 },
+  accountRowTextDanger: { ...Typography.body, color: Colors.error, flex: 1 },
+  appearanceCard: { marginBottom: 0 },
+  appearanceLabel: {
+    ...Typography.subheadline,
+    color: Colors.neutral[600],
+    fontWeight: '600',
+    marginBottom: Spacing.s8,
+  },
+  appearanceLabelSpaced: { marginTop: Spacing.s12 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.s8 },
+  chip: {
+    paddingHorizontal: Spacing.s12,
+    paddingVertical: Spacing.s8,
+    borderRadius: Radii.full,
+    backgroundColor: Colors.neutral[100],
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  chipActive: {
+    backgroundColor: Colors.brand.primary,
+    borderColor: Colors.brand.primary,
+  },
+  chipText: {
+    ...Typography.subheadline,
+    color: Colors.neutral[600],
+    fontWeight: '600',
+  },
+  chipTextActive: { color: Colors.white },
 });

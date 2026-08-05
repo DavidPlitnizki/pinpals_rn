@@ -2,11 +2,12 @@ import { Camera, MapView } from '@rnmapbox/maps';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Animated } from 'react-native';
 
 import { Coordinates, MemoryMood } from '../../../models/types';
 import { MapboxSearchResult } from '../../../services/mapboxSearch';
+import { copyPhotosToAppStorage } from '../../../shared/photoStorage';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from '../constants';
@@ -18,6 +19,10 @@ export interface QuickAddSaveData {
   photoUris: string[];
   mood?: MemoryMood;
   rating: number;
+  favorite: boolean;
+  wantToVisit: boolean;
+  pinColor?: string;
+  mainPhotoUri?: string;
 }
 
 type ScreenPointFeature = GeoJSON.Feature<
@@ -51,35 +56,53 @@ export function useMapScreen() {
 
   const [searchResultMarkers, setSearchResultMarkers] = useState<PendingSearchMarker[]>([]);
   const [nativePoiMarker, setNativePoiMarker] = useState<NativePoiMarker | null>(null);
+  // Bumped on any map tap that didn't land on one of our own annotations — tells the
+  // on-map callouts (My Places / search result) to close, the same way tapping a
+  // different annotation would.
+  const [dismissSignal, setDismissSignal] = useState(0);
 
   const toastAnim = useRef(new Animated.Value(0)).current;
   const [toastMsg, setToastMsg] = useState('');
   const [toastGPS, setToastGPS] = useState(false);
 
-  useEffect(() => {
-    requestLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const showToast = useCallback(
+    (msg: string, isGPS: boolean) => {
+      setToastMsg(msg);
+      setToastGPS(isGPS);
+      Animated.sequence([
+        Animated.timing(toastAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(2500),
+        Animated.timing(toastAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    },
+    [toastAnim],
+  );
 
-  function showToast(msg: string, isGPS: boolean) {
-    setToastMsg(msg);
-    setToastGPS(isGPS);
-    Animated.sequence([
-      Animated.timing(toastAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.delay(2500),
-      Animated.timing(toastAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }
+  const applyLocation = useCallback(
+    (latitude: number, longitude: number) => {
+      const coords = { latitude, longitude };
+      setGpsCoords(coords);
+      currentCenter.current = [longitude, latitude];
+      currentZoom.current = DEFAULT_ZOOM;
+      cameraRef.current?.setCamera({
+        centerCoordinate: [longitude, latitude],
+        zoomLevel: DEFAULT_ZOOM,
+        animationDuration: 800,
+      });
+      showToast('Centred on your GPS location', true);
+    },
+    [showToast],
+  );
 
-  async function requestLocation() {
+  const requestLocation = useCallback(async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -101,53 +124,50 @@ export function useMapScreen() {
     } catch {
       showToast('Could not get location', false);
     }
-  }
+  }, [applyLocation, showToast]);
 
-  function applyLocation(latitude: number, longitude: number) {
-    const coords = { latitude, longitude };
-    setGpsCoords(coords);
-    currentCenter.current = [longitude, latitude];
-    currentZoom.current = DEFAULT_ZOOM;
-    cameraRef.current?.setCamera({
-      centerCoordinate: [longitude, latitude],
-      zoomLevel: DEFAULT_ZOOM,
-      animationDuration: 800,
-    });
-    showToast('Centred on your GPS location', true);
-  }
+  // One-time permission request + location fetch on mount; requestLocation's identity is
+  // stable (see its useCallback deps), so this effect only ever runs once.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    requestLocation();
+  }, [requestLocation]);
 
-  function handleCenterGPS() {
+  const handleCenterGPS = useCallback(() => {
     if (!gpsCoords) return;
     cameraRef.current?.setCamera({
       centerCoordinate: [gpsCoords.longitude, gpsCoords.latitude],
       zoomLevel: currentZoom.current,
       animationDuration: 600,
     });
-  }
+  }, [gpsCoords]);
 
-  function handleLongPress(feature: { geometry: { coordinates: [number, number] } }) {
-    const [longitude, latitude] = feature.geometry.coordinates;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // Instant, not a 600ms animation: the sheet opens at full height and covers the map
-    // anyway, so the animation bought nothing while flooding the native map with camera
-    // work (and onCameraChanged callbacks) exactly as the form was mounting.
-    cameraRef.current?.setCamera({
-      centerCoordinate: [longitude, latitude],
-      zoomLevel: currentZoom.current,
-      animationDuration: 0,
-    });
-    setPendingPlaceCoords({ latitude, longitude });
-    setShowQuickAddSheet(true);
-  }
+  const handleLongPress = useCallback(
+    (feature: { geometry: { coordinates: [number, number] } }) => {
+      const [longitude, latitude] = feature.geometry.coordinates;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // Instant, not a 600ms animation: the sheet opens at full height and covers the map
+      // anyway, so the animation bought nothing while flooding the native map with camera
+      // work (and onCameraChanged callbacks) exactly as the form was mounting.
+      cameraRef.current?.setCamera({
+        centerCoordinate: [longitude, latitude],
+        zoomLevel: currentZoom.current,
+        animationDuration: 0,
+      });
+      setPendingPlaceCoords({ latitude, longitude });
+      setShowQuickAddSheet(true);
+    },
+    [],
+  );
 
-  function markAnnotationTapped() {
+  const markAnnotationTapped = useCallback(() => {
     annotationTapRef.current = true;
     setTimeout(() => {
       annotationTapRef.current = false;
     }, ANNOTATION_TAP_GUARD_MS);
-  }
+  }, []);
 
-  async function handleMapPress(feature: ScreenPointFeature) {
+  const handleMapPress = useCallback(async (feature: ScreenPointFeature) => {
     if (annotationTapRef.current) return;
     const { screenPointX, screenPointY } = feature.properties;
     if (screenPointX == null || screenPointY == null) return;
@@ -171,7 +191,16 @@ export function useMapScreen() {
     const poiFeature = collection?.features.find(
       (f) => typeof f.properties?.name === 'string' && f.properties.name.trim().length > 0,
     );
-    if (!poiFeature) return;
+
+    // The tap didn't land on one of our own markers (already ruled out above) — whatever
+    // callout is currently open (My Places pin, search result) should close, same as
+    // tapping a different annotation would. Only one popup makes sense at a time.
+    setDismissSignal((n) => n + 1);
+
+    if (!poiFeature) {
+      setNativePoiMarker(null);
+      return;
+    }
 
     const [longitude, latitude] =
       poiFeature.geometry.type === 'Point'
@@ -187,100 +216,127 @@ export function useMapScreen() {
         typeof poiFeature.properties?.class === 'string' ? poiFeature.properties.class : undefined,
       coordinates: { latitude, longitude },
     });
-  }
+  }, []);
 
-  function handleCloseNativePoiMarker() {
+  const handleCloseNativePoiMarker = useCallback(() => {
     setNativePoiMarker(null);
-  }
+  }, []);
 
-  function handleConfirmNativePoiMarker(marker: NativePoiMarker) {
+  const handleConfirmNativePoiMarker = useCallback((marker: NativePoiMarker) => {
     setPendingPlaceCoords(marker.coordinates);
     setNativePoiMarker(null);
     setShowQuickAddSheet(true);
-  }
+  }, []);
 
-  function handleCloseQuickAddSheet() {
+  const handleCloseQuickAddSheet = useCallback(() => {
     setShowQuickAddSheet(false);
     setPendingPlaceCoords(null);
-  }
+  }, []);
 
-  function handleSaveQuickAddPlace(data: QuickAddSaveData) {
-    if (!pendingPlaceCoords) return;
-    const name = data.name.trim() || 'New Pin';
-    const description = data.description.trim();
-    const placeId = addPlace({
-      name,
-      description: description || undefined,
-      coordinates: pendingPlaceCoords,
-      category: 'nature',
-      rating: data.rating,
-      isFavorite: false,
-    });
+  // Opens the quick-add sheet at a route waypoint's coordinates — used by "Save this point"
+  // in the RouteDestinationMarker callout, same as confirming a search result or POI.
+  const handleSaveWaypointAsPlace = useCallback((coordinates: Coordinates) => {
+    setPendingPlaceCoords(coordinates);
+    setShowQuickAddSheet(true);
+  }, []);
 
-    if (description || data.photoUris.length > 0 || data.mood) {
-      addNote({
-        placeId,
-        text: description,
-        photoUri: data.photoUris[0],
-        photoUris: data.photoUris.length > 0 ? data.photoUris : undefined,
-        mood: data.mood,
-        companions: [],
-        createdAt: new Date().toISOString(),
+  const handleSaveQuickAddPlace = useCallback(
+    async (data: QuickAddSaveData) => {
+      if (!pendingPlaceCoords) return;
+      const name = data.name.trim() || 'New Pin';
+      const description = data.description.trim();
+
+      // Copy every picked photo into the app's own storage (by date) before persisting
+      // anything — so what gets saved always points at a durable file, not a picker temp
+      // path. The "main photo" pick is remapped to its copy by its position in the array.
+      const photoUris = await copyPhotosToAppStorage(data.photoUris);
+      const mainPhotoIndex = data.mainPhotoUri ? data.photoUris.indexOf(data.mainPhotoUri) : -1;
+      const mainPhotoUri = mainPhotoIndex >= 0 ? photoUris[mainPhotoIndex] : undefined;
+
+      const placeId = addPlace({
+        name,
+        description: description || undefined,
+        coordinates: pendingPlaceCoords,
+        category: 'nature',
+        rating: data.rating,
+        isFavorite: data.wantToVisit,
+        favorite: data.favorite,
+        pinColor: data.pinColor,
+        mainPhotoUri,
       });
-    }
 
-    setShowQuickAddSheet(false);
-    setPendingPlaceCoords(null);
-  }
+      if (description || photoUris.length > 0 || data.mood) {
+        addNote({
+          placeId,
+          text: description,
+          photoUri: photoUris[0],
+          photoUris: photoUris.length > 0 ? photoUris : undefined,
+          mood: data.mood,
+          companions: [],
+          createdAt: new Date().toISOString(),
+        });
+      }
 
-  function handleSelectSearchResult(result: MapboxSearchResult) {
+      setShowQuickAddSheet(false);
+      setPendingPlaceCoords(null);
+    },
+    [pendingPlaceCoords, addPlace, addNote],
+  );
+
+  const handleSelectSearchResult = useCallback((result: MapboxSearchResult) => {
     cameraRef.current?.setCamera({
       centerCoordinate: [result.coordinates.longitude, result.coordinates.latitude],
       zoomLevel: 16,
       animationDuration: 600,
     });
     setSearchResultMarkers([result]);
-  }
+  }, []);
 
-  function handleShowSearchResultsOnMap(results: MapboxSearchResult[]) {
+  const handleShowSearchResultsOnMap = useCallback((results: MapboxSearchResult[]) => {
     setSearchResultMarkers(results);
-  }
+  }, []);
 
-  function handleClearSearchResultMarkers() {
+  const handleClearSearchResultMarkers = useCallback(() => {
     setSearchResultMarkers([]);
-  }
+  }, []);
 
-  function handleConfirmSearchResultMarker(marker: PendingSearchMarker) {
+  const handleConfirmSearchResultMarker = useCallback((marker: PendingSearchMarker) => {
     setPendingPlaceCoords(marker.coordinates);
     setSearchResultMarkers((prev) => prev.filter((m) => m.id !== marker.id));
     setShowQuickAddSheet(true);
-  }
+  }, []);
 
   // The "+" button has no map point to work from, so it falls back to the user's current
   // position (or the map centre).
-  function handleAddAtCurrentLocation() {
+  const handleAddAtCurrentLocation = useCallback(() => {
     const coords = gpsCoords ?? {
       latitude: currentCenter.current[1],
       longitude: currentCenter.current[0],
     };
     setPendingPlaceCoords(coords);
     setShowQuickAddSheet(true);
-  }
+  }, [gpsCoords]);
 
-  function handleMarkerPress(placeId: string) {
-    router.push({ pathname: '/place/[id]', params: { id: placeId } } as any);
-  }
+  const handleMarkerPress = useCallback(
+    (placeId: string) => {
+      router.push({ pathname: '/place/[id]', params: { id: placeId } } as any);
+    },
+    [router],
+  );
 
-  function handleDeleteMarker(placeId: string, placeName: string) {
-    Alert.alert('Delete place', `Remove "${placeName}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => deletePlace(placeId),
-      },
-    ]);
-  }
+  const handleDeleteMarker = useCallback(
+    (placeId: string, placeName: string) => {
+      Alert.alert('Delete place', `Remove "${placeName}"?`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deletePlace(placeId),
+        },
+      ]);
+    },
+    [deletePlace],
+  );
 
   return {
     cameraRef,
@@ -294,9 +350,11 @@ export function useMapScreen() {
     pendingPlaceCoords,
     searchResultMarkers,
     nativePoiMarker,
+    dismissSignal,
     toastAnim,
     toastMsg,
     toastGPS,
+    showToast,
     currentCenter,
     currentZoom,
     handleCenterGPS,
@@ -307,6 +365,7 @@ export function useMapScreen() {
     handleConfirmNativePoiMarker,
     handleAddAtCurrentLocation,
     handleCloseQuickAddSheet,
+    handleSaveWaypointAsPlace,
     handleSaveQuickAddPlace,
     handleSelectSearchResult,
     handleShowSearchResultsOnMap,

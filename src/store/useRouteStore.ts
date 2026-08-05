@@ -19,11 +19,34 @@ function sanitizeOrigin(origin: unknown): RouteOrigin {
   return { mode: 'gps', coordinates: origin as Coordinates, label: 'Your location' };
 }
 
+// Pre-waypoints persisted routes stored a single `destination`/`destinationLabel` pair
+// instead of a `waypoints` list. Detect that shape and wrap it into a one-stop list.
+function sanitizeWaypoints(route: unknown): ActiveRoute['waypoints'] {
+  const r = route as { waypoints?: unknown; destination?: Coordinates; destinationLabel?: string };
+  if (Array.isArray(r.waypoints)) return r.waypoints as ActiveRoute['waypoints'];
+  if (r.destination) return [{ coordinates: r.destination, label: r.destinationLabel ?? '' }];
+  return [];
+}
+
 // Only a 'success' route with geometry is meaningful across app restarts —
 // a rehydrated 'loading' or 'error' state would be stuck with no way to retry.
 function sanitizeRoute(route: ActiveRoute | null | undefined): ActiveRoute | null {
   if (!route || route.status !== 'success' || !route.geometry) return null;
-  return { ...route, origin: sanitizeOrigin(route.origin), steps: route.steps ?? [] };
+  const waypoints = sanitizeWaypoints(route);
+  if (waypoints.length === 0) return null;
+  // Built explicitly (not `...route`) so a legacy persisted `destination`/`destinationLabel`
+  // pair doesn't leak through alongside the `waypoints` list it's been converted into.
+  return {
+    profile: route.profile,
+    origin: sanitizeOrigin(route.origin),
+    waypoints,
+    geometry: route.geometry,
+    distanceMeters: route.distanceMeters,
+    durationSeconds: route.durationSeconds,
+    steps: route.steps ?? [],
+    status: route.status,
+    error: route.error,
+  };
 }
 
 export const useRouteStore = create<RouteState>()(

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PinButton } from '../../../design-system/components/PinButton';
 import { PinTextField } from '../../../design-system/components/PinTextField';
+import { PhotoViewerModal } from '../../../design-system/components/PhotoViewerModal';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 
 interface Props {
@@ -27,6 +28,8 @@ export function AddNoteModal({
   onSave,
   onClose,
 }: Props) {
+  const [viewerVisible, setViewerVisible] = useState(false);
+
   return (
     <Modal
       visible={visible}
@@ -54,11 +57,13 @@ export function AddNoteModal({
           <View style={styles.photoSection}>
             {notePhotoUri ? (
               <View>
-                <Image
-                  source={{ uri: notePhotoUri }}
-                  style={styles.previewPhoto}
-                  resizeMode="cover"
-                />
+                <TouchableOpacity activeOpacity={0.85} onPress={() => setViewerVisible(true)}>
+                  <Image
+                    source={{ uri: notePhotoUri }}
+                    style={styles.previewPhoto}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.removePhotoBtn} onPress={onRemovePhoto}>
                   <Text style={styles.removePhotoText}>Remove Photo</Text>
                 </TouchableOpacity>
@@ -71,6 +76,15 @@ export function AddNoteModal({
           <PinButton title="Save Note" onPress={onSave} fullWidth size="lg" />
         </ScrollView>
       </SafeAreaView>
+
+      {notePhotoUri && (
+        <PhotoViewerModal
+          visible={viewerVisible}
+          photoUris={[notePhotoUri]}
+          initialIndex={0}
+          onClose={() => setViewerVisible(false)}
+        />
+      )}
     </Modal>
   );
 }

@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Image, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { Image, Modal, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { PinButton } from '../../../design-system/components/PinButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { Place, UserProfile } from '../../../models/types';
@@ -18,6 +19,11 @@ interface Props {
 export function ProfileMenuSheet({ visible, onClose, profile, places }: Props) {
   const router = useRouter();
 
+  const handleViewFullProfile = useCallback(() => {
+    onClose();
+    router.push('/(tabs)/profile' as any);
+  }, [onClose, router]);
+
   return (
     <Modal
       visible={visible}
@@ -28,9 +34,7 @@ export function ProfileMenuSheet({ visible, onClose, profile, places }: Props) {
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <Text style={styles.title}>Account</Text>
-          <TouchableOpacity onPress={onClose}>
-            <Text style={styles.done}>Done</Text>
-          </TouchableOpacity>
+          <CircleCloseButton onPress={onClose} />
         </View>
 
         <View style={styles.content}>
@@ -64,14 +68,7 @@ export function ProfileMenuSheet({ visible, onClose, profile, places }: Props) {
             </View>
           </View>
 
-          <PinButton
-            title="View Full Profile"
-            fullWidth
-            onPress={() => {
-              onClose();
-              router.push('/(tabs)/profile' as any);
-            }}
-          />
+          <PinButton title="View Full Profile" fullWidth onPress={handleViewFullProfile} />
         </View>
       </SafeAreaView>
     </Modal>
@@ -91,7 +88,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   title: { ...Typography.title3, color: Colors.neutral[900] },
-  done: { ...Typography.body, color: Colors.brand.primary, fontWeight: '600' },
   content: { padding: Spacing.s20, gap: Spacing.s20 },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.s16 },
   avatar: { width: 64, height: 64, borderRadius: 32 },

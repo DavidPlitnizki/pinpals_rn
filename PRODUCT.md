@@ -317,14 +317,22 @@ Features/Ask/
 ### PHASE 2 — Социальные фичи
 *Цель: добавить друзей и реальную координацию встреч*
 
-- [ ] Auth (Apple Sign In + аккаунт)
+- [ ] **Auth — Google Sign-In + Apple Sign-In**
+  - Пакеты: `npx expo install @react-native-google-signin/google-signin expo-apple-authentication`
+  - Firebase Console: включить Google provider (запомнить `webClientId`), включить Apple provider (Service ID + key в Apple Developer portal)
+  - `app.json` plugins: `["@react-native-google-signin/google-signin", { "iosUrlScheme": "<REVERSED_CLIENT_ID>" }]`, `"expo-apple-authentication"`
+  - `src/services/firebaseAuth.ts` — добавить `signInWithGoogle()` и `signInWithApple()`
+  - `src/contexts/AuthContext.tsx` — прокинуть social-методы в контекст
+  - `src/features/auth/hooks/useLoginScreen.ts` / `useSignUpScreen.ts` — подключить `handleGooglePress` / `handleApplePress`
+  - `src/features/auth/components/SocialButtons.tsx` — UI уже есть (сейчас показывает alert "Coming soon"); опционально скрыть Apple-кнопку на Android
+  - Анонимные пользователи смогут привязать аккаунт через `linkWithCredential()`
 - [ ] Друзья — поиск, добавление
 - [ ] Шаринг локации в реальном времени
 - [ ] Фоновая навигация (когда приложение свёрнуто) с push-уведомлениями о следующем повороте — Phase 1 живая навигация работает только пока приложение открыто
 - [ ] Голосование за место встречи (синхронное)
 - [ ] Companions из контактов/друзей
 - [ ] Push-уведомления для встреч
-- [ ] Чат внутри встречи
+- [ ] Чат внутри встречи (real backend integration)
 
 ---
 

@@ -14,6 +14,7 @@ function makePlaceInput(overrides = {}) {
     category: 'coffee' as const,
     rating: 4,
     isFavorite: false,
+    favorite: false,
     ...overrides,
   };
 }

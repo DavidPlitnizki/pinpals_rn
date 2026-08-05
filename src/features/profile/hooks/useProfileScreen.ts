@@ -3,27 +3,52 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 
 import { useAuth } from '../../../contexts/AuthContext';
+import { promptPhotoSource } from '../../../shared/photoSourcePrompt';
 import { useMeetingsStore } from '../../../store/useMeetingsStore';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
+import { useSettingsStore } from '../../../store/useSettingsStore';
 
 export function useProfileScreen() {
   const { profile, updateProfile } = useProfileStore();
   const { places } = usePlacesStore();
   const { meetings } = useMeetingsStore();
-  const { logout, isGuest } = useAuth();
+  const { logout, isGuest, authData } = useAuth();
+  const { fontScale, setFontScale, theme, setTheme } = useSettingsStore();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile.name);
   const [bio, setBio] = useState(profile.bio ?? '');
 
   async function handlePickAvatar() {
+    const source = await promptPhotoSource();
+    if (!source) return;
+
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow access to the camera.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        cameraType: ImagePicker.CameraType.front,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        updateProfile({ avatarUri: result.assets[0].uri });
+      }
+      return;
+    }
+
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission needed', 'Please allow access to your photo library.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -73,6 +98,11 @@ export function useProfileScreen() {
   return {
     profile,
     isGuest,
+    authData,
+    fontScale,
+    setFontScale,
+    theme,
+    setTheme,
     places,
     meetings,
     isEditing,

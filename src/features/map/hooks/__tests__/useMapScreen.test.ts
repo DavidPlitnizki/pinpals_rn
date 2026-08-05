@@ -24,6 +24,13 @@ jest.mock('../../../../store/usePlacesStore', () => ({
   }),
 }));
 
+// Real photo copying touches the native expo-file-system module, which isn't available in
+// the Jest environment — pass uris through unchanged so save-flow assertions can focus on
+// the place/note data instead.
+jest.mock('../../../../shared/photoStorage', () => ({
+  copyPhotosToAppStorage: jest.fn((uris: string[]) => Promise.resolve(uris)),
+}));
+
 jest.mock('../../../../store/useProfileStore', () => ({
   useProfileStore: () => ({ profile: { name: 'Test User' } }),
 }));
@@ -240,7 +247,7 @@ describe('add-place sheet', () => {
 });
 
 describe('handleSaveQuickAddPlace', () => {
-  it('creates a place + note at the pending coordinates and closes the sheet', () => {
+  it('creates a place + note at the pending coordinates and closes the sheet', async () => {
     const { result } = renderHook(() => useMapScreen());
 
     act(() => {
@@ -251,13 +258,15 @@ describe('handleSaveQuickAddPlace', () => {
       });
     });
 
-    act(() => {
-      result.current.handleSaveQuickAddPlace({
+    await act(async () => {
+      await result.current.handleSaveQuickAddPlace({
         name: 'New Spot',
         description: 'Great place',
         photoUris: ['file://photo.jpg'],
         mood: 'happy',
         rating: 4,
+        favorite: false,
+        wantToVisit: false,
       });
     });
 
@@ -275,30 +284,34 @@ describe('handleSaveQuickAddPlace', () => {
     expect(result.current.pendingPlaceCoords).toBeNull();
   });
 
-  it('falls back to "New Pin" when the name is left blank', () => {
+  it('falls back to "New Pin" when the name is left blank', async () => {
     const { result } = renderHook(() => useMapScreen());
     act(() => {
       result.current.handleAddAtCurrentLocation();
     });
-    act(() => {
-      result.current.handleSaveQuickAddPlace({
+    await act(async () => {
+      await result.current.handleSaveQuickAddPlace({
         name: '   ',
         description: '',
         photoUris: [],
         rating: 5,
+        favorite: false,
+        wantToVisit: false,
       });
     });
     expect(mockAddPlace).toHaveBeenCalledWith(expect.objectContaining({ name: 'New Pin' }));
   });
 
-  it('does nothing when there are no pending coordinates', () => {
+  it('does nothing when there are no pending coordinates', async () => {
     const { result } = renderHook(() => useMapScreen());
-    act(() => {
-      result.current.handleSaveQuickAddPlace({
+    await act(async () => {
+      await result.current.handleSaveQuickAddPlace({
         name: 'New Spot',
         description: '',
         photoUris: [],
         rating: 5,
+        favorite: false,
+        wantToVisit: false,
       });
     });
     expect(mockAddPlace).not.toHaveBeenCalled();

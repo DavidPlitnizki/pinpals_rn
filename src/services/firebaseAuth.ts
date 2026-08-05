@@ -13,11 +13,16 @@ import {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+// Mirrors Firebase's own providerId values ('google.com', 'apple.com', 'password') plus an
+// 'anonymous' fallback for guest sessions, which have no entry in providerData at all.
+export type AuthProviderId = 'google.com' | 'apple.com' | 'password' | 'anonymous';
+
 export interface AuthData {
   uid: string;
   email: string | null;
   name: string | null;
   isAnonymous: boolean;
+  providerId: AuthProviderId;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -28,6 +33,9 @@ function userToAuthData(user: FirebaseAuthTypes.User): AuthData {
     email: user.email,
     name: user.displayName,
     isAnonymous: user.isAnonymous,
+    providerId: user.isAnonymous
+      ? 'anonymous'
+      : ((user.providerData[0]?.providerId as AuthProviderId | undefined) ?? 'password'),
   };
 }
 

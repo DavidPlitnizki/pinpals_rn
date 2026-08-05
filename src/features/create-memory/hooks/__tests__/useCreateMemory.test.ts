@@ -179,39 +179,39 @@ describe('handleSave', () => {
     mockBack.mockReset();
   });
 
-  it('calls addNote with correct placeId and text', () => {
+  it('calls addNote with correct placeId and text', async () => {
     const { result } = renderCreateMemory();
     act(() => result.current.setText('Было здорово!'));
-    act(() => result.current.handleSave());
+    await act(async () => result.current.handleSave());
     expect(mockAddNote).toHaveBeenCalledWith(
       expect.objectContaining({ placeId: 'place-1', text: 'Было здорово!' }),
     );
   });
 
-  it('trims whitespace from text before saving', () => {
+  it('trims whitespace from text before saving', async () => {
     const { result } = renderCreateMemory();
     act(() => result.current.setText('  пробелы  '));
-    act(() => result.current.handleSave());
+    await act(async () => result.current.handleSave());
     expect(mockAddNote).toHaveBeenCalledWith(expect.objectContaining({ text: 'пробелы' }));
   });
 
-  it('calls router.back() after saving', () => {
+  it('calls router.back() after saving', async () => {
     const { result } = renderCreateMemory();
-    act(() => result.current.handleSave());
+    await act(async () => result.current.handleSave());
     expect(mockBack).toHaveBeenCalled();
   });
 
-  it('includes companions in saved note', () => {
+  it('includes companions in saved note', async () => {
     const { result } = renderCreateMemory();
     act(() => result.current.addCompanion('Петр'));
-    act(() => result.current.handleSave());
+    await act(async () => result.current.handleSave());
     expect(mockAddNote).toHaveBeenCalledWith(expect.objectContaining({ companions: ['Петр'] }));
   });
 
-  it('includes selected mood in saved note', () => {
+  it('includes selected mood in saved note', async () => {
     const { result } = renderCreateMemory();
     act(() => result.current.setMood('nostalgic'));
-    act(() => result.current.handleSave());
+    await act(async () => result.current.handleSave());
     expect(mockAddNote).toHaveBeenCalledWith(expect.objectContaining({ mood: 'nostalgic' }));
   });
 });

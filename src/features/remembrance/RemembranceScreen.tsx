@@ -42,6 +42,8 @@ export default function RemembranceScreen() {
     toggleTag,
     toggleMood,
     setPeriod,
+    toggleWantToVisit,
+    setSortBy,
     clearFilters,
     handlePlacePress,
     handleDeletePlace,
@@ -204,6 +206,8 @@ export default function RemembranceScreen() {
           onToggleTag={toggleTag}
           onToggleMood={toggleMood}
           onSetPeriod={setPeriod}
+          onToggleWantToVisit={toggleWantToVisit}
+          onSetSortBy={setSortBy}
           onClear={clearFilters}
         />
       </SafeAreaView>

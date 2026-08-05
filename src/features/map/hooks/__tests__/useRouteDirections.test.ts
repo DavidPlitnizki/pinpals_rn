@@ -197,7 +197,7 @@ describe('race conditions', () => {
     mockGetDirections.mockReturnValueOnce(Promise.resolve(second));
     await act(async () => result.current.confirmRoute('driving'));
 
-    expect(result.current.activeRoute?.destinationLabel).toBe('Cafe B');
+    expect(result.current.activeRoute?.waypoints.at(-1)?.label).toBe('Cafe B');
     expect(result.current.activeRoute?.distanceMeters).toBe(999);
 
     // The stale first request now resolves — it must NOT clobber the newer route.
@@ -210,7 +210,7 @@ describe('race conditions', () => {
       await Promise.resolve();
     });
 
-    expect(result.current.activeRoute?.destinationLabel).toBe('Cafe B');
+    expect(result.current.activeRoute?.waypoints.at(-1)?.label).toBe('Cafe B');
     expect(result.current.activeRoute?.distanceMeters).toBe(999);
   });
 
@@ -258,7 +258,7 @@ describe('origin selection', () => {
       coordinates: GPS,
       label: 'Your location',
     });
-    mockGetDirections.mock.calls.forEach((call) => expect(call[0]).toEqual(GPS));
+    mockGetDirections.mock.calls.forEach((call) => expect(call[0]).toEqual([GPS, DESTINATION]));
   });
 });
 
@@ -275,9 +275,9 @@ describe('request cancellation', () => {
       void result.current.confirmRoute('walking');
     });
     const confirmCalls = mockGetDirections.mock.calls.filter(
-      (call) => call[3] instanceof AbortSignal,
+      (call) => call[2] instanceof AbortSignal,
     );
-    const firstSignal = confirmCalls[confirmCalls.length - 1][3] as AbortSignal;
+    const firstSignal = confirmCalls[confirmCalls.length - 1][2] as AbortSignal;
     expect(firstSignal.aborted).toBe(false);
 
     mockGetDirections.mockReturnValueOnce(Promise.resolve(makeDirectionsResult()));
@@ -298,9 +298,9 @@ describe('request cancellation', () => {
       void result.current.confirmRoute('walking');
     });
     const confirmCalls = mockGetDirections.mock.calls.filter(
-      (call) => call[3] instanceof AbortSignal,
+      (call) => call[2] instanceof AbortSignal,
     );
-    const signal = confirmCalls[confirmCalls.length - 1][3] as AbortSignal;
+    const signal = confirmCalls[confirmCalls.length - 1][2] as AbortSignal;
 
     act(() => result.current.clearRoute());
 
@@ -311,7 +311,7 @@ describe('request cancellation', () => {
 describe('route previews', () => {
   it('populates previews for all three profiles after opening the picker', async () => {
     mockGetDirections.mockImplementation(
-      (_origin: unknown, _destination: unknown, profile: string) =>
+      (_points: unknown, profile: string) =>
         Promise.resolve(
           makeDirectionsResult({
             distanceMeters: profile === 'walking' ? 100 : profile === 'driving' ? 200 : 300,
@@ -341,7 +341,7 @@ describe('route previews', () => {
 
   it('does not let one failed profile block the other two', async () => {
     mockGetDirections.mockImplementation(
-      (_origin: unknown, _destination: unknown, profile: string) =>
+      (_points: unknown, profile: string) =>
         profile === 'driving'
           ? Promise.reject(new Error('boom'))
           : Promise.resolve(makeDirectionsResult()),

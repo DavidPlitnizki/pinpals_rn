@@ -17,3 +17,18 @@ export const CATEGORY_LABELS: Record<PlaceCategory, string> = {
   sports: 'Sports',
   coffee: 'Coffee',
 };
+
+// Preset swatches for the user-chosen pin color (Place.pinColor). Undefined/unselected falls
+// back to Colors.myPlace (turquoise) wherever the pin is drawn — this list intentionally
+// excludes that default so "no color chosen" and "chose the default-looking teal" stay
+// distinguishable in the picker UI.
+export const PIN_COLOR_PRESETS: string[] = [
+  '#E4483C', // red
+  '#E8834A', // orange
+  '#F5C518', // yellow
+  '#4A7C59', // green
+  '#3D9BE9', // blue
+  '#6C63FF', // indigo
+  '#9C6ADE', // purple
+  '#F27DA5', // pink
+];
