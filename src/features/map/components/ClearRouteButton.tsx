@@ -6,7 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 
 interface Props {
+  // Short press: drop just the last stop. Long press: clear the whole route.
   onPress: () => void;
+  onLongPress: () => void;
   // True when ClearSearchResultsButton is also showing in the same bottom-right slot —
   // shifts this pill up so the two don't overlap.
   stacked?: boolean;
@@ -17,10 +19,15 @@ const FAB_GAP = Spacing.s12;
 const CLUSTER_HEIGHT = FAB_SIZE * 3 + FAB_GAP * 2;
 const PILL_STACK_OFFSET = 52;
 
-export function ClearRouteButton({ onPress, stacked }: Props) {
+export function ClearRouteButton({ onPress, onLongPress, stacked }: Props) {
   return (
     <SafeAreaView style={[styles.wrap, stacked && styles.wrapStacked]} pointerEvents="box-none">
-      <TouchableOpacity style={styles.btn} onPress={onPress} activeOpacity={0.85}>
+      <TouchableOpacity
+        style={styles.btn}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        activeOpacity={0.85}
+      >
         <Ionicons name="close-circle" size={18} color={Colors.white} />
         <Text style={styles.label}>Clear route</Text>
       </TouchableOpacity>

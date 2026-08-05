@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { PinButton } from '../../../design-system/components/PinButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { formatDistance, formatDuration } from '../../../shared/format';
@@ -40,6 +41,62 @@ interface Props {
   onClose: () => void;
 }
 
+function ModeOptionButton({
+  option,
+  selected,
+  preview,
+  isFastest,
+  onSelectProfile,
+}: {
+  option: ModeOption;
+  selected: boolean;
+  preview: RoutePreview | undefined;
+  isFastest: boolean;
+  onSelectProfile: (profile: RouteProfile) => void;
+}) {
+  const handlePress = useCallback(
+    () => onSelectProfile(option.profile),
+    [onSelectProfile, option.profile],
+  );
+
+  return (
+    <TouchableOpacity
+      style={[styles.modeOption, selected && styles.modeOptionSelected]}
+      onPress={handlePress}
+      activeOpacity={0.8}
+    >
+      <View style={styles.modeIconRow}>
+        <Ionicons
+          name={option.icon}
+          size={22}
+          color={selected ? Colors.white : Colors.brand.primary}
+        />
+        {isFastest && (
+          <View style={styles.fastestBadge}>
+            <Ionicons name="flash" size={10} color={Colors.white} />
+          </View>
+        )}
+      </View>
+      <Text style={[styles.modeLabel, selected && styles.modeLabelSelected]}>{option.label}</Text>
+      {/* Fixed-height slot so the row doesn't reflow as each mode's preview resolves
+          independently (loading spinner and success text are the same height, and this
+          reserves the same space while still loading). */}
+      <View style={styles.previewSlot}>
+        {preview?.status === 'loading' && (
+          <ActivityIndicator size="small" color={selected ? Colors.white : Colors.brand.primary} />
+        )}
+        {preview?.status === 'success' &&
+          preview.durationSeconds !== undefined &&
+          preview.distanceMeters !== undefined && (
+            <Text style={[styles.previewText, selected && styles.previewTextSelected]} numberOfLines={1}>
+              {formatDuration(preview.durationSeconds)} · {formatDistance(preview.distanceMeters)}
+            </Text>
+          )}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export function RouteModePicker({
   visible,
   destinationLabel,
@@ -53,25 +110,27 @@ export function RouteModePicker({
   onClose,
 }: Props) {
   // Only mark a "fastest" mode once every option has resolved — otherwise the badge would
-  // flicker onto whichever mode happens to respond first from the network.
-  const successPreviews = MODE_OPTIONS.map((o) => previews[o.profile]).filter(
-    (p): p is RoutePreview & { status: 'success' } => p?.status === 'success',
-  );
-  const allResolved = successPreviews.length === MODE_OPTIONS.length;
-  const fastestProfile = allResolved
-    ? MODE_OPTIONS.reduce((fastest, option) => {
-        const current = previews[option.profile];
-        const best = previews[fastest.profile];
-        if (
-          current?.status === 'success' &&
-          (best?.status !== 'success' ||
-            (current.durationSeconds ?? Infinity) < (best.durationSeconds ?? Infinity))
-        ) {
-          return option;
-        }
-        return fastest;
-      }, MODE_OPTIONS[0]).profile
-    : null;
+  // flicker onto whichever mode happens to respond first from the network. Memoized so this
+  // filter/reduce chain only re-runs when the previews actually change, not on every render
+  // (e.g. typing in an unrelated field elsewhere while this modal is open).
+  const fastestProfile = useMemo(() => {
+    const successPreviews = MODE_OPTIONS.map((o) => previews[o.profile]).filter(
+      (p): p is RoutePreview & { status: 'success' } => p?.status === 'success',
+    );
+    if (successPreviews.length !== MODE_OPTIONS.length) return null;
+    return MODE_OPTIONS.reduce((fastest, option) => {
+      const current = previews[option.profile];
+      const best = previews[fastest.profile];
+      if (
+        current?.status === 'success' &&
+        (best?.status !== 'success' ||
+          (current.durationSeconds ?? Infinity) < (best.durationSeconds ?? Infinity))
+      ) {
+        return option;
+      }
+      return fastest;
+    }, MODE_OPTIONS[0]).profile;
+  }, [previews]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -79,63 +138,23 @@ export function RouteModePicker({
         <View style={styles.backdrop}>
           <TouchableWithoutFeedback>
             <View style={styles.card}>
+              <CircleCloseButton onPress={onClose} style={styles.closeButton} />
               <Text style={styles.title}>Directions</Text>
               <Text style={styles.destination} numberOfLines={1}>
                 {destinationLabel}
               </Text>
 
               <View style={styles.modeRow}>
-                {MODE_OPTIONS.map((option) => {
-                  const selected = option.profile === selectedProfile;
-                  const preview = previews[option.profile];
-                  const isFastest = fastestProfile === option.profile;
-                  return (
-                    <TouchableOpacity
-                      key={option.profile}
-                      style={[styles.modeOption, selected && styles.modeOptionSelected]}
-                      onPress={() => onSelectProfile(option.profile)}
-                      activeOpacity={0.8}
-                    >
-                      <View style={styles.modeIconRow}>
-                        <Ionicons
-                          name={option.icon}
-                          size={22}
-                          color={selected ? Colors.white : Colors.brand.primary}
-                        />
-                        {isFastest && (
-                          <View style={styles.fastestBadge}>
-                            <Ionicons name="flash" size={10} color={Colors.white} />
-                          </View>
-                        )}
-                      </View>
-                      <Text style={[styles.modeLabel, selected && styles.modeLabelSelected]}>
-                        {option.label}
-                      </Text>
-                      {/* Fixed-height slot so the row doesn't reflow as each mode's preview
-                          resolves independently (loading spinner and success text are the
-                          same height, and this reserves the same space while still loading). */}
-                      <View style={styles.previewSlot}>
-                        {preview?.status === 'loading' && (
-                          <ActivityIndicator
-                            size="small"
-                            color={selected ? Colors.white : Colors.brand.primary}
-                          />
-                        )}
-                        {preview?.status === 'success' &&
-                          preview.durationSeconds !== undefined &&
-                          preview.distanceMeters !== undefined && (
-                            <Text
-                              style={[styles.previewText, selected && styles.previewTextSelected]}
-                              numberOfLines={1}
-                            >
-                              {formatDuration(preview.durationSeconds)} ·{' '}
-                              {formatDistance(preview.distanceMeters)}
-                            </Text>
-                          )}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                {MODE_OPTIONS.map((option) => (
+                  <ModeOptionButton
+                    key={option.profile}
+                    option={option}
+                    selected={option.profile === selectedProfile}
+                    preview={previews[option.profile]}
+                    isFastest={fastestProfile === option.profile}
+                    onSelectProfile={onSelectProfile}
+                  />
+                ))}
               </View>
 
               {!hasLocation && <Text style={styles.error}>Enable location to get directions</Text>}
@@ -177,6 +196,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: Radii.lg,
     padding: Spacing.s20,
+    position: 'relative',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: Spacing.s12,
+    right: Spacing.s12,
   },
   title: { ...Typography.title3, color: Colors.neutral[900] },
   destination: {

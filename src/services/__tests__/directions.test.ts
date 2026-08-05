@@ -26,7 +26,7 @@ describe('getDirections', () => {
       }),
     } as Response);
 
-    await getDirections(ORIGIN, DESTINATION, 'walking');
+    await getDirections([ORIGIN, DESTINATION], 'walking');
 
     expect(fetch).toHaveBeenCalledTimes(1);
     const calledUrl = (fetch as jest.Mock).mock.calls[0][0] as string;
@@ -44,7 +44,7 @@ describe('getDirections', () => {
       json: async () => ({ routes: [{ geometry, distance: 1234, duration: 567 }] }),
     } as Response);
 
-    const result = await getDirections(ORIGIN, DESTINATION, 'driving');
+    const result = await getDirections([ORIGIN, DESTINATION], 'driving');
 
     expect(result.geometry).toEqual(geometry);
     expect(result.distanceMeters).toBe(1234);
@@ -78,7 +78,7 @@ describe('getDirections', () => {
       }),
     } as Response);
 
-    const result = await getDirections(ORIGIN, DESTINATION, 'walking');
+    const result = await getDirections([ORIGIN, DESTINATION], 'walking');
 
     const calledUrl = (fetch as jest.Mock).mock.calls[0][0] as string;
     expect(calledUrl).toContain('steps=true');
@@ -106,7 +106,7 @@ describe('getDirections', () => {
     } as Response);
     const controller = new AbortController();
 
-    await getDirections(ORIGIN, DESTINATION, 'walking', controller.signal);
+    await getDirections([ORIGIN, DESTINATION], 'walking', controller.signal);
 
     expect((fetch as jest.Mock).mock.calls[0][1]).toEqual({ signal: controller.signal });
   });
@@ -115,7 +115,7 @@ describe('getDirections', () => {
     process.env.EXPO_PUBLIC_MAPBOX_TOKEN = 'test-token';
     mockFetchOnce({ ok: false, status: 500, json: async () => ({}) } as Response);
 
-    await expect(getDirections(ORIGIN, DESTINATION, 'walking')).rejects.toThrow(
+    await expect(getDirections([ORIGIN, DESTINATION], 'walking')).rejects.toThrow(
       'Mapbox directions failed: 500',
     );
   });
@@ -124,14 +124,14 @@ describe('getDirections', () => {
     process.env.EXPO_PUBLIC_MAPBOX_TOKEN = 'test-token';
     mockFetchOnce({ ok: true, json: async () => ({ routes: [] }) } as Response);
 
-    await expect(getDirections(ORIGIN, DESTINATION, 'walking')).rejects.toThrow('No route found');
+    await expect(getDirections([ORIGIN, DESTINATION], 'walking')).rejects.toThrow('No route found');
   });
 
   it('throws when routes is missing entirely', async () => {
     process.env.EXPO_PUBLIC_MAPBOX_TOKEN = 'test-token';
     mockFetchOnce({ ok: true, json: async () => ({}) } as Response);
 
-    await expect(getDirections(ORIGIN, DESTINATION, 'walking')).rejects.toThrow('No route found');
+    await expect(getDirections([ORIGIN, DESTINATION], 'walking')).rejects.toThrow('No route found');
   });
 
   it('still issues a request with an empty access_token when EXPO_PUBLIC_MAPBOX_TOKEN is missing', async () => {
@@ -143,7 +143,7 @@ describe('getDirections', () => {
       }),
     } as Response);
 
-    await getDirections(ORIGIN, DESTINATION, 'cycling');
+    await getDirections([ORIGIN, DESTINATION], 'cycling');
 
     const calledUrl = (fetch as jest.Mock).mock.calls[0][0] as string;
     expect(calledUrl).toContain('access_token=');

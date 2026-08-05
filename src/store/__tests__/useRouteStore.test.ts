@@ -10,8 +10,7 @@ function makeRoute(overrides: Partial<ActiveRoute> = {}): ActiveRoute {
   return {
     profile: 'walking',
     origin: { mode: 'gps', coordinates: { latitude: 1, longitude: 1 }, label: 'Your location' },
-    destination: { latitude: 2, longitude: 2 },
-    destinationLabel: 'Test Place',
+    waypoints: [{ coordinates: { latitude: 2, longitude: 2 }, label: 'Test Place' }],
     geometry: {
       type: 'LineString',
       coordinates: [
@@ -88,6 +87,17 @@ describe('useRouteStore merge (rehydration sanitizing)', () => {
         origin: { mode: 'gps', coordinates: { latitude: 1, longitude: 1 }, label: 'Your location' },
       }),
     );
+  });
+
+  it('wraps a route persisted before multi-stop waypoints shipped (bare destination/destinationLabel) into a one-stop waypoints list', () => {
+    const { waypoints: _omit, ...routeWithoutWaypoints } = makeRoute();
+    const legacyRoute = {
+      ...routeWithoutWaypoints,
+      destination: { latitude: 2, longitude: 2 },
+      destinationLabel: 'Test Place',
+    };
+    const merged = callMerge({ activeRoute: legacyRoute });
+    expect(merged.activeRoute).toEqual(makeRoute());
   });
 });
 

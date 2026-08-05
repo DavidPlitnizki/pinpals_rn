@@ -22,6 +22,7 @@ function makePlace(overrides: Partial<Place> = {}): Place {
     category: 'coffee',
     rating: 4,
     isFavorite: false,
+    favorite: false,
     tags: [],
     visitCount: 0,
     createdAt: '2024-01-01T00:00:00.000Z',

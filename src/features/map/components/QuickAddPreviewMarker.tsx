@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function QuickAddPreviewMarker({ coordinates, refreshSignal }: Props) {
-  const registerRef = usePointAnnotationRefresh(refreshSignal);
+  const { registerRef } = usePointAnnotationRefresh(refreshSignal);
 
   return (
     <PointAnnotation

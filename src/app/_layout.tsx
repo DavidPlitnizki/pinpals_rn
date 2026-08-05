@@ -1,11 +1,15 @@
 import Mapbox from '@rnmapbox/maps';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { applyFontScale, useResolvedTheme } from '../shared/appearance';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '');
 SplashScreen.preventAutoHideAsync();
@@ -37,10 +41,26 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function AppearanceEffects() {
+  const fontScale = useSettingsStore((s) => s.fontScale);
+  const resolvedTheme = useResolvedTheme();
+
+  useEffect(() => {
+    applyFontScale(fontScale);
+  }, [fontScale]);
+
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(resolvedTheme === 'dark' ? '#1C2B22' : '#FAF8F4');
+  }, [resolvedTheme]);
+
+  return <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />;
+}
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <AuthProvider>
+        <AppearanceEffects />
         <AuthGate>
           <Stack
             screenOptions={{
@@ -59,6 +79,14 @@ export default function RootLayout() {
             <Stack.Screen
               name="create-memory"
               options={{ title: 'New Memory', presentation: 'modal', headerShown: false }}
+            />
+            <Stack.Screen
+              name="legal"
+              options={{ title: '', presentation: 'modal' }}
+            />
+            <Stack.Screen
+              name="paywall"
+              options={{ title: '', presentation: 'modal', headerShown: false }}
             />
           </Stack>
         </AuthGate>

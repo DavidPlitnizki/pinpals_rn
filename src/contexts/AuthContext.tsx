@@ -36,6 +36,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: firebaseUser.email,
           name: firebaseUser.displayName,
           isAnonymous: firebaseUser.isAnonymous,
+          providerId: firebaseUser.isAnonymous
+            ? 'anonymous'
+            : (firebaseUser.providerData[0]?.providerId as AuthData['providerId'] | undefined) ??
+              'password',
         });
         setIsAuth(!firebaseUser.isAnonymous);
         setIsGuest(firebaseUser.isAnonymous);

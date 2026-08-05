@@ -145,6 +145,7 @@ export function useSearchSheet(places: Place[], userLocation: Coordinates | null
         return false;
       if (activeCategories.size > 0 && !activeCategories.has(place.category)) return false;
       if (specialFilters.has('favorites') && !place.isFavorite) return false;
+      if (specialFilters.has('favorite') && !place.favorite) return false;
       if (
         radiusEnabled &&
         userLocation &&
@@ -168,6 +169,7 @@ export function useSearchSheet(places: Place[], userLocation: Coordinates | null
     debouncedQuery.trim().length > 0 ||
     activeCategories.size > 0 ||
     specialFilters.has('favorites') ||
+    specialFilters.has('favorite') ||
     radiusM !== DEFAULT_RADIUS_M ||
     !radiusEnabled;
 

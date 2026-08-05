@@ -15,6 +15,7 @@ interface Props {
   durationSeconds: number;
   steps: RouteStep[];
   nearestStepIndex: number | null;
+  onShareRoute: () => void;
 }
 
 const PROFILE_ICON: Record<RouteProfile, React.ComponentProps<typeof Ionicons>['name']> = {
@@ -36,6 +37,7 @@ export function RouteInfoCard({
   durationSeconds,
   steps,
   nearestStepIndex,
+  onShareRoute,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const toggleExpanded = useCallback(() => setExpanded((e) => !e), []);
@@ -53,6 +55,9 @@ export function RouteInfoCard({
               {formatDistance(distanceMeters)} · {formatDuration(durationSeconds)}
             </Text>
           </View>
+          <TouchableOpacity onPress={onShareRoute} hitSlop={HIT_SLOP_16} style={styles.saveButton}>
+            <Ionicons name="share-outline" size={18} color={Colors.neutral[500]} />
+          </TouchableOpacity>
           {steps.length > 0 && (
             <TouchableOpacity onPress={toggleExpanded} hitSlop={HIT_SLOP_16}>
               <Ionicons
@@ -117,6 +122,7 @@ const styles = StyleSheet.create({
     gap: Spacing.s8,
   },
   textCol: { flexShrink: 1 },
+  saveButton: { padding: Spacing.s2 },
   destination: {
     ...Typography.subheadline,
     color: Colors.neutral[900],
@@ -125,7 +131,7 @@ const styles = StyleSheet.create({
   meta: {
     ...Typography.caption,
     color: Colors.neutral[600],
-    marginTop: 2,
+    marginTop: Spacing.s2,
   },
   stepsList: {
     maxHeight: STEPS_LIST_MAX_HEIGHT,
@@ -152,6 +158,6 @@ const styles = StyleSheet.create({
   stepDistance: {
     ...Typography.caption,
     color: Colors.neutral[500],
-    marginTop: 2,
+    marginTop: Spacing.s2,
   },
 });

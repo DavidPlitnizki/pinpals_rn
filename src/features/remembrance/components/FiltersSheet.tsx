@@ -2,9 +2,10 @@ import React from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { MEMORY_MOODS, MOOD_CONFIG } from '../../../models/types';
-import { FilterPeriod, PlaceFilters } from '../types';
+import { FilterPeriod, PlaceFilters, SortOption } from '../types';
 
 interface Props {
   visible: boolean;
@@ -15,6 +16,8 @@ interface Props {
   onToggleTag: (tag: string) => void;
   onToggleMood: (mood: string) => void;
   onSetPeriod: (period: FilterPeriod) => void;
+  onToggleWantToVisit: () => void;
+  onSetSortBy: (sortBy: SortOption) => void;
   onClear: () => void;
 }
 
@@ -26,6 +29,13 @@ const PERIOD_OPTIONS: { value: FilterPeriod; label: string }[] = [
   { value: 'year', label: 'Year' },
 ];
 
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'oldest', label: 'Oldest' },
+  { value: 'name', label: 'Name' },
+  { value: 'mostVisited', label: 'Most Visited' },
+];
+
 export function FiltersSheet({
   visible,
   onClose,
@@ -35,10 +45,16 @@ export function FiltersSheet({
   onToggleTag,
   onToggleMood,
   onSetPeriod,
+  onToggleWantToVisit,
+  onSetSortBy,
   onClear,
 }: Props) {
   const activeFilterCount =
-    filters.tags.length + filters.moods.length + (filters.period !== 'all' ? 1 : 0);
+    filters.tags.length +
+    filters.moods.length +
+    (filters.period !== 'all' ? 1 : 0) +
+    (filters.wantToVisit ? 1 : 0) +
+    (filters.sortBy !== 'newest' ? 1 : 0);
 
   // Show all known moods, not just ones used — so user can explore
   const moodsToShow = MEMORY_MOODS.filter((m) => allMoods.includes(m));
@@ -53,20 +69,51 @@ export function FiltersSheet({
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.cancel}>Close</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Filters</Text>
           {activeFilterCount > 0 ? (
             <TouchableOpacity onPress={onClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={styles.clear}>Clear</Text>
+              <Text style={styles.clear}>Clear all</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.placeholder} />
           )}
+          <Text style={styles.title}>Filters</Text>
+          <CircleCloseButton onPress={onClose} />
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Sort */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Sort By</Text>
+            <View style={styles.chips}>
+              {SORT_OPTIONS.map((opt) => {
+                const active = filters.sortBy === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => onSetSortBy(opt.value)}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Want to visit */}
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={[styles.chip, filters.wantToVisit && styles.chipActive]}
+              onPress={onToggleWantToVisit}
+            >
+              <Text style={[styles.chipText, filters.wantToVisit && styles.chipTextActive]}>
+                ♥ Want to Visit
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Period */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Period</Text>
@@ -160,9 +207,8 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.neutral[100],
   },
   title: { ...Typography.headline, color: Colors.neutral[900] },
-  cancel: { ...Typography.body, color: Colors.neutral[500] },
   clear: { ...Typography.body, color: Colors.accent.primary, fontWeight: '600' },
-  placeholder: { width: 60 },
+  placeholder: { width: 28 },
   content: { padding: Spacing.s20, gap: Spacing.s24 },
   section: { gap: Spacing.s12 },
   sectionTitle: { ...Typography.title3, color: Colors.neutral[900] },

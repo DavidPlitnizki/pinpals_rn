@@ -43,6 +43,13 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Pinpals to access your photo library to add photos to your places.",
+          "cameraPermission": "Allow Pinpals to use your camera to take photos of your places."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#f8f4aa",

@@ -3,6 +3,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 
+import { promptPhotoSource } from '../../../shared/photoSourcePrompt';
+import { copyPhotoToAppStorage } from '../../../shared/photoStorage';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 
 export function usePlaceDetail() {
@@ -16,6 +18,7 @@ export function usePlaceDetail() {
     toggleFavorite,
     addNote,
     deleteNote,
+    deleteNotePhoto,
     addTagToPlace,
     removeTagFromPlace,
     getLatestMoodForPlace,
@@ -33,6 +36,9 @@ export function usePlaceDetail() {
   const [showAddNote, setShowAddNote] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [notePhotoUri, setNotePhotoUri] = useState<string | undefined>();
+  const [viewerPhotos, setViewerPhotos] = useState<string[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [viewerVisible, setViewerVisible] = useState(false);
 
   function handleSaveDescription() {
     updatePlace(place!.id, { description: description.trim() || undefined });
@@ -41,6 +47,10 @@ export function usePlaceDetail() {
 
   function handleToggleFavorite() {
     toggleFavorite(place!.id);
+  }
+
+  function handleSetPinColor(color: string | undefined) {
+    updatePlace(place!.id, { pinColor: color });
   }
 
   function handleDeletePlace() {
@@ -58,6 +68,26 @@ export function usePlaceDetail() {
   }
 
   async function handlePickPhoto() {
+    const source = await promptPhotoSource();
+    if (!source) return;
+
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow access to the camera.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setNotePhotoUri(result.assets[0].uri);
+      }
+      return;
+    }
+
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission needed', 'Please allow access to the photo library.');
@@ -73,20 +103,31 @@ export function usePlaceDetail() {
     }
   }
 
-  function handleSaveNote() {
+  async function handleSaveNote() {
     if (!noteText.trim()) {
       Alert.alert('Text required', 'Please enter the note text.');
       return;
     }
+    const photoUri = notePhotoUri ? await copyPhotoToAppStorage(notePhotoUri) : undefined;
     addNote({
       placeId: place!.id,
       text: noteText.trim(),
-      photoUri: notePhotoUri,
+      photoUri,
       companions: [],
     });
     setNoteText('');
     setNotePhotoUri(undefined);
     setShowAddNote(false);
+  }
+
+  function handleOpenPhotoViewer(photoUris: string[], index: number) {
+    setViewerPhotos(photoUris);
+    setViewerIndex(index);
+    setViewerVisible(true);
+  }
+
+  function handleClosePhotoViewer() {
+    setViewerVisible(false);
   }
 
   function handleDeleteNote(noteId: string) {
@@ -132,8 +173,15 @@ export function usePlaceDetail() {
     setNoteText,
     notePhotoUri,
     setNotePhotoUri,
+    viewerPhotos,
+    viewerIndex,
+    viewerVisible,
+    handleOpenPhotoViewer,
+    handleClosePhotoViewer,
+    deleteNotePhoto,
     handleSaveDescription,
     handleToggleFavorite,
+    handleSetPinColor,
     handleDeletePlace,
     handlePickPhoto,
     handleSaveNote,

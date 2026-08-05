@@ -1,16 +1,29 @@
-import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, Radii, Spacing, Typography } from '../tokens';
 import { PlaceNote, MOOD_CONFIG } from '../../models/types';
 
 interface MemoryCardProps {
   note: PlaceNote;
   onPress?: () => void;
+  onPhotoPress?: (photoUris: string[], index: number) => void;
+  onDeletePhoto?: (photoUri: string) => void;
 }
 
-export function MemoryCard({ note, onPress }: MemoryCardProps) {
+export function MemoryCard({ note, onPress, onPhotoPress, onDeletePhoto }: MemoryCardProps) {
   const moodConfig = note.mood ? MOOD_CONFIG[note.mood] : null;
-  const photoUri = note.photoUris?.[0] ?? note.photoUri;
+  const photoUris = note.photoUris?.length ? note.photoUris : note.photoUri ? [note.photoUri] : [];
+
+  const handleLongPressPhoto = useCallback(
+    (uri: string) => {
+      if (!onDeletePhoto) return;
+      Alert.alert('Delete photo', 'Delete this photo from the memory?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => onDeletePhoto(uri) },
+      ]);
+    },
+    [onDeletePhoto],
+  );
 
   const content = (
     <View
@@ -19,7 +32,55 @@ export function MemoryCard({ note, onPress }: MemoryCardProps) {
         moodConfig && { borderLeftColor: moodConfig.color, borderLeftWidth: 3 },
       ]}
     >
-      {photoUri && <Image source={{ uri: photoUri }} style={styles.photo} />}
+      {photoUris.length === 1 && (
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => onPhotoPress?.(photoUris, 0)}
+          onLongPress={() => handleLongPressPhoto(photoUris[0])}
+        >
+          <Image source={{ uri: photoUris[0] }} style={styles.photo} />
+        </TouchableOpacity>
+      )}
+      {photoUris.length > 1 && photoUris.length <= 3 && (
+        <View style={styles.photoGrid}>
+          {photoUris.map((uri, index) => (
+            <TouchableOpacity
+              key={uri}
+              style={styles.photoGridItem}
+              activeOpacity={0.85}
+              onPress={() => onPhotoPress?.(photoUris, index)}
+              onLongPress={() => handleLongPressPhoto(uri)}
+            >
+              <Image source={{ uri }} style={styles.photoGridImage} />
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+      {photoUris.length > 3 && (
+        <View style={styles.photoGrid}>
+          {photoUris.slice(0, 2).map((uri, index) => (
+            <TouchableOpacity
+              key={uri}
+              style={styles.photoGridItem}
+              activeOpacity={0.85}
+              onPress={() => onPhotoPress?.(photoUris, index)}
+              onLongPress={() => handleLongPressPhoto(uri)}
+            >
+              <Image source={{ uri }} style={styles.photoGridImage} />
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={styles.photoGridItem}
+            activeOpacity={0.85}
+            onPress={() => onPhotoPress?.(photoUris, 2)}
+          >
+            <Image source={{ uri: photoUris[2] }} style={styles.photoGridImage} />
+            <View style={styles.photoMoreOverlay}>
+              <Text style={styles.photoMoreText}>+{photoUris.length - 2}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.body}>
         {moodConfig && (
@@ -80,6 +141,35 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: 160,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 2,
+  },
+  photoGridItem: {
+    width: '49.5%',
+    height: 120,
+    position: 'relative',
+  },
+  photoGridImage: {
+    width: '100%',
+    height: '100%',
+  },
+  photoMoreOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoMoreText: {
+    ...Typography.title2,
+    color: Colors.white,
+    fontWeight: '700',
   },
   body: {
     padding: Spacing.s12,

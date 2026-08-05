@@ -26,14 +26,19 @@ interface MapboxRoute {
   legs?: MapboxLeg[];
 }
 
+// `points` is the full ordered stop list: [origin, ...destinations]. Two points is a plain
+// A→B trip; three or more asks Mapbox for a multi-leg route visiting each in order (used
+// when "Get directions" is requested again while a route is already active — the new point
+// extends the trip instead of replacing it). `route.distance`/`route.duration` are already
+// totals across every leg, so no summing needed; steps are flattened across all legs in
+// visiting order.
 export async function getDirections(
-  origin: Coordinates,
-  destination: Coordinates,
+  points: Coordinates[],
   profile: RouteProfile,
   signal?: AbortSignal,
 ): Promise<DirectionsResult> {
   const token = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
-  const coords = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
+  const coords = points.map((p) => `${p.longitude},${p.latitude}`).join(';');
   const params = new URLSearchParams({
     geometries: 'geojson',
     overview: 'full',
@@ -54,11 +59,16 @@ export async function getDirections(
     throw new Error('No route found');
   }
 
-  const steps: RouteStep[] = (route.legs?.[0]?.steps ?? []).map((step) => ({
-    instruction: step.maneuver.instruction,
-    distanceMeters: step.distance,
-    maneuverLocation: { longitude: step.maneuver.location[0], latitude: step.maneuver.location[1] },
-  }));
+  const steps: RouteStep[] = (route.legs ?? []).flatMap((leg) =>
+    leg.steps.map((step) => ({
+      instruction: step.maneuver.instruction,
+      distanceMeters: step.distance,
+      maneuverLocation: {
+        longitude: step.maneuver.location[0],
+        latitude: step.maneuver.location[1],
+      },
+    })),
+  );
 
   return {
     geometry: route.geometry,

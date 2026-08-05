@@ -6,8 +6,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PinButton } from '../../design-system/components/PinButton';
 import { PinCard } from '../../design-system/components/PinCard';
 import { PinChip } from '../../design-system/components/PinChip';
+import { PinColorPicker } from '../../design-system/components/PinColorPicker';
 import { PinTextField } from '../../design-system/components/PinTextField';
 import { MemoryCard } from '../../design-system/components/MemoryCard';
+import { PhotoViewerModal } from '../../design-system/components/PhotoViewerModal';
 import { TagInput } from '../../design-system/components/TagInput';
 import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
 import { PlaceNote, MOOD_CONFIG } from '../../models/types';
@@ -29,8 +31,15 @@ export default function PlaceDetailScreen() {
     setNoteText,
     notePhotoUri,
     setNotePhotoUri,
+    viewerPhotos,
+    viewerIndex,
+    viewerVisible,
+    handleOpenPhotoViewer,
+    handleClosePhotoViewer,
+    deleteNotePhoto,
     handleSaveDescription,
     handleToggleFavorite,
+    handleSetPinColor,
     handleDeletePlace,
     handlePickPhoto,
     handleSaveNote,
@@ -103,7 +112,8 @@ export default function PlaceDetailScreen() {
                   width: 20,
                   height: 20,
                   borderRadius: 10,
-                  backgroundColor: moodConfig?.color ?? CATEGORY_COLORS[place.category],
+                  backgroundColor:
+                    moodConfig?.color ?? place.pinColor ?? CATEGORY_COLORS[place.category],
                   borderWidth: 2,
                   borderColor: '#fff',
                 }}
@@ -141,6 +151,12 @@ export default function PlaceDetailScreen() {
           <PinCard style={styles.section}>
             <Text style={styles.sectionTitle}>Tags</Text>
             <TagInput tags={place.tags || []} onAdd={handleAddTag} onRemove={handleRemoveTag} />
+          </PinCard>
+
+          {/* Pin color */}
+          <PinCard style={styles.section}>
+            <Text style={styles.sectionTitle}>Pin Color</Text>
+            <PinColorPicker selected={place.pinColor} onSelect={handleSetPinColor} />
           </PinCard>
 
           {/* Description */}
@@ -210,7 +226,11 @@ export default function PlaceDetailScreen() {
                     </View>
                     {/* Card */}
                     <View style={styles.timelineCard}>
-                      <MemoryCard note={note} />
+                      <MemoryCard
+                        note={note}
+                        onPhotoPress={handleOpenPhotoViewer}
+                        onDeletePhoto={(uri) => deleteNotePhoto(note.id, uri)}
+                      />
                       <TouchableOpacity
                         style={styles.deleteNote}
                         onPress={() => handleDeleteNote(note.id)}
@@ -245,6 +265,13 @@ export default function PlaceDetailScreen() {
         onRemovePhoto={() => setNotePhotoUri(undefined)}
         onSave={handleSaveNote}
         onClose={handleCloseAddNote}
+      />
+
+      <PhotoViewerModal
+        visible={viewerVisible}
+        photoUris={viewerPhotos}
+        initialIndex={viewerIndex}
+        onClose={handleClosePhotoViewer}
       />
     </SafeAreaView>
   );

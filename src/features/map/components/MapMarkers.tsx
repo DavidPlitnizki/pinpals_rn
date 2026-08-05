@@ -1,13 +1,24 @@
+import { Ionicons } from '@expo/vector-icons';
 import { MarkerView, PointAnnotation } from '@rnmapbox/maps';
 import { Image } from 'expo-image';
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { Place, PlaceNote, MOOD_CONFIG } from '../../../models/types';
+import { Place, MOOD_CONFIG } from '../../../models/types';
+import { buildGoogleMapsSearchUrl } from '../../../shared/mapLinks';
 import { usePlacesStore } from '../../../store/usePlacesStore';
-import { CATEGORY_COLORS, CATEGORY_LABELS, HIT_SLOP_8 } from '../constants';
+import { CATEGORY_LABELS, HIT_SLOP_8 } from '../constants';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
+import { getPlacePhotoPreview, PlacePhotoPreview } from '../utils/placePhoto';
+
+const PIN_SIZE = 46;
+const CALLOUT_DESCRIPTION_MAX_CHARS = 24;
+
+function truncate(text: string, maxChars: number): string {
+  return text.length > maxChars ? `${text.slice(0, maxChars)}...` : text;
+}
 
 interface Props {
   places: Place[];
@@ -20,26 +31,75 @@ interface Props {
   // Called when one of these annotations is selected, so the base MapView's onPress
   // (which also fires on this tap) can skip querying for a native basemap POI underneath.
   onAnnotationSelected?: () => void;
+  // Bumped whenever the user taps empty map space (or a different POI) — closes this
+  // marker's open callout the same way tapping a different annotation would.
+  dismissSignal?: unknown;
 }
 
-interface FootprintPreview {
-  photoUri: string;
-  mood?: (typeof MOOD_CONFIG)[keyof typeof MOOD_CONFIG];
+interface MarkerPinProps {
+  place: Place;
+  color: string;
+  preview: PlacePhotoPreview | null;
+  registerRef: (id: string) => (ref: PointAnnotation | null) => void;
+  onSelect: (id: string) => void;
+  onDeselect: (id: string) => void;
+  onPhotoLoad: (id: string) => void;
 }
 
-function getFootprintPreview(placeId: string, notes: PlaceNote[]): FootprintPreview | null {
-  const placeNotes = notes
-    .filter((n) => n.placeId === placeId)
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+// Isolated from MapMarkers' own re-renders (e.g. selecting/deselecting a different pin) so
+// that toggling one callout doesn't force every other marker in the list to re-evaluate its
+// JSX — only a marker whose own place/color/preview actually changed re-renders.
+const MarkerPin = React.memo(function MarkerPin({
+  place,
+  color,
+  preview,
+  registerRef,
+  onSelect,
+  onDeselect,
+  onPhotoLoad,
+}: MarkerPinProps) {
+  const handleSelected = useCallback(() => onSelect(place.id), [onSelect, place.id]);
+  const handleDeselected = useCallback(() => onDeselect(place.id), [onDeselect, place.id]);
+  const handlePhotoLoad = useCallback(() => onPhotoLoad(place.id), [onPhotoLoad, place.id]);
 
-  for (const note of placeNotes) {
-    const photoUri = note.photoUris?.[0] ?? note.photoUri;
-    if (photoUri) {
-      return { photoUri, mood: note.mood ? MOOD_CONFIG[note.mood] : undefined };
-    }
-  }
-  return null;
-}
+  return (
+    <PointAnnotation
+      ref={registerRef(place.id)}
+      id={place.id}
+      coordinate={[place.coordinates.longitude, place.coordinates.latitude]}
+      anchor={{ x: 0.5, y: 1 }}
+      onSelected={handleSelected}
+      onDeselected={handleDeselected}
+    >
+      <View style={styles.markerColumn}>
+        <View style={styles.markerLabel}>
+          <Text style={styles.markerLabelText} numberOfLines={1}>
+            {place.name}
+          </Text>
+        </View>
+        <View style={styles.pinWrap}>
+          <Ionicons name="location-sharp" size={PIN_SIZE} color={color} />
+          {preview ? (
+            <View style={styles.photoBadge}>
+              <Image
+                source={{ uri: preview.photoUri }}
+                style={styles.photoBadgeImage}
+                onLoad={handlePhotoLoad}
+              />
+            </View>
+          ) : (
+            <View style={styles.pinBadge} />
+          )}
+          {preview?.mood && (
+            <View style={styles.moodBadge}>
+              <Text style={styles.moodBadgeEmoji}>{preview.mood.emoji}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </PointAnnotation>
+  );
+});
 
 export function MapMarkers({
   places,
@@ -48,63 +108,105 @@ export function MapMarkers({
   onDirections,
   refreshSignal,
   onAnnotationSelected,
+  dismissSignal,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedPlace = places.find((p) => p.id === selectedId);
   const getLatestMoodForPlace = usePlacesStore((s) => s.getLatestMoodForPlace);
   const notes = usePlacesStore((s) => s.notes);
-  const registerRef = usePointAnnotationRefresh(refreshSignal);
+  const { registerRef, refreshOne } = usePointAnnotationRefresh(refreshSignal);
 
-  function getPinColor(place: Place): string {
-    const mood = getLatestMoodForPlace(place.id);
-    if (mood) return MOOD_CONFIG[mood].color;
-    return CATEGORY_COLORS[place.category];
+  // Adjust state during render (React's documented pattern for "reset on prop change")
+  // rather than in a useEffect — an effect-based reset costs an extra render pass, and
+  // the value of `dismissSignal` itself has no meaning, only its transitions matter.
+  const prevDismissSignalRef = useRef(dismissSignal);
+  if (dismissSignal !== prevDismissSignalRef.current) {
+    prevDismissSignalRef.current = dismissSignal;
+    if (selectedId !== null) setSelectedId(null);
   }
 
   const selectedMood = selectedPlace ? getLatestMoodForPlace(selectedPlace.id) : undefined;
 
+  // Per-place preview + pin color, computed once per places/notes change instead of on every
+  // MapMarkers render (e.g. selecting a different pin no longer re-scans every place's notes).
+  // Color priority: a logged mood is the strongest, most specific signal and always wins;
+  // otherwise the user's own chosen pinColor (set at save time or edited later) applies;
+  // falling back to the default "My Places" turquoise when neither is set.
+  const markerData = useMemo(() => {
+    const map = new Map<string, { preview: PlacePhotoPreview | null; color: string }>();
+    for (const place of places) {
+      const mood = getLatestMoodForPlace(place.id);
+      map.set(place.id, {
+        preview: getPlacePhotoPreview(place, notes),
+        color: mood ? MOOD_CONFIG[mood].color : (place.pinColor ?? Colors.myPlace),
+      });
+    }
+    return map;
+  }, [places, notes, getLatestMoodForPlace]);
+
+  const selectedPreview = selectedPlace ? markerData.get(selectedPlace.id)?.preview : null;
+
   // Keying the whole annotation set on place composition forces PointAnnotation to fully
   // remount on add/remove — @rnmapbox/maps can otherwise leave a stale native annotation
   // behind when the array shrinks (e.g. deleting a place after filtering).
-  const annotationsKey = places.map((p) => p.id).join(',');
+  const annotationsKey = useMemo(() => places.map((p) => p.id).join(','), [places]);
+
+  const handleSelect = useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      onAnnotationSelected?.();
+    },
+    [onAnnotationSelected],
+  );
+
+  const handleDeselect = useCallback((id: string) => {
+    setSelectedId((cur) => (cur === id ? null : cur));
+  }, []);
+
+  const handleCloseCallout = useCallback(() => setSelectedId(null), []);
+
+  const handleCalloutPress = useCallback(() => {
+    if (selectedPlace) onMarkerPress(selectedPlace.id);
+  }, [onMarkerPress, selectedPlace]);
+
+  const handleDirectionsPress = useCallback(() => {
+    if (!selectedPlace) return;
+    setSelectedId(null);
+    onDirections(selectedPlace);
+  }, [onDirections, selectedPlace]);
+
+  const handleDeletePress = useCallback(() => {
+    if (!selectedPlace) return;
+    setSelectedId(null);
+    onDeleteMarker(selectedPlace.id, selectedPlace.name);
+  }, [onDeleteMarker, selectedPlace]);
+
+  const handleSharePress = useCallback(() => {
+    if (!selectedPlace) return;
+    const { latitude, longitude } = selectedPlace.coordinates;
+    const mapsUrl = buildGoogleMapsSearchUrl(selectedPlace.coordinates);
+    // The message always carries the name, coordinates, and Google Maps link as text; when
+    // there's a photo it's attached via `url` too (iOS's share sheet renders it inline) —
+    // falls back to sharing the maps link itself as `url` when there's no photo.
+    const message = `${selectedPlace.name}\n${latitude.toFixed(5)}, ${longitude.toFixed(5)}\n${mapsUrl}`;
+    void Share.share({ message, url: selectedPreview?.photoUri ?? mapsUrl });
+  }, [selectedPlace, selectedPreview]);
 
   return (
     <React.Fragment key={annotationsKey}>
       {places.map((place) => {
-        const preview = getFootprintPreview(place.id, notes);
+        const data = markerData.get(place.id)!;
         return (
-          <PointAnnotation
+          <MarkerPin
             key={place.id}
-            ref={registerRef(place.id)}
-            id={place.id}
-            coordinate={[place.coordinates.longitude, place.coordinates.latitude]}
-            anchor={{ x: 0.5, y: 1 }}
-            onSelected={() => {
-              setSelectedId(place.id);
-              onAnnotationSelected?.();
-            }}
-            onDeselected={() => setSelectedId(null)}
-          >
-            <View style={styles.markerColumn}>
-              <View style={styles.markerLabel}>
-                <Text style={styles.markerLabelText} numberOfLines={1}>
-                  {place.name}
-                </Text>
-              </View>
-              {preview ? (
-                <View style={styles.footprint}>
-                  <Image source={{ uri: preview.photoUri }} style={styles.footprintPhoto} />
-                  {preview.mood && (
-                    <View style={styles.moodBadge}>
-                      <Text style={styles.moodBadgeEmoji}>{preview.mood.emoji}</Text>
-                    </View>
-                  )}
-                </View>
-              ) : (
-                <View style={[styles.pin, { backgroundColor: getPinColor(place) }]} />
-              )}
-            </View>
-          </PointAnnotation>
+            place={place}
+            color={data.color}
+            preview={data.preview}
+            registerRef={registerRef}
+            onSelect={handleSelect}
+            onDeselect={handleDeselect}
+            onPhotoLoad={refreshOne}
+          />
         );
       })}
 
@@ -114,8 +216,49 @@ export function MapMarkers({
           anchor={{ x: 0.5, y: 1.3 }}
         >
           <View style={styles.callout}>
-            <TouchableOpacity onPress={() => onMarkerPress(selectedPlace.id)}>
-              <Text style={styles.calloutName}>{selectedPlace.name}</Text>
+            <TouchableOpacity
+              style={styles.calloutShareButton}
+              onPress={handleSharePress}
+              hitSlop={HIT_SLOP_8}
+            >
+              <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
+            </TouchableOpacity>
+            <CircleCloseButton
+              onPress={handleCloseCallout}
+              style={styles.calloutCloseButton}
+              size={32}
+            />
+            <TouchableOpacity onPress={handleCalloutPress}>
+              <View style={styles.calloutPhotoWrap}>
+                {selectedPreview?.photoUri ? (
+                  <Image
+                    source={{ uri: selectedPreview.photoUri }}
+                    style={styles.calloutPhoto}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={[styles.calloutPhoto, styles.calloutPhotoMock]}>
+                    <Ionicons name="image-outline" size={28} color={Colors.neutral[300]} />
+                  </View>
+                )}
+                {selectedMood && (
+                  <View style={styles.calloutPhotoMoodBadge}>
+                    <Text style={styles.calloutPhotoMoodEmoji}>
+                      {MOOD_CONFIG[selectedMood].emoji}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.calloutNameRow}>
+                <Text style={styles.calloutName}>{selectedPlace.name}</Text>
+                {selectedPlace.favorite && <Text style={styles.calloutBadgeIcon}>❤️</Text>}
+                {selectedPlace.isFavorite && <Text style={styles.calloutBadgeIcon}>⭐</Text>}
+              </View>
+              {!!selectedPlace.description && (
+                <Text style={styles.calloutDescription} numberOfLines={1}>
+                  {truncate(selectedPlace.description, CALLOUT_DESCRIPTION_MAX_CHARS)}
+                </Text>
+              )}
               <Text style={styles.calloutCategory}>{CATEGORY_LABELS[selectedPlace.category]}</Text>
               {selectedMood && (
                 <Text style={styles.calloutMood}>
@@ -125,27 +268,22 @@ export function MapMarkers({
               <Text style={styles.calloutTap}>Details →</Text>
             </TouchableOpacity>
             <View style={styles.calloutDivider} />
-            <TouchableOpacity
-              style={styles.calloutActionButton}
-              hitSlop={HIT_SLOP_8}
-              onPress={() => {
-                setSelectedId(null);
-                onDirections(selectedPlace);
-              }}
-            >
-              <Text style={styles.calloutDirections}>Directions</Text>
-            </TouchableOpacity>
-            <View style={styles.calloutDivider} />
-            <TouchableOpacity
-              style={styles.calloutActionButton}
-              hitSlop={HIT_SLOP_8}
-              onPress={() => {
-                setSelectedId(null);
-                onDeleteMarker(selectedPlace.id, selectedPlace.name);
-              }}
-            >
-              <Text style={styles.calloutDelete}>Delete</Text>
-            </TouchableOpacity>
+            <View style={styles.calloutActionsRow}>
+              <TouchableOpacity
+                style={[styles.calloutActionButtonBase, styles.calloutDirectionsButton]}
+                hitSlop={HIT_SLOP_8}
+                onPress={handleDirectionsPress}
+              >
+                <Ionicons name="navigate-outline" size={24} color={Colors.brand.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.calloutActionButtonBase, styles.calloutDeleteButton]}
+                hitSlop={HIT_SLOP_8}
+                onPress={handleDeletePress}
+              >
+                <Ionicons name="trash-outline" size={24} color={Colors.error} />
+              </TouchableOpacity>
+            </View>
           </View>
         </MarkerView>
       )}
@@ -161,9 +299,9 @@ const styles = StyleSheet.create({
     maxWidth: 120,
     backgroundColor: 'rgba(255,255,255,0.92)',
     borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginBottom: 4,
+    paddingHorizontal: Spacing.s8,
+    paddingVertical: Spacing.s2,
+    marginBottom: Spacing.s4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
@@ -175,36 +313,46 @@ const styles = StyleSheet.create({
     color: Colors.neutral[900],
     fontWeight: '600',
   },
-  pin: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+  pinWrap: {
+    width: PIN_SIZE,
+    height: PIN_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Plain drop-pin silhouette (no photo yet) — same white "hole" badge as
+  // QuickAddPreviewMarker so an un-photographed place still reads as a pin, not a blob.
+  pinBadge: {
+    position: 'absolute',
+    top: 10,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: Colors.white,
+  },
+  // The photo sits as a circle on top of the drop shape (near its wide end), not in place
+  // of it — keeps the pin silhouette intact instead of replacing it with a plain circle.
+  photoBadge: {
+    position: 'absolute',
+    top: 5,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 2,
     borderColor: Colors.white,
+    overflow: 'hidden',
+    backgroundColor: Colors.neutral[100],
   },
-  footprint: {
-    width: 40,
-    height: 40,
-  },
-  footprintPhoto: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: Colors.white,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 3,
+  photoBadgeImage: {
+    width: '100%',
+    height: '100%',
   },
   moodBadge: {
     position: 'absolute',
     bottom: -2,
     right: -2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: Colors.white,
     borderWidth: 1.5,
     borderColor: Colors.white,
@@ -221,54 +369,128 @@ const styles = StyleSheet.create({
   },
   callout: {
     backgroundColor: Colors.white,
-    borderRadius: Radii.sm,
-    padding: Spacing.s8,
-    minWidth: 150,
+    borderRadius: Radii.md,
+    padding: Spacing.s16,
+    paddingTop: Spacing.s24,
+    minWidth: 200,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 4,
   },
+  calloutCloseButton: {
+    position: 'absolute',
+    top: Spacing.s8,
+    right: Spacing.s8,
+    zIndex: 1,
+    borderWidth: 1.5,
+    borderColor: Colors.neutral[200],
+  },
+  calloutShareButton: {
+    position: 'absolute',
+    top: Spacing.s8,
+    left: Spacing.s8,
+    zIndex: 1,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.neutral[100],
+    borderWidth: 1.5,
+    borderColor: Colors.neutral[200],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calloutPhotoWrap: {
+    marginBottom: Spacing.s8,
+  },
+  calloutPhoto: {
+    width: '100%',
+    height: 110,
+    borderRadius: Radii.sm,
+    backgroundColor: Colors.neutral[100],
+  },
+  calloutPhotoMock: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calloutPhotoMoodBadge: {
+    position: 'absolute',
+    top: Spacing.s4,
+    right: Spacing.s4,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  calloutPhotoMoodEmoji: {
+    fontSize: 14,
+  },
+  calloutNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.s4,
+    marginBottom: Spacing.s4,
+  },
   calloutName: {
-    ...Typography.headline,
+    ...Typography.title3,
     color: Colors.neutral[900],
-    marginBottom: 2,
+  },
+  calloutBadgeIcon: {
+    fontSize: 14,
+  },
+  calloutDescription: {
+    ...Typography.subheadline,
+    color: Colors.neutral[600],
+    marginBottom: Spacing.s4,
   },
   calloutCategory: {
-    ...Typography.caption,
+    ...Typography.subheadline,
     color: Colors.neutral[500],
     textTransform: 'capitalize',
   },
   calloutMood: {
-    ...Typography.caption,
+    ...Typography.subheadline,
     color: Colors.neutral[600],
-    marginTop: 2,
+    marginTop: Spacing.s4,
   },
   calloutTap: {
-    ...Typography.caption,
+    ...Typography.subheadline,
     color: Colors.brand.primary,
-    marginTop: Spacing.s4,
+    marginTop: Spacing.s8,
+    fontWeight: '600',
   },
   calloutDivider: {
     height: 1,
     backgroundColor: Colors.neutral[100],
-    marginVertical: Spacing.s8,
+    marginVertical: Spacing.s12,
   },
-  calloutActionButton: {
-    paddingVertical: Spacing.s8,
+  calloutActionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.s12,
+  },
+  calloutActionButtonBase: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.s16,
+    paddingVertical: Spacing.s8,
+    borderRadius: Radii.sm,
+    borderWidth: 1.5,
   },
-  calloutDirections: {
-    ...Typography.caption,
-    color: Colors.brand.primary,
-    fontWeight: '600',
-    textAlign: 'center',
+  calloutDirectionsButton: {
+    backgroundColor: Colors.brand.light,
+    borderColor: Colors.brand.primary,
   },
-  calloutDelete: {
-    ...Typography.caption,
-    color: Colors.error,
-    fontWeight: '600',
-    textAlign: 'center',
+  calloutDeleteButton: {
+    backgroundColor: '#FBE9E7',
+    borderColor: Colors.error,
   },
 });

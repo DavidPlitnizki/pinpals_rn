@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { MarkerView, PointAnnotation } from '@rnmapbox/maps';
 import { Image } from 'expo-image';
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { HIT_SLOP_8 } from '../constants';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
@@ -23,7 +24,54 @@ interface Props {
   // Called when one of these annotations is selected, so the base MapView's onPress
   // (which also fires on this tap) can skip querying for a native basemap POI underneath.
   onAnnotationSelected?: () => void;
+  // Bumped whenever the user taps empty map space (or a different POI) — closes this
+  // marker's open callout the same way tapping a different annotation would.
+  dismissSignal?: unknown;
 }
+
+interface MarkerPinProps {
+  marker: PendingSearchMarker;
+  registerRef: (id: string) => (ref: PointAnnotation | null) => void;
+  onSelect: (id: string) => void;
+  onDeselect: (id: string) => void;
+}
+
+// Isolated from SearchResultMarker's own re-renders (e.g. opening/closing the callout) so
+// unrelated markers in the list don't have to re-evaluate their JSX on every selection change.
+const MarkerPin = React.memo(function MarkerPin({
+  marker,
+  registerRef,
+  onSelect,
+  onDeselect,
+}: MarkerPinProps) {
+  const handleSelected = useCallback(() => onSelect(marker.id), [onSelect, marker.id]);
+  const handleDeselected = useCallback(() => onDeselect(marker.id), [onDeselect, marker.id]);
+
+  return (
+    <PointAnnotation
+      ref={registerRef(marker.id)}
+      id={marker.id}
+      coordinate={[marker.coordinates.longitude, marker.coordinates.latitude]}
+      anchor={{ x: 0.5, y: 1 }}
+      onSelected={handleSelected}
+      onDeselected={handleDeselected}
+    >
+      <View style={styles.markerColumn}>
+        <View style={styles.markerLabel}>
+          <Text style={styles.markerLabelText} numberOfLines={1}>
+            {marker.name}
+          </Text>
+        </View>
+        <View style={styles.pinWrap}>
+          <Ionicons name="location-sharp" size={PIN_SIZE} color={DROP_RED} />
+          <View style={styles.iconBadge}>
+            <Ionicons name={iconForMaki(marker.maki)} size={12} color={DROP_RED} />
+          </View>
+        </View>
+      </View>
+    </PointAnnotation>
+  );
+});
 
 export function SearchResultMarker({
   markers,
@@ -31,40 +79,60 @@ export function SearchResultMarker({
   onDirections,
   refreshSignal,
   onAnnotationSelected,
+  dismissSignal,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = markers.find((m) => m.id === selectedId) ?? null;
-  const registerRef = usePointAnnotationRefresh(refreshSignal);
+  const { registerRef } = usePointAnnotationRefresh(refreshSignal);
+
+  // Adjust state during render (React's documented pattern for "reset on prop change")
+  // rather than in a useEffect — see MapMarkers' identical dismissSignal handling.
+  const prevDismissSignalRef = useRef(dismissSignal);
+  if (dismissSignal !== prevDismissSignalRef.current) {
+    prevDismissSignalRef.current = dismissSignal;
+    if (selectedId !== null) setSelectedId(null);
+  }
+
+  const handleSelect = useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      onAnnotationSelected?.();
+    },
+    [onAnnotationSelected],
+  );
+
+  const handleDeselect = useCallback((id: string) => {
+    setSelectedId((cur) => (cur === id ? null : cur));
+  }, []);
+
+  const handleCloseCallout = useCallback(() => setSelectedId(null), []);
+
+  const handleWebsitePress = useCallback(() => {
+    if (selected?.website) Linking.openURL(selected.website);
+  }, [selected]);
+
+  const handleDirectionsPress = useCallback(() => {
+    if (!selected) return;
+    setSelectedId(null);
+    onDirections(selected);
+  }, [onDirections, selected]);
+
+  const handleConfirmPress = useCallback(() => {
+    if (!selected) return;
+    setSelectedId(null);
+    onConfirm(selected);
+  }, [onConfirm, selected]);
 
   return (
     <>
       {markers.map((marker) => (
-        <PointAnnotation
+        <MarkerPin
           key={marker.id}
-          ref={registerRef(marker.id)}
-          id={marker.id}
-          coordinate={[marker.coordinates.longitude, marker.coordinates.latitude]}
-          anchor={{ x: 0.5, y: 1 }}
-          onSelected={() => {
-            setSelectedId(marker.id);
-            onAnnotationSelected?.();
-          }}
-          onDeselected={() => setSelectedId((id) => (id === marker.id ? null : id))}
-        >
-          <View style={styles.markerColumn}>
-            <View style={styles.markerLabel}>
-              <Text style={styles.markerLabelText} numberOfLines={1}>
-                {marker.name}
-              </Text>
-            </View>
-            <View style={styles.pinWrap}>
-              <Ionicons name="location-sharp" size={PIN_SIZE} color={DROP_RED} />
-              <View style={styles.iconBadge}>
-                <Ionicons name={iconForMaki(marker.maki)} size={12} color={DROP_RED} />
-              </View>
-            </View>
-          </View>
-        </PointAnnotation>
+          marker={marker}
+          registerRef={registerRef}
+          onSelect={handleSelect}
+          onDeselect={handleDeselect}
+        />
       ))}
 
       {selected && (
@@ -73,6 +141,7 @@ export function SearchResultMarker({
           anchor={{ x: 0.5, y: 1.4 }}
         >
           <View style={styles.callout}>
+            <CircleCloseButton onPress={handleCloseCallout} style={styles.calloutCloseButton} />
             <View style={styles.calloutImageWrap}>
               {selected.imageUrl ? (
                 <Image source={{ uri: selected.imageUrl }} style={styles.calloutImage} />
@@ -98,7 +167,7 @@ export function SearchResultMarker({
                 </Text>
               )}
               {selected.website && (
-                <TouchableOpacity onPress={() => Linking.openURL(selected.website!)}>
+                <TouchableOpacity onPress={handleWebsitePress}>
                   <Text style={styles.calloutWebsite} numberOfLines={1}>
                     {selected.website.replace(/^https?:\/\//, '')}
                   </Text>
@@ -106,33 +175,18 @@ export function SearchResultMarker({
               )}
               <TouchableOpacity
                 style={styles.directionsButton}
-                onPress={() => {
-                  setSelectedId(null);
-                  onDirections(selected);
-                }}
+                onPress={handleDirectionsPress}
                 hitSlop={HIT_SLOP_8}
               >
                 <Text style={styles.directionsButtonText}>Directions</Text>
               </TouchableOpacity>
-              <View style={styles.calloutActions}>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={() => setSelectedId(null)}
-                  hitSlop={HIT_SLOP_8}
-                >
-                  <Text style={styles.closeButtonText}>Close</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.addButton}
-                  onPress={() => {
-                    setSelectedId(null);
-                    onConfirm(selected);
-                  }}
-                  hitSlop={HIT_SLOP_8}
-                >
-                  <Text style={styles.addButtonText}>Add place</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={handleConfirmPress}
+                hitSlop={HIT_SLOP_8}
+              >
+                <Text style={styles.addButtonText}>Add place</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </MarkerView>
@@ -149,9 +203,9 @@ const styles = StyleSheet.create({
     maxWidth: 120,
     backgroundColor: 'rgba(255,255,255,0.92)',
     borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginBottom: 4,
+    paddingHorizontal: Spacing.s8,
+    paddingVertical: Spacing.s2,
+    marginBottom: Spacing.s4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
@@ -191,6 +245,12 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
+  calloutCloseButton: {
+    position: 'absolute',
+    top: Spacing.s4,
+    right: Spacing.s4,
+    zIndex: 1,
+  },
   calloutImageWrap: {
     alignItems: 'center',
     paddingTop: Spacing.s12,
@@ -223,20 +283,20 @@ const styles = StyleSheet.create({
   calloutCategory: {
     ...Typography.caption,
     color: Colors.neutral[500],
-    marginTop: 2,
+    marginTop: Spacing.s2,
     textAlign: 'center',
     textTransform: 'capitalize',
   },
   calloutAddress: {
     ...Typography.caption,
     color: Colors.neutral[500],
-    marginTop: 2,
+    marginTop: Spacing.s2,
     textAlign: 'center',
   },
   calloutWebsite: {
     ...Typography.caption,
     color: Colors.brand.primary,
-    marginTop: 4,
+    marginTop: Spacing.s4,
     textAlign: 'center',
     textDecorationLine: 'underline',
   },
@@ -254,27 +314,9 @@ const styles = StyleSheet.create({
     color: Colors.brand.primary,
     fontWeight: '600',
   },
-  calloutActions: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: Spacing.s8,
-    marginTop: Spacing.s8,
-  },
-  closeButton: {
-    flex: 1,
-    paddingVertical: Spacing.s8,
-    borderRadius: Radii.sm,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    ...Typography.caption,
-    color: Colors.neutral[600],
-    fontWeight: '600',
-  },
   addButton: {
-    flex: 1,
+    width: '100%',
+    marginTop: Spacing.s8,
     paddingVertical: Spacing.s8,
     borderRadius: Radii.sm,
     backgroundColor: Colors.brand.primary,

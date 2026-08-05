@@ -2,6 +2,11 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Place, PlaceNote, MemoryMood } from '../models/types';
+import { deletePhotoFile, deletePhotoFiles } from '../shared/photoStorage';
+
+function notePhotoUris(note: PlaceNote): string[] {
+  return [note.photoUri, ...(note.photoUris ?? [])].filter((uri): uri is string => !!uri);
+}
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -18,6 +23,7 @@ interface PlacesState {
 
   addNote: (note: Omit<PlaceNote, 'id' | 'createdAt'> & { createdAt?: string }) => void;
   deleteNote: (id: string) => void;
+  deleteNotePhoto: (noteId: string, photoUri: string) => void;
   getNotesForPlace: (placeId: string) => PlaceNote[];
 
   addTagToPlace: (placeId: string, tag: string) => void;
@@ -51,9 +57,16 @@ export const usePlacesStore = create<PlacesState>()(
       },
 
       deletePlace: (id) => {
-        set((state) => ({
-          places: state.places.filter((p) => p.id !== id),
-          notes: state.notes.filter((n) => n.placeId !== id),
+        const state = get();
+        const place = state.places.find((p) => p.id === id);
+        const placeNotes = state.notes.filter((n) => n.placeId === id);
+        // A deleted place takes every photo it ever had (its own mainPhotoUri pick plus
+        // every note's photos) with it — nothing orphaned is left in app storage.
+        deletePhotoFiles([place?.mainPhotoUri, ...placeNotes.flatMap(notePhotoUris)]);
+
+        set((s) => ({
+          places: s.places.filter((p) => p.id !== id),
+          notes: s.notes.filter((n) => n.placeId !== id),
         }));
       },
 
@@ -90,7 +103,42 @@ export const usePlacesStore = create<PlacesState>()(
       },
 
       deleteNote: (id) => {
-        set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
+        const state = get();
+        const note = state.notes.find((n) => n.id === id);
+        if (note) {
+          const uris = notePhotoUris(note);
+          deletePhotoFiles(uris);
+          // A place's mainPhotoUri pick can point at a photo from this note — clear it so
+          // the map pin doesn't keep referencing a file we're about to delete.
+          if (uris.length > 0) {
+            set((s) => ({
+              places: s.places.map((p) =>
+                p.id === note.placeId && p.mainPhotoUri && uris.includes(p.mainPhotoUri)
+                  ? { ...p, mainPhotoUri: undefined }
+                  : p,
+              ),
+            }));
+          }
+        }
+        set((s) => ({ notes: s.notes.filter((n) => n.id !== id) }));
+      },
+
+      deleteNotePhoto: (noteId, photoUri) => {
+        deletePhotoFile(photoUri);
+        set((state) => ({
+          notes: state.notes.map((n) => {
+            if (n.id !== noteId) return n;
+            return {
+              ...n,
+              photoUri: n.photoUri === photoUri ? undefined : n.photoUri,
+              photoUris: n.photoUris?.filter((uri) => uri !== photoUri),
+            };
+          }),
+          // The map pin's "main photo" pick can point at the photo being deleted.
+          places: state.places.map((p) =>
+            p.mainPhotoUri === photoUri ? { ...p, mainPhotoUri: undefined } : p,
+          ),
+        }));
       },
 
       getNotesForPlace: (placeId) => {
@@ -134,10 +182,10 @@ export const usePlacesStore = create<PlacesState>()(
     }),
     {
       name: 'pinpals-places',
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => AsyncStorage),
       migrate: (persistedState: unknown, version: number) => {
-        const state = persistedState as { places?: Place[]; notes?: PlaceNote[] };
+        let state = persistedState as { places?: Place[]; notes?: PlaceNote[] };
         // Migrate v2 → v3: add new fields with defaults
         if (version < 3) {
           const places = (state.places || []).map((p) => ({
@@ -149,7 +197,17 @@ export const usePlacesStore = create<PlacesState>()(
             ...n,
             companions: n.companions ?? [],
           }));
-          return { places, notes };
+          state = { places, notes };
+        }
+        // Migrate v3 → v4: add the new "favorite" flag, distinct from the pre-existing
+        // isFavorite field (which the UI actually uses for "want to visit") — no prior
+        // data represents this new concept, so it defaults to false for every place.
+        if (version < 4) {
+          const places = (state.places || []).map((p) => ({
+            ...p,
+            favorite: p.favorite ?? false,
+          }));
+          state = { ...state, places };
         }
         return state;
       },

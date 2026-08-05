@@ -8,6 +8,7 @@ module.exports = {
       'expo-router|' +
       'expo-constants|' +
       'expo-image-picker|' +
+      'expo-file-system|' +
       'expo-location|' +
       'expo-modules-core|' +
       '@expo|' +

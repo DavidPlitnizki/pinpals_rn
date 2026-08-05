@@ -8,6 +8,10 @@ export const Colors = {
     primary: '#E8834A',
     light: '#FDEBD0',
   },
+  // The user's own saved places ("My Places" pins) get this distinct color, separate from
+  // CATEGORY_COLORS — category is no longer user-facing (the add-place form dropped category
+  // selection), so a fixed identity color reads as "this is mine" regardless of what it is.
+  myPlace: '#2AB6A8',
   neutral: {
     50: '#F0F5F2',
     100: '#E4EDE8',
@@ -32,6 +36,9 @@ export const Colors = {
 };
 
 export const Spacing = {
+  // Hairline step below the base 4px grid — recurring need for tight title→subtitle gaps
+  // and small badge padding across the map feature's marker callouts.
+  s2: 2,
   s4: 4,
   s8: 8,
   s12: 12,

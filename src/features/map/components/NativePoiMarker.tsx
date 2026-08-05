@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { MarkerView, PointAnnotation } from '@rnmapbox/maps';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { HIT_SLOP_8 } from '../constants';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
@@ -36,7 +37,11 @@ export function NativePoiMarker({
   refreshSignal,
   onAnnotationSelected,
 }: Props) {
-  const registerRef = usePointAnnotationRefresh(refreshSignal);
+  const { registerRef } = usePointAnnotationRefresh(refreshSignal);
+
+  const handleSelected = useCallback(() => onAnnotationSelected?.(), [onAnnotationSelected]);
+  const handleDirectionsPress = useCallback(() => onDirections(marker), [onDirections, marker]);
+  const handleAddPlacePress = useCallback(() => onAddPlace(marker), [onAddPlace, marker]);
 
   return (
     <>
@@ -46,7 +51,7 @@ export function NativePoiMarker({
         id={marker.id}
         coordinate={[marker.coordinates.longitude, marker.coordinates.latitude]}
         anchor={{ x: 0.5, y: 1 }}
-        onSelected={() => onAnnotationSelected?.()}
+        onSelected={handleSelected}
       >
         <View style={styles.markerColumn}>
           <View style={styles.markerLabel}>
@@ -68,6 +73,7 @@ export function NativePoiMarker({
         anchor={{ x: 0.5, y: 1.4 }}
       >
         <View style={styles.callout}>
+          <CircleCloseButton onPress={onClose} style={styles.calloutCloseButton} />
           <Text style={styles.calloutName} numberOfLines={1}>
             {marker.name}
           </Text>
@@ -75,23 +81,18 @@ export function NativePoiMarker({
 
           <TouchableOpacity
             style={styles.directionsButton}
-            onPress={() => onDirections(marker)}
+            onPress={handleDirectionsPress}
             hitSlop={HIT_SLOP_8}
           >
             <Text style={styles.directionsButtonText}>Directions</Text>
           </TouchableOpacity>
-          <View style={styles.calloutActions}>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose} hitSlop={HIT_SLOP_8}>
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => onAddPlace(marker)}
-              hitSlop={HIT_SLOP_8}
-            >
-              <Text style={styles.addButtonText}>Add place</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={handleAddPlacePress}
+            hitSlop={HIT_SLOP_8}
+          >
+            <Text style={styles.addButtonText}>Add place</Text>
+          </TouchableOpacity>
         </View>
       </MarkerView>
     </>
@@ -106,9 +107,9 @@ const styles = StyleSheet.create({
     maxWidth: 120,
     backgroundColor: 'rgba(255,255,255,0.92)',
     borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginBottom: 4,
+    paddingHorizontal: Spacing.s8,
+    paddingVertical: Spacing.s2,
+    marginBottom: Spacing.s4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
@@ -149,6 +150,12 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
+  calloutCloseButton: {
+    position: 'absolute',
+    top: Spacing.s4,
+    right: Spacing.s4,
+    zIndex: 1,
+  },
   calloutName: {
     ...Typography.headline,
     color: Colors.neutral[900],
@@ -157,7 +164,7 @@ const styles = StyleSheet.create({
   calloutCategory: {
     ...Typography.caption,
     color: Colors.neutral[500],
-    marginTop: 2,
+    marginTop: Spacing.s2,
     textAlign: 'center',
     textTransform: 'capitalize',
   },
@@ -175,27 +182,9 @@ const styles = StyleSheet.create({
     color: Colors.brand.primary,
     fontWeight: '600',
   },
-  calloutActions: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: Spacing.s8,
-    marginTop: Spacing.s8,
-  },
-  closeButton: {
-    flex: 1,
-    paddingVertical: Spacing.s8,
-    borderRadius: Radii.sm,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    ...Typography.caption,
-    color: Colors.neutral[600],
-    fontWeight: '600',
-  },
   addButton: {
-    flex: 1,
+    width: '100%',
+    marginTop: Spacing.s8,
     paddingVertical: Spacing.s8,
     borderRadius: Radii.sm,
     backgroundColor: Colors.brand.primary,
