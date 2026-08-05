@@ -1,6 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback } from 'react';
+import {
+  FlatList,
+  ListRenderItemInfo,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,6 +28,34 @@ const VIEW_MODES: { mode: ViewMode; icon: React.ComponentProps<typeof Ionicons>[
   { mode: 'grid', icon: 'grid' },
   { mode: 'map', icon: 'map' },
 ];
+
+const HIT_SLOP_8_4 = { top: 8, bottom: 8, left: 4, right: 4 };
+const HIT_SLOP_6 = { top: 6, bottom: 6, left: 6, right: 6 };
+
+interface ViewModeButtonProps {
+  mode: ViewMode;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  active: boolean;
+  onSelect: (mode: ViewMode) => void;
+}
+
+const ViewModeButton = React.memo(function ViewModeButton({
+  mode,
+  icon,
+  active,
+  onSelect,
+}: ViewModeButtonProps) {
+  const handlePress = useCallback(() => onSelect(mode), [onSelect, mode]);
+  return (
+    <TouchableOpacity
+      style={[styles.toggleBtn, active && styles.toggleBtnActive]}
+      onPress={handlePress}
+      hitSlop={HIT_SLOP_8_4}
+    >
+      <Ionicons name={icon} size={18} color={active ? Colors.brand.primary : Colors.neutral[400]} />
+    </TouchableOpacity>
+  );
+});
 
 export default function RemembranceScreen() {
   const {
@@ -51,8 +86,42 @@ export default function RemembranceScreen() {
 
   const isMapMode = viewMode === 'map';
 
+  const handleOpenFilters = useCallback(() => setFiltersOpen(true), [setFiltersOpen]);
+  const handleCloseFilters = useCallback(() => setFiltersOpen(false), [setFiltersOpen]);
+  const handleSelectAllTab = useCallback(() => setActiveTab('all'), [setActiveTab]);
+  const handleSelectFavoritesTab = useCallback(() => setActiveTab('favorites'), [setActiveTab]);
+
+  const renderPlaceRow = useCallback(
+    ({ item }: ListRenderItemInfo<Place>) => (
+      <PlaceRow
+        place={item}
+        onPress={handlePlacePress}
+        onDelete={handleDeletePlace}
+        allTags={allTags}
+      />
+    ),
+    [handlePlacePress, handleDeletePlace, allTags],
+  );
+
+  const renderPlaceGridCard = useCallback(
+    ({ item }: ListRenderItemInfo<Place>) => (
+      <PlaceGridCard place={item} onPress={handlePlacePress} allTags={allTags} />
+    ),
+    [handlePlacePress, allTags],
+  );
+
+  const listFooter =
+    upcomingMeetings.length > 0 ? (
+      <View style={styles.meetingsSection}>
+        <Text style={styles.sectionTitle}>Upcoming Meetings</Text>
+        {upcomingMeetings.map((m: Meeting) => (
+          <MeetingCard key={m.id} meeting={m} />
+        ))}
+      </View>
+    ) : null;
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={styles.flex}>
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         {/* Header */}
         <View style={styles.header}>
@@ -61,8 +130,8 @@ export default function RemembranceScreen() {
             {/* Filter button */}
             <TouchableOpacity
               style={styles.filterBtn}
-              onPress={() => setFiltersOpen(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+              onPress={handleOpenFilters}
+              hitSlop={HIT_SLOP_8_4}
             >
               <Ionicons
                 name="options"
@@ -79,18 +148,13 @@ export default function RemembranceScreen() {
             {/* View mode toggle */}
             <View style={styles.viewToggle}>
               {VIEW_MODES.map(({ mode, icon }) => (
-                <TouchableOpacity
+                <ViewModeButton
                   key={mode}
-                  style={[styles.toggleBtn, viewMode === mode && styles.toggleBtnActive]}
-                  onPress={() => setViewMode(mode)}
-                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                >
-                  <Ionicons
-                    name={icon}
-                    size={18}
-                    color={viewMode === mode ? Colors.brand.primary : Colors.neutral[400]}
-                  />
-                </TouchableOpacity>
+                  mode={mode}
+                  icon={icon}
+                  active={viewMode === mode}
+                  onSelect={setViewMode}
+                />
               ))}
             </View>
           </View>
@@ -105,10 +169,7 @@ export default function RemembranceScreen() {
               {' • '}
               {displayedPlaces.length} of {places.length} places
             </Text>
-            <TouchableOpacity
-              onPress={clearFilters}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            >
+            <TouchableOpacity onPress={clearFilters} hitSlop={HIT_SLOP_6}>
               <Text style={styles.clearFiltersText}>✕ Clear</Text>
             </TouchableOpacity>
           </View>
@@ -127,7 +188,7 @@ export default function RemembranceScreen() {
           <View style={styles.tabs}>
             <TouchableOpacity
               style={[styles.tab, activeTab === 'all' && styles.activeTab]}
-              onPress={() => setActiveTab('all')}
+              onPress={handleSelectAllTab}
             >
               <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
                 All ({places.length})
@@ -135,7 +196,7 @@ export default function RemembranceScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tab, activeTab === 'favorites' && styles.activeTab]}
-              onPress={() => setActiveTab('favorites')}
+              onPress={handleSelectFavoritesTab}
             >
               <Text style={[styles.tabText, activeTab === 'favorites' && styles.activeTabText]}>
                 Favorites ({places.filter((p) => p.isFavorite).length})
@@ -148,30 +209,14 @@ export default function RemembranceScreen() {
         {viewMode === 'list' && (
           <FlatList
             data={displayedPlaces}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }: { item: Place }) => (
-              <PlaceRow
-                place={item}
-                onPress={handlePlacePress}
-                onDelete={handleDeletePlace}
-                allTags={allTags}
-              />
-            )}
+            keyExtractor={keyExtractor}
+            renderItem={renderPlaceRow}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <EmptyState activeTab={activeTab} hasFilters={activeFilterCount > 0} />
             }
-            ListFooterComponent={
-              upcomingMeetings.length > 0 ? (
-                <View style={styles.meetingsSection}>
-                  <Text style={styles.sectionTitle}>Upcoming Meetings</Text>
-                  {upcomingMeetings.map((m: Meeting) => (
-                    <MeetingCard key={m.id} meeting={m} />
-                  ))}
-                </View>
-              ) : null
-            }
+            ListFooterComponent={listFooter}
           />
         )}
 
@@ -179,11 +224,9 @@ export default function RemembranceScreen() {
         {viewMode === 'grid' && (
           <FlatList
             data={displayedPlaces}
-            keyExtractor={(item) => item.id}
+            keyExtractor={keyExtractor}
             numColumns={2}
-            renderItem={({ item }: { item: Place }) => (
-              <PlaceGridCard place={item} onPress={handlePlacePress} allTags={allTags} />
-            )}
+            renderItem={renderPlaceGridCard}
             columnWrapperStyle={styles.gridRow}
             contentContainerStyle={styles.gridContent}
             showsVerticalScrollIndicator={false}
@@ -199,7 +242,7 @@ export default function RemembranceScreen() {
         {/* Filters sheet */}
         <FiltersSheet
           visible={filtersOpen}
-          onClose={() => setFiltersOpen(false)}
+          onClose={handleCloseFilters}
           filters={filters}
           allTags={allTags}
           allMoods={allMoods}
@@ -213,6 +256,10 @@ export default function RemembranceScreen() {
       </SafeAreaView>
     </GestureHandlerRootView>
   );
+}
+
+function keyExtractor(item: Place) {
+  return item.id;
 }
 
 function EmptyState({ activeTab, hasFilters }: { activeTab: string; hasFilters: boolean }) {
@@ -241,6 +288,7 @@ function EmptyState({ activeTab, hasFilters }: { activeTab: string; hasFilters: 
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   container: { flex: 1, backgroundColor: Colors.neutral[50] },
   header: {
     flexDirection: 'row',

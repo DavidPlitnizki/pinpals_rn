@@ -1,6 +1,17 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TextInputProps, TouchableOpacity } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  BlurEvent,
+  FocusEvent,
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TextInputProps,
+  TouchableOpacity,
+} from 'react-native';
 import { Colors, Spacing, Radii, Typography } from '../tokens';
+
+const HIT_SLOP_8 = { top: 8, bottom: 8, left: 8, right: 8 };
 
 interface PinTextFieldProps extends TextInputProps {
   label?: string;
@@ -32,6 +43,22 @@ export function PinTextField({
 }: PinTextFieldProps) {
   const [focused, setFocused] = useState(false);
 
+  const handleFocus = useCallback(
+    (e: FocusEvent) => {
+      setFocused(true);
+      onFocus?.(e);
+    },
+    [onFocus],
+  );
+
+  const handleBlur = useCallback(
+    (e: BlurEvent) => {
+      setFocused(false);
+      onBlur?.(e);
+    },
+    [onBlur],
+  );
+
   const borderColor = errorMessage
     ? Colors.error
     : focused
@@ -59,14 +86,8 @@ export function PinTextField({
           placeholderTextColor={Colors.neutral[400]}
           multiline={multiline}
           textAlignVertical={multiline ? 'top' : 'center'}
-          onFocus={(e) => {
-            setFocused(true);
-            onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setFocused(false);
-            onBlur?.(e);
-          }}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           {...rest}
         />
 
@@ -75,7 +96,7 @@ export function PinTextField({
             style={styles.iconRight}
             onPress={onRightIconPress}
             disabled={!onRightIconPress}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={HIT_SLOP_8}
           >
             {rightIcon}
           </TouchableOpacity>

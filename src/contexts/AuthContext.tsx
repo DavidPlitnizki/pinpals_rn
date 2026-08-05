@@ -2,11 +2,11 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 
 import {
   AuthData,
-  login as serviceLogin,
-  signUp as serviceSignUp,
-  logout as serviceLogout,
   loginAnonymously,
   onAuthStateChanged,
+  login as serviceLogin,
+  logout as serviceLogout,
+  signUp as serviceSignUp,
 } from '../services/authService';
 
 interface AuthContextValue {
@@ -38,8 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isAnonymous: firebaseUser.isAnonymous,
           providerId: firebaseUser.isAnonymous
             ? 'anonymous'
-            : (firebaseUser.providerData[0]?.providerId as AuthData['providerId'] | undefined) ??
-              'password',
+            : ((firebaseUser.providerData[0]?.providerId as AuthData['providerId'] | undefined) ??
+              'password'),
         });
         setIsAuth(!firebaseUser.isAnonymous);
         setIsGuest(firebaseUser.isAnonymous);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors, Radii, Spacing, Typography } from '../tokens';
 
@@ -10,6 +10,38 @@ interface TagInputProps {
   placeholder?: string;
 }
 
+interface TagChipProps {
+  tag: string;
+  onRemove: (tag: string) => void;
+}
+
+const TagChip = React.memo(function TagChip({ tag, onRemove }: TagChipProps) {
+  const handlePress = useCallback(() => onRemove(tag), [onRemove, tag]);
+  return (
+    <TouchableOpacity style={styles.chip} onPress={handlePress} activeOpacity={0.7}>
+      <Text style={styles.chipText}>#{tag}</Text>
+      <Text style={styles.chipRemove}>✕</Text>
+    </TouchableOpacity>
+  );
+});
+
+interface SuggestionChipProps {
+  suggestion: string;
+  onSelect: (suggestion: string) => void;
+}
+
+const SuggestionChip = React.memo(function SuggestionChip({
+  suggestion,
+  onSelect,
+}: SuggestionChipProps) {
+  const handlePress = useCallback(() => onSelect(suggestion), [onSelect, suggestion]);
+  return (
+    <TouchableOpacity style={styles.suggestionChip} onPress={handlePress}>
+      <Text style={styles.suggestionText}>#{suggestion}</Text>
+    </TouchableOpacity>
+  );
+});
+
 export function TagInput({
   tags,
   onAdd,
@@ -19,13 +51,21 @@ export function TagInput({
 }: TagInputProps) {
   const [text, setText] = useState('');
 
-  function handleSubmit() {
+  const handleSubmit = useCallback(() => {
     const tag = text.trim().toLowerCase();
     if (tag && !tags.includes(tag)) {
       onAdd(tag);
       setText('');
     }
-  }
+  }, [text, tags, onAdd]);
+
+  const handleSelectSuggestion = useCallback(
+    (suggestion: string) => {
+      onAdd(suggestion);
+      setText('');
+    },
+    [onAdd],
+  );
 
   const filteredSuggestions = suggestions.filter(
     (s) => !tags.includes(s) && s.includes(text.toLowerCase()),
@@ -35,15 +75,7 @@ export function TagInput({
     <View style={styles.container}>
       <View style={styles.chips}>
         {tags.map((tag) => (
-          <TouchableOpacity
-            key={tag}
-            style={styles.chip}
-            onPress={() => onRemove(tag)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.chipText}>#{tag}</Text>
-            <Text style={styles.chipRemove}>✕</Text>
-          </TouchableOpacity>
+          <TagChip key={tag} tag={tag} onRemove={onRemove} />
         ))}
       </View>
 
@@ -61,16 +93,7 @@ export function TagInput({
       {text.length > 0 && filteredSuggestions.length > 0 && (
         <View style={styles.suggestions}>
           {filteredSuggestions.slice(0, 5).map((s) => (
-            <TouchableOpacity
-              key={s}
-              style={styles.suggestionChip}
-              onPress={() => {
-                onAdd(s);
-                setText('');
-              }}
-            >
-              <Text style={styles.suggestionText}>#{s}</Text>
-            </TouchableOpacity>
+            <SuggestionChip key={s} suggestion={s} onSelect={handleSelectSuggestion} />
           ))}
         </View>
       )}

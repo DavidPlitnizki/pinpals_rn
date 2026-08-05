@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
@@ -6,6 +6,8 @@ import { MOOD_CONFIG, Place } from '../../../models/types';
 import { CATEGORY_COLORS, CATEGORY_LABELS } from '../../../shared/constants';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { InlineTags } from './InlineTags';
+
+function noop() {}
 
 interface Props {
   place: Place;
@@ -19,8 +21,18 @@ export function PlaceGridCard({ place, onPress, allTags = [] }: Props) {
   const mood = getLatestMoodForPlace(place.id);
   const accentColor = mood ? MOOD_CONFIG[mood].color : CATEGORY_COLORS[place.category];
 
+  const handlePress = useCallback(() => onPress(place.id), [onPress, place.id]);
+  const handleAddTag = useCallback(
+    (tag: string) => addTagToPlace(place.id, tag),
+    [addTagToPlace, place.id],
+  );
+  const handleRemoveTag = useCallback(
+    (tag: string) => removeTagFromPlace(place.id, tag),
+    [removeTagFromPlace, place.id],
+  );
+
   return (
-    <TouchableOpacity style={styles.card} onPress={() => onPress(place.id)} activeOpacity={0.75}>
+    <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.75}>
       <View style={[styles.accent, { backgroundColor: accentColor }]} />
       <View style={styles.body}>
         <View style={styles.titleRow}>
@@ -40,12 +52,12 @@ export function PlaceGridCard({ place, onPress, allTags = [] }: Props) {
         {place.visitCount > 0 && <Text style={styles.visits}>{place.visitCount}× visited</Text>}
 
         {/* Inline tags — stop propagation so chip taps don't open detail */}
-        <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+        <TouchableOpacity activeOpacity={1} onPress={noop}>
           <InlineTags
             tags={place.tags ?? []}
             allTags={allTags}
-            onAdd={(tag) => addTagToPlace(place.id, tag)}
-            onRemove={(tag) => removeTagFromPlace(place.id, tag)}
+            onAdd={handleAddTag}
+            onRemove={handleRemoveTag}
           />
         </TouchableOpacity>
       </View>

@@ -1,5 +1,5 @@
 import { Camera, MapView, PointAnnotation } from '@rnmapbox/maps';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -35,6 +35,21 @@ export default function CreateMeetingScreen() {
     getDaysInMonth,
     handleSave,
   } = useCreateMeeting();
+
+  const onMapPress = useCallback(
+    (feature: any) =>
+      handleMapPress({
+        geometry: {
+          coordinates: [feature.geometry.coordinates[0], feature.geometry.coordinates[1]] as [
+            number,
+            number,
+          ],
+        },
+      }),
+    [handleMapPress],
+  );
+
+  const handleCloseDateModal = useCallback(() => setShowDateModal(false), [setShowDateModal]);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -83,19 +98,7 @@ export default function CreateMeetingScreen() {
         <View style={styles.formGroup}>
           <Text style={styles.fieldLabel}>Location</Text>
           <Text style={styles.mapHint}>Tap on the map to set the meeting point</Text>
-          <MapView
-            style={styles.map}
-            onPress={(feature: any) =>
-              handleMapPress({
-                geometry: {
-                  coordinates: [
-                    feature.geometry.coordinates[0],
-                    feature.geometry.coordinates[1],
-                  ] as [number, number],
-                },
-              })
-            }
-          >
+          <MapView style={styles.map} onPress={onMapPress}>
             <Camera
               centerCoordinate={[coordinates.longitude, coordinates.latitude]}
               zoomLevel={13}
@@ -105,16 +108,7 @@ export default function CreateMeetingScreen() {
               id="meeting-location"
               coordinate={[coordinates.longitude, coordinates.latitude]}
             >
-              <View
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 10,
-                  backgroundColor: Colors.brand.primary,
-                  borderWidth: 2,
-                  borderColor: '#fff',
-                }}
-              />
+              <View style={styles.locationMarker} />
             </PointAnnotation>
           </MapView>
           <Text style={styles.coordsText}>
@@ -141,7 +135,7 @@ export default function CreateMeetingScreen() {
         onChangeHour={setTempHour}
         onChangeMinute={setTempMinute}
         onConfirm={confirmDate}
-        onClose={() => setShowDateModal(false)}
+        onClose={handleCloseDateModal}
       />
     </SafeAreaView>
   );
@@ -177,6 +171,14 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.s8,
   },
   map: { height: 220, borderRadius: Radii.md, overflow: 'hidden' },
+  locationMarker: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.brand.primary,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
   coordsText: {
     ...Typography.caption,
     color: Colors.neutral[400],

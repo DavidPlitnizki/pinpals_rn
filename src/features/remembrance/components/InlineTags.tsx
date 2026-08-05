@@ -1,7 +1,10 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+
+const HIT_SLOP_TAG = { top: 6, bottom: 6, left: 2, right: 2 };
+const HIT_SLOP_ADD = { top: 6, bottom: 6, left: 4, right: 4 };
 
 interface Props {
   tags: string[];
@@ -10,32 +13,70 @@ interface Props {
   onRemove: (tag: string) => void;
 }
 
+interface TagChipProps {
+  tag: string;
+  onRemove: (tag: string) => void;
+}
+
+const TagChip = React.memo(function TagChip({ tag, onRemove }: TagChipProps) {
+  const handlePress = useCallback(() => onRemove(tag), [onRemove, tag]);
+  return (
+    <TouchableOpacity style={styles.chip} onPress={handlePress} hitSlop={HIT_SLOP_TAG}>
+      <Text style={styles.chipText}>#{tag}</Text>
+      <Text style={styles.chipRemove}>✕</Text>
+    </TouchableOpacity>
+  );
+});
+
+interface SuggestionProps {
+  suggestion: string;
+  onSelect: (suggestion: string) => void;
+}
+
+const Suggestion = React.memo(function Suggestion({ suggestion, onSelect }: SuggestionProps) {
+  const handlePress = useCallback(() => onSelect(suggestion), [onSelect, suggestion]);
+  return (
+    <TouchableOpacity style={styles.suggestion} onPress={handlePress}>
+      <Text style={styles.suggestionText}>#{suggestion}</Text>
+    </TouchableOpacity>
+  );
+});
+
 export function InlineTags({ tags, allTags = [], onAdd, onRemove }: Props) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const inputRef = useRef<TextInput>(null);
 
-  function openInput() {
+  const openInput = useCallback(() => {
     setEditing(true);
     setTimeout(() => inputRef.current?.focus(), 50);
-  }
+  }, []);
 
-  function handleSubmit() {
+  const handleSubmit = useCallback(() => {
     const tag = text.trim().toLowerCase();
     if (tag && !tags.includes(tag)) {
       onAdd(tag);
     }
     setText('');
     setEditing(false);
-  }
+  }, [text, tags, onAdd]);
 
-  function handleBlur() {
+  const handleBlur = useCallback(() => {
     if (text.trim()) {
       handleSubmit();
     } else {
       setEditing(false);
     }
-  }
+  }, [text, handleSubmit]);
+
+  const handleSelectSuggestion = useCallback(
+    (suggestion: string) => {
+      onAdd(suggestion);
+      setText('');
+      setEditing(false);
+    },
+    [onAdd],
+  );
 
   const suggestions = allTags.filter(
     (s) => !tags.includes(s) && s.includes(text.toLowerCase()) && s.length > 0,
@@ -51,24 +92,12 @@ export function InlineTags({ tags, allTags = [], onAdd, onRemove }: Props) {
       >
         {/* Existing tag chips */}
         {tags.map((tag) => (
-          <TouchableOpacity
-            key={tag}
-            style={styles.chip}
-            onPress={() => onRemove(tag)}
-            hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
-          >
-            <Text style={styles.chipText}>#{tag}</Text>
-            <Text style={styles.chipRemove}>✕</Text>
-          </TouchableOpacity>
+          <TagChip key={tag} tag={tag} onRemove={onRemove} />
         ))}
 
         {/* Add button or input */}
         {!editing ? (
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={openInput}
-            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-          >
+          <TouchableOpacity style={styles.addBtn} onPress={openInput} hitSlop={HIT_SLOP_ADD}>
             <Text style={styles.addBtnText}>+ tag</Text>
           </TouchableOpacity>
         ) : (
@@ -92,17 +121,7 @@ export function InlineTags({ tags, allTags = [], onAdd, onRemove }: Props) {
       {editing && text.length > 0 && suggestions.length > 0 && (
         <View style={styles.suggestions}>
           {suggestions.slice(0, 4).map((s) => (
-            <TouchableOpacity
-              key={s}
-              style={styles.suggestion}
-              onPress={() => {
-                onAdd(s);
-                setText('');
-                setEditing(false);
-              }}
-            >
-              <Text style={styles.suggestionText}>#{s}</Text>
-            </TouchableOpacity>
+            <Suggestion key={s} suggestion={s} onSelect={handleSelectSuggestion} />
           ))}
         </View>
       )}

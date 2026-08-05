@@ -310,13 +310,12 @@ describe('request cancellation', () => {
 
 describe('route previews', () => {
   it('populates previews for all three profiles after opening the picker', async () => {
-    mockGetDirections.mockImplementation(
-      (_points: unknown, profile: string) =>
-        Promise.resolve(
-          makeDirectionsResult({
-            distanceMeters: profile === 'walking' ? 100 : profile === 'driving' ? 200 : 300,
-          }),
-        ),
+    mockGetDirections.mockImplementation((_points: unknown, profile: string) =>
+      Promise.resolve(
+        makeDirectionsResult({
+          distanceMeters: profile === 'walking' ? 100 : profile === 'driving' ? 200 : 300,
+        }),
+      ),
     );
     const { result } = renderHook(() => useRouteDirections(GPS));
 
@@ -340,11 +339,10 @@ describe('route previews', () => {
   });
 
   it('does not let one failed profile block the other two', async () => {
-    mockGetDirections.mockImplementation(
-      (_points: unknown, profile: string) =>
-        profile === 'driving'
-          ? Promise.reject(new Error('boom'))
-          : Promise.resolve(makeDirectionsResult()),
+    mockGetDirections.mockImplementation((_points: unknown, profile: string) =>
+      profile === 'driving'
+        ? Promise.reject(new Error('boom'))
+        : Promise.resolve(makeDirectionsResult()),
     );
     const { result } = renderHook(() => useRouteDirections(GPS));
 

@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -45,16 +45,17 @@ export default function LegalScreen() {
   const router = useRouter();
   const { type } = useLocalSearchParams<{ type: string }>();
   const content = CONTENT[type === 'terms' ? 'terms' : 'privacy'];
+  const handleClose = useCallback(() => router.back(), [router]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Text style={styles.title}>{content.title}</Text>
-        <CircleCloseButton onPress={() => router.back()} />
+        <CircleCloseButton onPress={handleClose} />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.body}>{content.body}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.doneBtn}>
+        <TouchableOpacity onPress={handleClose} style={styles.doneBtn}>
           <Text style={styles.doneText}>Done</Text>
         </TouchableOpacity>
       </ScrollView>

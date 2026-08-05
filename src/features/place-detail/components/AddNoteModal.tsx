@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -29,6 +29,9 @@ export function AddNoteModal({
   onClose,
 }: Props) {
   const [viewerVisible, setViewerVisible] = useState(false);
+  const openViewer = useCallback(() => setViewerVisible(true), []);
+  const closeViewer = useCallback(() => setViewerVisible(false), []);
+  const viewerPhotoUris = useMemo(() => (notePhotoUri ? [notePhotoUri] : []), [notePhotoUri]);
 
   return (
     <Modal
@@ -57,7 +60,7 @@ export function AddNoteModal({
           <View style={styles.photoSection}>
             {notePhotoUri ? (
               <View>
-                <TouchableOpacity activeOpacity={0.85} onPress={() => setViewerVisible(true)}>
+                <TouchableOpacity activeOpacity={0.85} onPress={openViewer}>
                   <Image
                     source={{ uri: notePhotoUri }}
                     style={styles.previewPhoto}
@@ -80,9 +83,9 @@ export function AddNoteModal({
       {notePhotoUri && (
         <PhotoViewerModal
           visible={viewerVisible}
-          photoUris={[notePhotoUri]}
+          photoUris={viewerPhotoUris}
           initialIndex={0}
-          onClose={() => setViewerVisible(false)}
+          onClose={closeViewer}
         />
       )}
     </Modal>

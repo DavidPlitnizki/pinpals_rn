@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   Image,
   ScrollView,
@@ -101,6 +101,24 @@ export default function CreateMemoryScreen() {
 
 /* Step components */
 
+const PhotoThumb = React.memo(function PhotoThumb({
+  uri,
+  onRemove,
+}: {
+  uri: string;
+  onRemove: (uri: string) => void;
+}) {
+  const handleRemove = useCallback(() => onRemove(uri), [onRemove, uri]);
+  return (
+    <View style={styles.photoItem}>
+      <Image source={{ uri }} style={styles.photoThumb} />
+      <TouchableOpacity style={styles.photoRemove} onPress={handleRemove}>
+        <Text style={styles.photoRemoveText}>✕</Text>
+      </TouchableOpacity>
+    </View>
+  );
+});
+
 function PhotoStep({
   photoUris,
   onPick,
@@ -115,12 +133,7 @@ function PhotoStep({
       <Text style={styles.stepHint}>Add up to 5 photos to this memory</Text>
       <View style={styles.photoGrid}>
         {photoUris.map((uri) => (
-          <View key={uri} style={styles.photoItem}>
-            <Image source={{ uri }} style={styles.photoThumb} />
-            <TouchableOpacity style={styles.photoRemove} onPress={() => onRemove(uri)}>
-              <Text style={styles.photoRemoveText}>✕</Text>
-            </TouchableOpacity>
-          </View>
+          <PhotoThumb key={uri} uri={uri} onRemove={onRemove} />
         ))}
         {photoUris.length < 5 && (
           <TouchableOpacity style={styles.photoAdd} onPress={onPick}>
@@ -190,23 +203,26 @@ function NoteStep({ text, onChangeText }: { text: string; onChangeText: (t: stri
 function DateStep({ date, onChangeDate }: { date: Date; onChangeDate: (d: Date) => void }) {
   const isToday = date.toDateString() === new Date().toDateString();
 
+  const handlePressToday = useCallback(() => onChangeDate(new Date()), [onChangeDate]);
+  const handlePressYesterday = useCallback(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    onChangeDate(yesterday);
+  }, [onChangeDate]);
+
   return (
     <View style={styles.stepContent}>
       <Text style={styles.stepHint}>When was this?</Text>
       <View style={styles.dateOptions}>
         <TouchableOpacity
           style={[styles.dateOption, isToday && styles.dateOptionActive]}
-          onPress={() => onChangeDate(new Date())}
+          onPress={handlePressToday}
         >
           <Text style={[styles.dateOptionText, isToday && styles.dateOptionTextActive]}>Today</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.dateOption, !isToday && styles.dateOptionActive]}
-          onPress={() => {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            onChangeDate(yesterday);
-          }}
+          onPress={handlePressYesterday}
         >
           <Text style={[styles.dateOptionText, !isToday && styles.dateOptionTextActive]}>
             Yesterday

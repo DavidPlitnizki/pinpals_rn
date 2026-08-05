@@ -1,6 +1,10 @@
 import { ColorSchemeName, PixelRatio, useColorScheme } from 'react-native';
 
-import { FONT_SCALE_MULTIPLIERS, ThemePreference, useSettingsStore } from '../store/useSettingsStore';
+import {
+  FONT_SCALE_MULTIPLIERS,
+  ThemePreference,
+  useSettingsStore,
+} from '../store/useSettingsStore';
 
 // RN's <Text>/<TextInput> multiply their fontSize by PixelRatio.getFontScale() whenever
 // allowFontScaling isn't explicitly turned off (the default everywhere in this app) — so

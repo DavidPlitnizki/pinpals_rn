@@ -93,7 +93,9 @@ export default function MapScreen() {
   // otherwise stack a second one directly on top of it.
   const allRouteWaypoints = route.pickerVisible
     ? route.pendingWaypoints
-    : (route.activeRoute?.status === 'success' ? route.activeRoute.waypoints : []);
+    : route.activeRoute?.status === 'success'
+      ? route.activeRoute.waypoints
+      : [];
   const routeWaypoints = allRouteWaypoints.filter(
     (w) =>
       !search.mapPlaces.some((p) => isSameCoordinates(p.coordinates, w.coordinates)) &&

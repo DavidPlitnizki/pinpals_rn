@@ -1,7 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -23,7 +23,10 @@ import { FontScale, ThemePreference } from '../../store/useSettingsStore';
 import { useProfileScreen } from './hooks/useProfileScreen';
 import { getInitials } from './utils/getInitials';
 
-const PROVIDER_BADGE: Record<AuthProviderId, { icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
+const PROVIDER_BADGE: Record<
+  AuthProviderId,
+  { icon: React.ComponentProps<typeof Ionicons>['name'] }
+> = {
   'google.com': { icon: 'logo-google' },
   'apple.com': { icon: 'logo-apple' },
   password: { icon: 'mail' },
@@ -41,6 +44,28 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'dark', label: 'Dark' },
   { value: 'system', label: 'System' },
 ];
+
+interface SettingChipProps<T extends string> {
+  value: T;
+  label: string;
+  active: boolean;
+  onSelect: (value: T) => void;
+}
+
+function SettingChipInner<T extends string>({
+  value,
+  label,
+  active,
+  onSelect,
+}: SettingChipProps<T>) {
+  const handlePress = useCallback(() => onSelect(value), [onSelect, value]);
+  return (
+    <TouchableOpacity style={[styles.chip, active && styles.chipActive]} onPress={handlePress}>
+      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+const SettingChip = React.memo(SettingChipInner) as typeof SettingChipInner;
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -70,13 +95,18 @@ export default function ProfileScreen() {
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   const providerBadge = PROVIDER_BADGE[authData?.providerId ?? 'anonymous'];
 
+  const handleStartEdit = useCallback(() => setIsEditing(true), [setIsEditing]);
+  const handleOpenPaywall = useCallback(() => router.push('/paywall' as any), [router]);
+  const handleOpenPrivacy = useCallback(() => router.push('/legal?type=privacy' as any), [router]);
+  const handleOpenTerms = useCallback(() => router.push('/legal?type=terms' as any), [router]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Fixed header */}
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
         {!isEditing ? (
-          <TouchableOpacity onPress={() => setIsEditing(true)} hitSlop={HIT_SLOP}>
+          <TouchableOpacity onPress={handleStartEdit} hitSlop={HIT_SLOP}>
             <Ionicons name="create-outline" size={22} color={Colors.brand.primary} />
           </TouchableOpacity>
         ) : (
@@ -123,183 +153,164 @@ export default function ProfileScreen() {
       >
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.content}>
-          {/* Profile Info */}
-          <PinCard style={styles.profileCard}>
-            {isEditing ? (
-              <View style={styles.editForm}>
-                <PinTextField
-                  label="Name"
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Your name"
-                />
-                <View style={styles.fieldSpacing} />
-                <PinTextField
-                  label="Bio"
-                  value={bio}
-                  onChangeText={setBio}
-                  placeholder="Tell us about yourself..."
-                  multiline
-                />
-                <View style={styles.fieldSpacing} />
-                <PinButton title="Save Changes" onPress={handleSave} fullWidth />
-              </View>
-            ) : (
-              <View>
-                <Text style={styles.profileName}>{profile.name}</Text>
-                {profile.bio ? (
-                  <Text style={styles.profileBio}>{profile.bio}</Text>
-                ) : (
-                  <Text style={styles.placeholderBio}>No bio yet. Tap Edit to add one.</Text>
-                )}
-              </View>
-            )}
-          </PinCard>
+            {/* Profile Info */}
+            <PinCard style={styles.profileCard}>
+              {isEditing ? (
+                <View style={styles.editForm}>
+                  <PinTextField
+                    label="Name"
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Your name"
+                  />
+                  <View style={styles.fieldSpacing} />
+                  <PinTextField
+                    label="Bio"
+                    value={bio}
+                    onChangeText={setBio}
+                    placeholder="Tell us about yourself..."
+                    multiline
+                  />
+                  <View style={styles.fieldSpacing} />
+                  <PinButton title="Save Changes" onPress={handleSave} fullWidth />
+                </View>
+              ) : (
+                <View>
+                  <Text style={styles.profileName}>{profile.name}</Text>
+                  {profile.bio ? (
+                    <Text style={styles.profileBio}>{profile.bio}</Text>
+                  ) : (
+                    <Text style={styles.placeholderBio}>No bio yet. Tap Edit to add one.</Text>
+                  )}
+                </View>
+              )}
+            </PinCard>
 
-          {/* Stats */}
-          <PinCard style={styles.statsCard}>
-            <Text style={styles.statsTitle}>Stats</Text>
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{places.length}</Text>
-                <Text style={styles.statLabel}>Places</Text>
+            {/* Stats */}
+            <PinCard style={styles.statsCard}>
+              <Text style={styles.statsTitle}>Stats</Text>
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{places.length}</Text>
+                  <Text style={styles.statLabel}>Places</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{places.filter((p) => p.isFavorite).length}</Text>
+                  <Text style={styles.statLabel}>Favorites</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{meetings.length}</Text>
+                  <Text style={styles.statLabel}>Meetings</Text>
+                </View>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{places.filter((p) => p.isFavorite).length}</Text>
-                <Text style={styles.statLabel}>Favorites</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{meetings.length}</Text>
-                <Text style={styles.statLabel}>Meetings</Text>
-              </View>
-            </View>
-          </PinCard>
+            </PinCard>
 
-          {/* Appearance */}
-          <PinCard style={styles.appearanceCard}>
-            <Text style={styles.infoTitle}>Appearance</Text>
-            <Text style={styles.appearanceLabel}>Font Size</Text>
-            <View style={styles.chips}>
-              {FONT_SCALE_OPTIONS.map((opt) => {
-                const active = fontScale === opt.value;
-                return (
-                  <TouchableOpacity
+            {/* Appearance */}
+            <PinCard style={styles.appearanceCard}>
+              <Text style={styles.infoTitle}>Appearance</Text>
+              <Text style={styles.appearanceLabel}>Font Size</Text>
+              <View style={styles.chips}>
+                {FONT_SCALE_OPTIONS.map((opt) => (
+                  <SettingChip
                     key={opt.value}
-                    style={[styles.chip, active && styles.chipActive]}
-                    onPress={() => setFontScale(opt.value)}
-                  >
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <Text style={[styles.appearanceLabel, styles.appearanceLabelSpaced]}>Theme</Text>
-            <View style={styles.chips}>
-              {THEME_OPTIONS.map((opt) => {
-                const active = theme === opt.value;
-                return (
-                  <TouchableOpacity
+                    value={opt.value}
+                    label={opt.label}
+                    active={fontScale === opt.value}
+                    onSelect={setFontScale}
+                  />
+                ))}
+              </View>
+              <Text style={[styles.appearanceLabel, styles.appearanceLabelSpaced]}>Theme</Text>
+              <View style={styles.chips}>
+                {THEME_OPTIONS.map((opt) => (
+                  <SettingChip
                     key={opt.value}
-                    style={[styles.chip, active && styles.chipActive]}
-                    onPress={() => setTheme(opt.value)}
-                  >
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </PinCard>
+                    value={opt.value}
+                    label={opt.label}
+                    active={theme === opt.value}
+                    onSelect={setTheme}
+                  />
+                ))}
+              </View>
+            </PinCard>
 
-          {/* Billing */}
-          <PinCard style={styles.accountCard}>
-            <TouchableOpacity
-              style={styles.accountRow}
-              onPress={() => router.push('/paywall' as any)}
-            >
-              <Ionicons
-                name="card-outline"
-                size={20}
-                color={Colors.neutral[700]}
-                style={styles.accountIcon}
-              />
-              <Text style={styles.accountRowText}>Payment Method & Billing</Text>
-              <Ionicons name="chevron-forward" size={18} color={Colors.neutral[300]} />
-            </TouchableOpacity>
-          </PinCard>
+            {/* Billing */}
+            <PinCard style={styles.accountCard}>
+              <TouchableOpacity style={styles.accountRow} onPress={handleOpenPaywall}>
+                <Ionicons
+                  name="card-outline"
+                  size={20}
+                  color={Colors.neutral[700]}
+                  style={styles.accountIcon}
+                />
+                <Text style={styles.accountRowText}>Payment Method & Billing</Text>
+                <Ionicons name="chevron-forward" size={18} color={Colors.neutral[300]} />
+              </TouchableOpacity>
+            </PinCard>
 
-          {/* Legal */}
-          <PinCard style={styles.accountCard}>
-            <TouchableOpacity
-              style={styles.accountRow}
-              onPress={() => router.push('/legal?type=privacy' as any)}
-            >
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={20}
-                color={Colors.neutral[700]}
-                style={styles.accountIcon}
-              />
-              <Text style={styles.accountRowText}>Privacy Policy</Text>
-              <Ionicons name="chevron-forward" size={18} color={Colors.neutral[300]} />
-            </TouchableOpacity>
-            <View style={styles.accountDivider} />
-            <TouchableOpacity
-              style={styles.accountRow}
-              onPress={() => router.push('/legal?type=terms' as any)}
-            >
-              <Ionicons
-                name="document-text-outline"
-                size={20}
-                color={Colors.neutral[700]}
-                style={styles.accountIcon}
-              />
-              <Text style={styles.accountRowText}>Terms of Service</Text>
-              <Ionicons name="chevron-forward" size={18} color={Colors.neutral[300]} />
-            </TouchableOpacity>
-          </PinCard>
+            {/* Legal */}
+            <PinCard style={styles.accountCard}>
+              <TouchableOpacity style={styles.accountRow} onPress={handleOpenPrivacy}>
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={20}
+                  color={Colors.neutral[700]}
+                  style={styles.accountIcon}
+                />
+                <Text style={styles.accountRowText}>Privacy Policy</Text>
+                <Ionicons name="chevron-forward" size={18} color={Colors.neutral[300]} />
+              </TouchableOpacity>
+              <View style={styles.accountDivider} />
+              <TouchableOpacity style={styles.accountRow} onPress={handleOpenTerms}>
+                <Ionicons
+                  name="document-text-outline"
+                  size={20}
+                  color={Colors.neutral[700]}
+                  style={styles.accountIcon}
+                />
+                <Text style={styles.accountRowText}>Terms of Service</Text>
+                <Ionicons name="chevron-forward" size={18} color={Colors.neutral[300]} />
+              </TouchableOpacity>
+            </PinCard>
 
-          {/* App Info */}
-          <PinCard style={styles.infoCard}>
-            <Text style={styles.infoTitle}>About Pinpals</Text>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Version</Text>
-              <Text style={styles.infoValue}>{appVersion}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Platform</Text>
-              <Text style={styles.infoValue}>iOS</Text>
-            </View>
-          </PinCard>
+            {/* App Info */}
+            <PinCard style={styles.infoCard}>
+              <Text style={styles.infoTitle}>About Pinpals</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Version</Text>
+                <Text style={styles.infoValue}>{appVersion}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Platform</Text>
+                <Text style={styles.infoValue}>iOS</Text>
+              </View>
+            </PinCard>
 
-          {/* Account Actions */}
-          <PinCard style={styles.accountCard}>
-            <TouchableOpacity style={styles.accountRow} onPress={handleLogout}>
-              <Ionicons
-                name="log-out-outline"
-                size={20}
-                color={Colors.neutral[700]}
-                style={styles.accountIcon}
-              />
-              <Text style={styles.accountRowText}>Log Out</Text>
-            </TouchableOpacity>
-            <View style={styles.accountDivider} />
-            <TouchableOpacity style={styles.accountRow} onPress={handleDeleteAccount}>
-              <Ionicons
-                name="trash-outline"
-                size={20}
-                color={Colors.error}
-                style={styles.accountIcon}
-              />
-              <Text style={styles.accountRowTextDanger}>Delete Account</Text>
-            </TouchableOpacity>
-          </PinCard>
-        </View>
+            {/* Account Actions */}
+            <PinCard style={styles.accountCard}>
+              <TouchableOpacity style={styles.accountRow} onPress={handleLogout}>
+                <Ionicons
+                  name="log-out-outline"
+                  size={20}
+                  color={Colors.neutral[700]}
+                  style={styles.accountIcon}
+                />
+                <Text style={styles.accountRowText}>Log Out</Text>
+              </TouchableOpacity>
+              <View style={styles.accountDivider} />
+              <TouchableOpacity style={styles.accountRow} onPress={handleDeleteAccount}>
+                <Ionicons
+                  name="trash-outline"
+                  size={20}
+                  color={Colors.error}
+                  style={styles.accountIcon}
+                />
+                <Text style={styles.accountRowTextDanger}>Delete Account</Text>
+              </TouchableOpacity>
+            </PinCard>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -64,10 +64,7 @@ const PhotoThumb = React.memo(function PhotoThumb({
       activeOpacity={0.85}
       delayLongPress={350}
     >
-      <Image
-        source={{ uri }}
-        style={[styles.photoThumb, isMain && styles.photoThumbMain]}
-      />
+      <Image source={{ uri }} style={[styles.photoThumb, isMain && styles.photoThumbMain]} />
       {isMain && (
         <View style={styles.photoMainBadge}>
           <Ionicons name="star" size={11} color={Colors.white} />
@@ -88,7 +85,11 @@ export function QuickAddPlaceSheet({ visible, coordinates, onSave, onClose, onDi
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const sheetStyle = useMemo(
-    () => [styles.sheet, { paddingBottom: insets.bottom + Spacing.s16 }, { transform: [{ translateY }] }],
+    () => [
+      styles.sheet,
+      { paddingBottom: insets.bottom + Spacing.s16 },
+      { transform: [{ translateY }] },
+    ],
     [insets.bottom, translateY],
   );
 
@@ -398,9 +399,7 @@ export function QuickAddPlaceSheet({ visible, coordinates, onSave, onClose, onDi
                 onPress={handleToggleFavorite}
               >
                 <Text style={styles.actionButtonEmoji}>{favorite ? '❤️' : '🤍'}</Text>
-                <Text
-                  style={[styles.actionButtonText, favorite && styles.actionButtonTextActive]}
-                >
+                <Text style={[styles.actionButtonText, favorite && styles.actionButtonTextActive]}>
                   Favorite
                 </Text>
               </TouchableOpacity>
