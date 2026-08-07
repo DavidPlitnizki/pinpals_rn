@@ -2,10 +2,9 @@ import { Camera, MapView, UserLocation } from '@rnmapbox/maps';
 import React, { useCallback, useRef } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
 
+import { ClearMapButton } from './components/ClearMapButton';
 import { ClearRouteButton } from './components/ClearRouteButton';
-import { ClearSearchResultsButton } from './components/ClearSearchResultsButton';
-import { FriendsButton } from './components/FriendsButton';
-import { FriendsSheet } from './components/FriendsSheet';
+import { FlyToSheet } from './components/FlyToSheet';
 import { MapControls } from './components/MapControls';
 import { MapMarkers } from './components/MapMarkers';
 import { MapToast } from './components/MapToast';
@@ -19,7 +18,7 @@ import { RouteModePicker } from './components/RouteModePicker';
 import { SearchResultMarker } from './components/SearchResultMarker';
 import { SearchSheet } from './components/SearchSheet';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from './constants';
-import { useFriendsSheet } from './hooks/useFriendsSheet';
+import { useFlyToSheet } from './hooks/useFlyToSheet';
 import { useMapScreen } from './hooks/useMapScreen';
 import { useRouteDirections } from './hooks/useRouteDirections';
 import { useSearchSheet } from './hooks/useSearchSheet';
@@ -40,6 +39,7 @@ export default function MapScreen() {
     places,
     locationGranted,
     gpsCoords,
+    handleConfirmFlyTo,
     showQuickAddSheet,
     pendingPlaceCoords,
     searchResultMarkers,
@@ -70,7 +70,7 @@ export default function MapScreen() {
   } = useMapScreen();
 
   const search = useSearchSheet(places, gpsCoords);
-  const friends = useFriendsSheet();
+  const flyTo = useFlyToSheet(handleConfirmFlyTo);
   const onWaypointReached = useCallback(
     (label: string) => showToast(`Reached ${label}`, false),
     [showToast],
@@ -84,7 +84,7 @@ export default function MapScreen() {
   // Every Modal presented over the MapView can drop PointAnnotation bitmaps (see
   // usePointAnnotationRefresh), so markers must re-register whenever any of them opens
   // or closes — not just the route picker.
-  const annotationRefreshSignal = `${route.pickerVisible}|${showQuickAddSheet}|${search.visible}`;
+  const annotationRefreshSignal = `${route.pickerVisible}|${showQuickAddSheet}|${search.visible}|${flyTo.visible}`;
 
   // Pins for every stop of the route: while picking a mode, the full (possibly extended)
   // pending stop list; once confirmed, the waypoints actually being routed to. Stops that
@@ -136,7 +136,8 @@ export default function MapScreen() {
 
   const onCameraChanged = useCallback(
     (state: { properties: { center: unknown; zoom: number } }) => {
-      currentCenter.current = state.properties.center as [number, number];
+      const center = state.properties.center as [number, number];
+      currentCenter.current = center;
       currentZoom.current = state.properties.zoom;
     },
     [currentCenter, currentZoom],
@@ -240,6 +241,16 @@ export default function MapScreen() {
     [route],
   );
 
+  // Single top-right "clear" button covers both things that can be highlighted on the map
+  // at once: an active route and pinned search results.
+  const onClearAll = useCallback(() => {
+    if (searchResultMarkers.length > 0) {
+      onClearSearchResults();
+    } else {
+      route.clearRoute();
+    }
+  }, [searchResultMarkers, onClearSearchResults, route]);
+
   return (
     <View style={styles.container}>
       <MapView
@@ -335,20 +346,11 @@ export default function MapScreen() {
         )}
 
       {route.activeRoute?.status === 'success' && (
-        <ClearRouteButton
-          onPress={route.removeLastWaypoint}
-          onLongPress={route.clearRoute}
-          stacked={searchResultMarkers.length > 0}
-        />
+        <ClearRouteButton onPress={route.removeLastWaypoint} onLongPress={route.clearRoute} />
       )}
 
-      <FriendsButton onPress={friends.open} hasUnread={friends.hasUnread} />
-
-      {searchResultMarkers.length > 0 && (
-        <ClearSearchResultsButton
-          count={searchResultMarkers.length}
-          onPress={onClearSearchResults}
-        />
+      {(route.activeRoute?.status === 'success' || searchResultMarkers.length > 0) && (
+        <ClearMapButton onPress={onClearAll} />
       )}
 
       <MapControls
@@ -356,6 +358,7 @@ export default function MapScreen() {
         onCenterGPS={handleCenterGPS}
         onAdd={handleAddAtCurrentLocation}
         onSearch={search.open}
+        onFlyTo={flyTo.open}
       />
 
       <QuickAddPlaceSheet
@@ -379,14 +382,14 @@ export default function MapScreen() {
         onClose={route.closeModePicker}
       />
 
-      <FriendsSheet
-        visible={friends.visible}
-        query={friends.query}
-        filteredFriends={friends.filteredFriends}
-        filteredGroups={friends.filteredGroups}
-        recents={friends.recents}
-        onChangeQuery={friends.setQuery}
-        onClose={friends.close}
+      <FlyToSheet
+        visible={flyTo.visible}
+        query={flyTo.query}
+        loading={flyTo.loading}
+        error={flyTo.error}
+        onChangeQuery={flyTo.setQuery}
+        onSubmit={flyTo.submit}
+        onClose={flyTo.close}
       />
 
       <SearchSheet

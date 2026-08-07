@@ -306,6 +306,9 @@ Features/Ask/
 ### PHASE 1E — Meeting Negotiation (2 недели)
 *Цель: сделать встречи процессом, а не формой*
 
+> В коде и в этом документе «event»/«событие» и «meeting»/«встреча» — одно и то же понятие (`Meeting` в модели).
+
+- [x] Создание event (встречи) — `CreateMeetingScreen` + `useCreateMeeting`, одноэтапная форма (название, дата/время, точка на карте) → сохраняется в `useMeetingsStore`
 - [x] `MeetingStatus` enum + миграция модели — `MeetingStatus` + `proposedPlaceIds`/`participants` в модели, store на version 2 с миграцией
 - [ ] `proposedPlaces` — список кандидатов — поле `proposedPlaceIds` есть в модели/сторе, но нигде не заполняется и не используется в UI (CreateMeeting — обычная одноэтапная форма)
 - [ ] Переделать **CreateMeeting** под step-by-step flow

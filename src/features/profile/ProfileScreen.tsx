@@ -17,9 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PinButton } from '../../design-system/components/PinButton';
 import { PinCard } from '../../design-system/components/PinCard';
 import { PinTextField } from '../../design-system/components/PinTextField';
-import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
+import { Colors, Spacing, Typography } from '../../design-system/tokens';
 import { AuthProviderId } from '../../services/firebaseAuth';
-import { FontScale, ThemePreference } from '../../store/useSettingsStore';
 import { useProfileScreen } from './hooks/useProfileScreen';
 import { getInitials } from './utils/getInitials';
 
@@ -33,40 +32,6 @@ const PROVIDER_BADGE: Record<
   anonymous: { icon: 'eye-off' },
 };
 
-const FONT_SCALE_OPTIONS: { value: FontScale; label: string }[] = [
-  { value: 'small', label: 'Small' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'large', label: 'Large' },
-];
-
-const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-  { value: 'system', label: 'System' },
-];
-
-interface SettingChipProps<T extends string> {
-  value: T;
-  label: string;
-  active: boolean;
-  onSelect: (value: T) => void;
-}
-
-function SettingChipInner<T extends string>({
-  value,
-  label,
-  active,
-  onSelect,
-}: SettingChipProps<T>) {
-  const handlePress = useCallback(() => onSelect(value), [onSelect, value]);
-  return (
-    <TouchableOpacity style={[styles.chip, active && styles.chipActive]} onPress={handlePress}>
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-const SettingChip = React.memo(SettingChipInner) as typeof SettingChipInner;
-
 export default function ProfileScreen() {
   const router = useRouter();
   const {
@@ -74,17 +39,13 @@ export default function ProfileScreen() {
     isGuest,
     authData,
     places,
-    meetings,
+    savedRoutes,
     isEditing,
     setIsEditing,
     name,
     setName,
     bio,
     setBio,
-    fontScale,
-    setFontScale,
-    theme,
-    setTheme,
     handlePickAvatar,
     handleSave,
     handleCancelEdit,
@@ -188,7 +149,10 @@ export default function ProfileScreen() {
 
             {/* Stats */}
             <PinCard style={styles.statsCard}>
-              <Text style={styles.statsTitle}>Stats</Text>
+              <View style={styles.statsTitleRow}>
+                <Ionicons name="bookmark" size={16} color={Colors.neutral[700]} />
+                <Text style={styles.statsTitle}>Saved</Text>
+              </View>
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <Text style={styles.statNumber}>{places.length}</Text>
@@ -196,43 +160,14 @@ export default function ProfileScreen() {
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{places.filter((p) => p.isFavorite).length}</Text>
-                  <Text style={styles.statLabel}>Favorites</Text>
+                  <Text style={styles.statNumber}>{savedRoutes.length}</Text>
+                  <Text style={styles.statLabel}>Routes</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{meetings.length}</Text>
-                  <Text style={styles.statLabel}>Meetings</Text>
+                  <Text style={styles.statNumber}>{places.filter((p) => p.isFavorite).length}</Text>
+                  <Text style={styles.statLabel}>Want to Visit</Text>
                 </View>
-              </View>
-            </PinCard>
-
-            {/* Appearance */}
-            <PinCard style={styles.appearanceCard}>
-              <Text style={styles.infoTitle}>Appearance</Text>
-              <Text style={styles.appearanceLabel}>Font Size</Text>
-              <View style={styles.chips}>
-                {FONT_SCALE_OPTIONS.map((opt) => (
-                  <SettingChip
-                    key={opt.value}
-                    value={opt.value}
-                    label={opt.label}
-                    active={fontScale === opt.value}
-                    onSelect={setFontScale}
-                  />
-                ))}
-              </View>
-              <Text style={[styles.appearanceLabel, styles.appearanceLabelSpaced]}>Theme</Text>
-              <View style={styles.chips}>
-                {THEME_OPTIONS.map((opt) => (
-                  <SettingChip
-                    key={opt.value}
-                    value={opt.value}
-                    label={opt.label}
-                    active={theme === opt.value}
-                    onSelect={setTheme}
-                  />
-                ))}
               </View>
             </PinCard>
 
@@ -398,10 +333,15 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   statsCard: { marginBottom: 0 },
+  statsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.s8,
+    marginBottom: Spacing.s16,
+  },
   statsTitle: {
     ...Typography.headline,
     color: Colors.neutral[700],
-    marginBottom: Spacing.s16,
   },
   statsRow: { flexDirection: 'row', alignItems: 'center' },
   statItem: { flex: 1, alignItems: 'center' },
@@ -442,31 +382,4 @@ const styles = StyleSheet.create({
   accountDivider: { height: 1, backgroundColor: Colors.neutral[100] },
   accountRowText: { ...Typography.body, color: Colors.neutral[700], flex: 1 },
   accountRowTextDanger: { ...Typography.body, color: Colors.error, flex: 1 },
-  appearanceCard: { marginBottom: 0 },
-  appearanceLabel: {
-    ...Typography.subheadline,
-    color: Colors.neutral[600],
-    fontWeight: '600',
-    marginBottom: Spacing.s8,
-  },
-  appearanceLabelSpaced: { marginTop: Spacing.s12 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.s8 },
-  chip: {
-    paddingHorizontal: Spacing.s12,
-    paddingVertical: Spacing.s8,
-    borderRadius: Radii.full,
-    backgroundColor: Colors.neutral[100],
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-  },
-  chipActive: {
-    backgroundColor: Colors.brand.primary,
-    borderColor: Colors.brand.primary,
-  },
-  chipText: {
-    ...Typography.subheadline,
-    color: Colors.neutral[600],
-    fontWeight: '600',
-  },
-  chipTextActive: { color: Colors.white },
 });

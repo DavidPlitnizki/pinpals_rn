@@ -1,35 +1,43 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Spacing } from '../../../design-system/tokens';
 import { Coordinates } from '../../../models/types';
+import { RoundMapButton } from './RoundMapButton';
 
 interface Props {
   gpsCoords: Coordinates | null;
   onCenterGPS: () => void;
   onAdd: () => void;
   onSearch: () => void;
+  onFlyTo: () => void;
 }
 
-export function MapControls({ gpsCoords, onCenterGPS, onAdd, onSearch }: Props) {
+const FAB_SIZE = 56;
+
+export function MapControls({ gpsCoords, onCenterGPS, onAdd, onSearch, onFlyTo }: Props) {
   return (
     <SafeAreaView style={styles.wrap} pointerEvents="box-none">
       <View style={styles.cluster}>
-        <TouchableOpacity style={styles.fab} onPress={onSearch}>
+        <RoundMapButton onPress={onFlyTo} color={Colors.brand.primary} size={FAB_SIZE}>
+          <Ionicons name="airplane" size={22} color={Colors.white} style={styles.flyToIcon} />
+        </RoundMapButton>
+        <RoundMapButton onPress={onSearch} color={Colors.brand.primary} size={FAB_SIZE}>
           <Ionicons name="search" size={26} color={Colors.white} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.fab, !gpsCoords && styles.fabDisabled]}
+        </RoundMapButton>
+        <RoundMapButton
           onPress={onCenterGPS}
+          color={Colors.brand.primary}
+          size={FAB_SIZE}
           disabled={!gpsCoords}
         >
           <Ionicons name="locate" size={26} color={Colors.white} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.fab} onPress={onAdd}>
+        </RoundMapButton>
+        <RoundMapButton onPress={onAdd} color={Colors.brand.primary} size={FAB_SIZE}>
           <Text style={styles.fabText}>+</Text>
-        </TouchableOpacity>
+        </RoundMapButton>
       </View>
     </SafeAreaView>
   );
@@ -44,20 +52,8 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.s16,
   },
   cluster: { alignItems: 'center', gap: Spacing.s12 },
-  fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.brand.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  fabDisabled: { opacity: 0.35 },
+  // Tilted nose-up, like a plane climbing right after takeoff, instead of the flat glyph default.
+  flyToIcon: { transform: [{ rotate: '-45deg' }] },
   fabText: {
     fontSize: 28,
     color: Colors.white,

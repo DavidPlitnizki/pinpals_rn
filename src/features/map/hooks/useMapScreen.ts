@@ -133,6 +133,21 @@ export function useMapScreen() {
     requestLocation();
   }, [requestLocation]);
 
+  // FlyTo is a one-off camera jump — it doesn't set any "fake current location", just moves
+  // the map to the place the user typed/picked in FlyToSheet.
+  const handleConfirmFlyTo = useCallback(
+    (coords: Coordinates, label: string) => {
+      currentCenter.current = [coords.longitude, coords.latitude];
+      cameraRef.current?.setCamera({
+        centerCoordinate: [coords.longitude, coords.latitude],
+        zoomLevel: DEFAULT_ZOOM,
+        animationDuration: 1200,
+      });
+      showToast(`Flew to ${label}`, false);
+    },
+    [showToast],
+  );
+
   const handleCenterGPS = useCallback(() => {
     if (!gpsCoords) return;
     cameraRef.current?.setCamera({
@@ -345,6 +360,7 @@ export function useMapScreen() {
     profile,
     locationGranted,
     gpsCoords,
+    handleConfirmFlyTo,
     showProfileMenu,
     showQuickAddSheet,
     pendingPlaceCoords,

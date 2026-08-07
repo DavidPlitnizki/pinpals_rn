@@ -1,69 +1,51 @@
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { Colors, Spacing } from '../../../design-system/tokens';
+import { RoundMapButton } from './RoundMapButton';
 
 interface Props {
   // Short press: drop just the last stop. Long press: clear the whole route.
   onPress: () => void;
   onLongPress: () => void;
-  // True when ClearSearchResultsButton is also showing in the same bottom-right slot —
-  // shifts this pill up so the two don't overlap.
-  stacked?: boolean;
 }
 
-const FAB_SIZE = 56;
-const FAB_GAP = Spacing.s12;
-const CLUSTER_HEIGHT = FAB_SIZE * 3 + FAB_GAP * 2;
-const PILL_STACK_OFFSET = 52;
+const BUTTON_SIZE = 44;
+// Sits directly below ClearMapButton, same top-right column.
+const COLUMN_OFFSET = Spacing.s16 + BUTTON_SIZE + Spacing.s8;
 
-export function ClearRouteButton({ onPress, onLongPress, stacked }: Props) {
+export function ClearRouteButton({ onPress, onLongPress }: Props) {
   return (
-    <SafeAreaView style={[styles.wrap, stacked && styles.wrapStacked]} pointerEvents="box-none">
-      <TouchableOpacity
-        style={styles.btn}
+    <SafeAreaView style={styles.wrap} pointerEvents="box-none">
+      <RoundMapButton
         onPress={onPress}
         onLongPress={onLongPress}
-        activeOpacity={0.85}
+        color="#E4483C"
+        size={BUTTON_SIZE}
       >
-        <Ionicons name="close-circle" size={18} color={Colors.white} />
-        <Text style={styles.label}>Clear route</Text>
-      </TouchableOpacity>
+        <MaterialCommunityIcons name="road-variant" size={22} color={Colors.white} />
+        <View style={styles.slash} />
+      </RoundMapButton>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  // Bottom-right, same slot/style as ClearSearchResultsButton (red pill, mirrors "N results").
   wrap: {
     position: 'absolute',
-    bottom: 0,
+    top: 0,
     right: 0,
-    paddingBottom: Spacing.s24 + CLUSTER_HEIGHT + Spacing.s12,
+    paddingTop: COLUMN_OFFSET,
     paddingRight: Spacing.s16,
   },
-  wrapStacked: {
-    paddingBottom: Spacing.s24 + CLUSTER_HEIGHT + Spacing.s12 + PILL_STACK_OFFSET,
-  },
-  btn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.s8,
-    paddingHorizontal: Spacing.s12,
-    paddingVertical: Spacing.s8,
-    borderRadius: Radii.md,
-    backgroundColor: '#E4483C',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  label: {
-    ...Typography.caption,
-    color: Colors.white,
-    fontWeight: '600',
+  // A "no entry" style diagonal bar over the road icon — inset from the circle's edges.
+  slash: {
+    position: 'absolute',
+    width: BUTTON_SIZE * 0.6,
+    height: 1.5,
+    backgroundColor: Colors.white,
+    transform: [{ rotate: '-45deg' }],
   },
 });

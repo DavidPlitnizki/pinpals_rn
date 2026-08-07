@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,8 +13,23 @@ const ICONS: Record<string, { active: string; inactive: string }> = {
   profile: { active: 'person', inactive: 'person-outline' },
 };
 
-export default function AnimatedTabBar(props: BottomTabBarProps) {
-  // @ts-ignore - type mismatch between expo-router and @react-navigation/bottom-tabs
+// Expo Router (SDK 56+) no longer allows importing `BottomTabBarProps` from
+// `@react-navigation/bottom-tabs` in app code — this mirrors just the fields this
+// component actually reads off the tabBar render-prop it's handed by expo-router's `Tabs`.
+interface AnimatedTabBarProps {
+  state: { index: number; routes: { key: string; name: string }[] };
+  descriptors: Record<string, { options: { title?: string } }>;
+  navigation: {
+    emit: (event: {
+      type: string;
+      target: string;
+      canPreventDefault: true;
+    }) => { defaultPrevented: boolean };
+    navigate: (name: string) => void;
+  };
+}
+
+export default function AnimatedTabBar(props: AnimatedTabBarProps) {
   const { state, descriptors, navigation } = props;
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -88,9 +102,14 @@ export default function AnimatedTabBar(props: BottomTabBarProps) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.white,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.neutral[100],
+    borderTopWidth: 1,
+    borderTopColor: Colors.neutral[200],
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 8,
   },
   bar: {
     flexDirection: 'row',

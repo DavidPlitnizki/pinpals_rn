@@ -1,4 +1,5 @@
-import React from 'react';
+import { useNavigation } from 'expo-router';
+import React, { useEffect } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Camera, MapView, PointAnnotation } from '@rnmapbox/maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -51,6 +52,13 @@ export default function PlaceDetailScreen() {
     handleRemoveTag,
     router,
   } = usePlaceDetail();
+
+  const navigation = useNavigation();
+  // The Stack header defaults to "Place Details" (set in the root layout) — swap it to
+  // "Edit" while the description field is open, back to the default once it closes.
+  useEffect(() => {
+    navigation.setOptions({ title: isEditingDescription ? 'Edit' : 'Place Details' });
+  }, [isEditingDescription, navigation]);
 
   if (!place) {
     return (

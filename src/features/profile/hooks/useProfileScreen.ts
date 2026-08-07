@@ -7,12 +7,14 @@ import { promptPhotoSource } from '../../../shared/photoSourcePrompt';
 import { useMeetingsStore } from '../../../store/useMeetingsStore';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
+import { useSavedRoutesStore } from '../../../store/useSavedRoutesStore';
 import { useSettingsStore } from '../../../store/useSettingsStore';
 
 export function useProfileScreen() {
   const { profile, updateProfile } = useProfileStore();
   const { places } = usePlacesStore();
   const { meetings } = useMeetingsStore();
+  const { savedRoutes } = useSavedRoutesStore();
   const { logout, isGuest, authData } = useAuth();
   const { fontScale, setFontScale, theme, setTheme } = useSettingsStore();
   const [isEditing, setIsEditing] = useState(false);
@@ -105,6 +107,7 @@ export function useProfileScreen() {
     setTheme,
     places,
     meetings,
+    savedRoutes,
     isEditing,
     setIsEditing,
     name,
