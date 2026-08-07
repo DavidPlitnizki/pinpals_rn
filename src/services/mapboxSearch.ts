@@ -93,7 +93,8 @@ export async function searchMapboxPlaces(
   const params = new URLSearchParams({
     q: trimmed,
     types: 'poi,address,place',
-    limit: '5',
+    // Mapbox's Search Box forward endpoint caps this at 10 — there's no "unlimited" option.
+    limit: '10',
     access_token: token,
   });
   if (proximity) {

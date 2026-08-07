@@ -84,13 +84,13 @@ export function QuickAddPlaceSheet({ visible, coordinates, onSave, onClose, onDi
   const insets = useSafeAreaInsets();
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
-  const sheetStyle = useMemo(
-    () => [
-      styles.sheet,
-      { paddingBottom: insets.bottom + Spacing.s16 },
-      { transform: [{ translateY }] },
-    ],
-    [insets.bottom, translateY],
+  const sheetShadowStyle = useMemo(
+    () => [styles.sheetShadow, { transform: [{ translateY }] }],
+    [translateY],
+  );
+  const sheetInnerStyle = useMemo(
+    () => [styles.sheetInner, { paddingBottom: insets.bottom + Spacing.s16 }],
+    [insets.bottom],
   );
 
   const [name, setName] = useState('');
@@ -296,136 +296,142 @@ export function QuickAddPlaceSheet({ visible, coordinates, onSave, onClose, onDi
           <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} />
         </TouchableWithoutFeedback>
 
-        <Animated.View style={sheetStyle}>
-          <View style={styles.handleRow}>
-            <View style={styles.handle} />
-          </View>
+        <Animated.View style={sheetShadowStyle}>
+          <View style={sheetInnerStyle}>
+            <View style={styles.handleRow}>
+              <View style={styles.handle} />
+            </View>
 
-          <View style={styles.header}>
-            <TouchableOpacity onPress={handleSavePress} hitSlop={8}>
-              <Text style={styles.saveLink}>Save</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>New Pin</Text>
-            <CircleCloseButton onPress={handleClose} />
-          </View>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={handleSavePress} hitSlop={8}>
+                <Text style={styles.saveLink}>Save</Text>
+              </TouchableOpacity>
+              <Text style={styles.title}>New Pin</Text>
+              <CircleCloseButton onPress={handleClose} />
+            </View>
 
-          <ScrollView
-            style={styles.content}
-            contentContainerStyle={styles.contentContainer}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {coordinates && (
-              <View style={styles.coordsRow}>
-                <Text style={styles.coordsText}>
-                  📍 {coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)}
-                </Text>
-                <TouchableOpacity onPress={handleDirectionsPress} hitSlop={8}>
-                  <Text style={styles.directionsLink}>Get directions</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            <ScrollView
+              style={styles.content}
+              contentContainerStyle={styles.contentContainer}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {coordinates && (
+                <View style={styles.coordsRow}>
+                  <Text style={styles.coordsText}>
+                    📍 {coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)}
+                  </Text>
+                  <TouchableOpacity onPress={handleDirectionsPress} hitSlop={8}>
+                    <Text style={styles.directionsLink}>Get directions</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
-            {/* Bare TextInput, matching SearchSheet's (the one input in this app whose
+              {/* Bare TextInput, matching SearchSheet's (the one input in this app whose
               keyboard reliably works) exact pattern — no PinTextField wrapper, which owns
               its own focus-driven internal state and re-renders on every focus/blur. That
               re-render was never isolated as a variable in the earlier keyboard debugging;
               this rules it in or out. */}
-            <Text style={styles.fieldLabel}>Name</Text>
-            <View style={styles.inputWrap}>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Place name"
-                placeholderTextColor={Colors.neutral[400]}
-              />
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Description</Text>
-              <View style={[styles.inputWrap, styles.descriptionWrap]}>
+              <Text style={styles.fieldLabel}>Name</Text>
+              <View style={styles.inputWrap}>
                 <TextInput
-                  style={[styles.input, styles.descriptionInput]}
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholder="What's special about this place?"
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Place name"
                   placeholderTextColor={Colors.neutral[400]}
-                  multiline
-                  textAlignVertical="top"
                 />
               </View>
-            </View>
 
-            <View style={styles.iconActionRow}>
-              <TouchableOpacity style={styles.iconActionButton} onPress={handlePickPhotos}>
-                <Ionicons name="camera-outline" size={22} color={Colors.brand.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconActionButton} onPress={handleToggleMoodPicker}>
-                <Text style={styles.iconActionButtonEmoji}>
-                  {mood ? MOOD_CONFIG[mood].emoji : '🙂'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {moodPickerOpen && (
-              <View style={styles.moodPickerWrap}>
-                <MoodPicker selected={mood} onSelect={handleSelectMood} />
-              </View>
-            )}
-
-            {photoUris.length > 0 && (
-              <>
-                <View style={styles.photoGrid}>
-                  {photoUris.map((uri) => (
-                    <PhotoThumb
-                      key={uri}
-                      uri={uri}
-                      isMain={mainPhotoUri === uri}
-                      onRemove={handleRemovePhoto}
-                      onSetMain={handleSetMainPhoto}
-                    />
-                  ))}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Description</Text>
+                <View style={[styles.inputWrap, styles.descriptionWrap]}>
+                  <TextInput
+                    style={[styles.input, styles.descriptionInput]}
+                    value={description}
+                    onChangeText={setDescription}
+                    placeholder="What's special about this place?"
+                    placeholderTextColor={Colors.neutral[400]}
+                    multiline
+                    textAlignVertical="top"
+                  />
                 </View>
-                {photoUris.length > 1 && (
-                  <Text style={styles.photoHint}>Hold a photo to set it as the map pin photo</Text>
-                )}
-              </>
-            )}
+              </View>
 
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={[styles.actionButton, favorite && styles.actionButtonActive]}
-                onPress={handleToggleFavorite}
-              >
-                <Text style={styles.actionButtonEmoji}>{favorite ? '❤️' : '🤍'}</Text>
-                <Text style={[styles.actionButtonText, favorite && styles.actionButtonTextActive]}>
-                  Favorite
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, wantToVisit && styles.actionButtonActive]}
-                onPress={handleToggleWantToVisit}
-              >
-                <Text style={styles.actionButtonEmoji}>{wantToVisit ? '⭐' : '☆'}</Text>
-                <Text
-                  style={[styles.actionButtonText, wantToVisit && styles.actionButtonTextActive]}
+              <View style={styles.iconActionRow}>
+                <TouchableOpacity style={styles.iconActionButton} onPress={handlePickPhotos}>
+                  <Ionicons name="camera-outline" size={22} color={Colors.brand.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.iconActionButton} onPress={handleToggleMoodPicker}>
+                  <Text style={styles.iconActionButtonEmoji}>
+                    {mood ? MOOD_CONFIG[mood].emoji : '🙂'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {moodPickerOpen && (
+                <View style={styles.moodPickerWrap}>
+                  <MoodPicker selected={mood} onSelect={handleSelectMood} />
+                </View>
+              )}
+
+              {photoUris.length > 0 && (
+                <>
+                  <View style={styles.photoGrid}>
+                    {photoUris.map((uri) => (
+                      <PhotoThumb
+                        key={uri}
+                        uri={uri}
+                        isMain={mainPhotoUri === uri}
+                        onRemove={handleRemovePhoto}
+                        onSetMain={handleSetMainPhoto}
+                      />
+                    ))}
+                  </View>
+                  {photoUris.length > 1 && (
+                    <Text style={styles.photoHint}>
+                      Hold a photo to set it as the map pin photo
+                    </Text>
+                  )}
+                </>
+              )}
+
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={[styles.actionButton, favorite && styles.actionButtonActive]}
+                  onPress={handleToggleFavorite}
                 >
-                  Want to visit
-                </Text>
-              </TouchableOpacity>
-            </View>
+                  <Text style={styles.actionButtonEmoji}>{favorite ? '❤️' : '🤍'}</Text>
+                  <Text
+                    style={[styles.actionButtonText, favorite && styles.actionButtonTextActive]}
+                  >
+                    Favorite
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, wantToVisit && styles.actionButtonActive]}
+                  onPress={handleToggleWantToVisit}
+                >
+                  <Text style={styles.actionButtonEmoji}>{wantToVisit ? '⭐' : '☆'}</Text>
+                  <Text
+                    style={[styles.actionButtonText, wantToVisit && styles.actionButtonTextActive]}
+                  >
+                    Want to visit
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Pin color</Text>
-              <PinColorPicker selected={pinColor} onSelect={setPinColor} />
-            </View>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Pin color</Text>
+                <PinColorPicker selected={pinColor} onSelect={setPinColor} />
+              </View>
 
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Rating</Text>
-              <PinRatingView rating={rating} onRatingChange={setRating} size={28} />
-            </View>
-          </ScrollView>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Rating</Text>
+                <PinRatingView rating={rating} onRatingChange={setRating} size={28} />
+              </View>
+            </ScrollView>
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -441,8 +447,23 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
-  sheet: {
+  // Shadow lives on this outer wrapper — a sibling `overflow: hidden` on the same view
+  // would clip the shadow along with the content, since iOS clips CALayer shadows too.
+  sheetShadow: {
     height: SHEET_HEIGHT,
+    borderTopLeftRadius: Radii.lg,
+    borderTopRightRadius: Radii.lg,
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+    borderBottomWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  sheetInner: {
+    flex: 1,
     backgroundColor: Colors.white,
     borderTopLeftRadius: Radii.lg,
     borderTopRightRadius: Radii.lg,

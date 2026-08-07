@@ -24,10 +24,10 @@ const PROFILE_ICON: Record<RouteProfile, React.ComponentProps<typeof Ionicons>['
   cycling: 'bicycle',
 };
 
-// FriendsButton floats top-right (44pt button, Spacing.s16 top inset). A long
+// ClearMapButton floats top-right (44pt button, Spacing.s16 top inset). A long
 // destination label can grow this card up to its maxWidth and reach that corner,
 // so push the card below the button's row instead of relying on horizontal luck.
-const FRIENDS_BUTTON_CLEARANCE = Spacing.s16 + 44 + Spacing.s12;
+const CLEAR_BUTTON_CLEARANCE = Spacing.s16 + 44 + Spacing.s12;
 const STEPS_LIST_MAX_HEIGHT = 220;
 
 export function RouteInfoCard({
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingTop: FRIENDS_BUTTON_CLEARANCE,
+    paddingTop: CLEAR_BUTTON_CLEARANCE,
   },
   card: {
     backgroundColor: Colors.white,
@@ -110,11 +110,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.s16,
     paddingVertical: Spacing.s12,
     maxWidth: '85%',
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   summaryRow: {
     flexDirection: 'row',
