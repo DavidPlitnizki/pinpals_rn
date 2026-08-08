@@ -11,21 +11,17 @@ interface Props {
   gpsCoords: Coordinates | null;
   onCenterGPS: () => void;
   onAdd: () => void;
-  onSearch: () => void;
   onFlyTo: () => void;
 }
 
 const FAB_SIZE = 56;
 
-export function MapControls({ gpsCoords, onCenterGPS, onAdd, onSearch, onFlyTo }: Props) {
+export function MapControls({ gpsCoords, onCenterGPS, onAdd, onFlyTo }: Props) {
   return (
     <SafeAreaView style={styles.wrap} pointerEvents="box-none">
       <View style={styles.cluster}>
         <RoundMapButton onPress={onFlyTo} color={Colors.brand.primary} size={FAB_SIZE}>
           <Ionicons name="airplane" size={22} color={Colors.white} style={styles.flyToIcon} />
-        </RoundMapButton>
-        <RoundMapButton onPress={onSearch} color={Colors.brand.primary} size={FAB_SIZE}>
-          <Ionicons name="search" size={26} color={Colors.white} />
         </RoundMapButton>
         <RoundMapButton
           onPress={onCenterGPS}

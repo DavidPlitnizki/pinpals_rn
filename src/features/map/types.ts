@@ -14,11 +14,6 @@ export interface NativePoiMarker {
   coordinates: Coordinates;
 }
 
-// 'favorites' filters on Place.isFavorite (labeled "Want to visit" in the UI); 'favorite'
-// filters on the separate Place.favorite flag (the true "favorite" star, distinct from
-// "want to visit" — see models/types.ts).
-export type SpecialFilter = 'mine' | 'favorites' | 'favorite';
-
 export type RouteProfile = 'walking' | 'driving' | 'cycling';
 export type RouteStatus = 'idle' | 'loading' | 'success' | 'error';
 export type RouteOriginMode = 'gps' | 'place';

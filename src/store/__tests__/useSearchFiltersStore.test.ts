@@ -1,17 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSearchFiltersStore } from '../useSearchFiltersStore';
-import { DEFAULT_RADIUS_M } from '../../features/map/constants';
 
 beforeEach(async () => {
   await AsyncStorage.clear();
-  useSearchFiltersStore.setState({
-    query: '',
-    activeCategories: [],
-    specialFilters: [],
-    radiusM: DEFAULT_RADIUS_M,
-    radiusEnabled: true,
-    alwaysShowFavorites: true,
-  });
+  useSearchFiltersStore.setState({ query: '' });
 });
 
 // zustand's `set` (and therefore setState) is wrapped by the persist middleware, so
@@ -23,32 +15,15 @@ async function seedPersistedStorage(state: Record<string, unknown>) {
 }
 
 describe('persistence round-trip', () => {
-  it('rehydrates activeCategories and specialFilters arrays after a reload', async () => {
-    await seedPersistedStorage({
-      query: 'sushi',
-      activeCategories: ['food', 'coffee'],
-      specialFilters: ['favorites'],
-      radiusM: DEFAULT_RADIUS_M,
-      radiusEnabled: true,
-      alwaysShowFavorites: true,
-    });
+  it('rehydrates query after a reload', async () => {
+    await seedPersistedStorage({ query: 'sushi' });
     await useSearchFiltersStore.persist.rehydrate();
 
-    const state = useSearchFiltersStore.getState();
-    expect(state.query).toBe('sushi');
-    expect(state.activeCategories).toEqual(['food', 'coffee']);
-    expect(state.specialFilters).toEqual(['favorites']);
+    expect(useSearchFiltersStore.getState().query).toBe('sushi');
   });
 
   it('resetFilters clears persisted state, not just in-memory state', async () => {
-    await seedPersistedStorage({
-      query: 'park',
-      activeCategories: ['nature'],
-      specialFilters: [],
-      radiusM: 1,
-      radiusEnabled: false,
-      alwaysShowFavorites: true,
-    });
+    await seedPersistedStorage({ query: 'park' });
     await useSearchFiltersStore.persist.rehydrate();
     expect(useSearchFiltersStore.getState().query).toBe('park'); // sanity check the seed took effect
 
@@ -58,16 +33,6 @@ describe('persistence round-trip', () => {
     // Simulate a reload: rehydrate straight from whatever resetFilters() persisted.
     await useSearchFiltersStore.persist.rehydrate();
 
-    const state = useSearchFiltersStore.getState();
-    expect(state.query).toBe('');
-    expect(state.activeCategories).toEqual([]);
-    expect(state.radiusM).toBe(DEFAULT_RADIUS_M);
-    expect(state.radiusEnabled).toBe(true);
-  });
-
-  it('resetFilters does not reset alwaysShowFavorites (a standing preference, not a filter)', () => {
-    useSearchFiltersStore.getState().setAlwaysShowFavorites(false);
-    useSearchFiltersStore.getState().resetFilters();
-    expect(useSearchFiltersStore.getState().alwaysShowFavorites).toBe(false);
+    expect(useSearchFiltersStore.getState().query).toBe('');
   });
 });

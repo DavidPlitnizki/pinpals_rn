@@ -7,6 +7,7 @@ import { ClearRouteButton } from './components/ClearRouteButton';
 import { FlyToSheet } from './components/FlyToSheet';
 import { MapControls } from './components/MapControls';
 import { MapMarkers } from './components/MapMarkers';
+import { MapSearchBar } from './components/MapSearchBar';
 import { MapToast } from './components/MapToast';
 import { NativePoiMarker } from './components/NativePoiMarker';
 import { QuickAddPlaceSheet } from './components/QuickAddPlaceSheet';
@@ -20,9 +21,10 @@ import { SearchSheet } from './components/SearchSheet';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from './constants';
 import { useFlyToSheet } from './hooks/useFlyToSheet';
 import { useMapScreen } from './hooks/useMapScreen';
+import { useQuickCategorySearch } from './hooks/useQuickCategorySearch';
 import { useRouteDirections } from './hooks/useRouteDirections';
 import { useSearchSheet } from './hooks/useSearchSheet';
-import { NativePoiMarker as NativePoiMarkerData, RouteWaypoint, SavedRoute } from './types';
+import { NativePoiMarker as NativePoiMarkerData, RouteWaypoint } from './types';
 import { Coordinates, Place } from '../../models/types';
 import { MapboxSearchResult } from '../../services/mapboxSearch';
 import { buildGoogleMapsDirectionsUrl } from '../../shared/mapLinks';
@@ -51,6 +53,8 @@ export default function MapScreen() {
     showToast,
     currentCenter,
     currentZoom,
+    getMapCenter,
+    getVisibleBbox,
     handleCenterGPS,
     handleLongPress,
     handleMapPress,
@@ -69,17 +73,20 @@ export default function MapScreen() {
     handleDeleteMarker,
   } = useMapScreen();
 
-  const search = useSearchSheet(places, gpsCoords);
+  const search = useSearchSheet(places, getMapCenter, getVisibleBbox);
   const flyTo = useFlyToSheet(handleConfirmFlyTo);
+  const quickSearch = useQuickCategorySearch(
+    handleShowSearchResultsOnMap,
+    handleClearSearchResultMarkers,
+    getVisibleBbox,
+  );
   const onWaypointReached = useCallback(
     (label: string) => showToast(`Reached ${label}`, false),
     [showToast],
   );
   const route = useRouteDirections(gpsCoords, locationGranted, onWaypointReached);
   const resultWasTappedRef = useRef(false);
-  const savedRoutes = useSavedRoutesStore((s) => s.savedRoutes);
   const addSavedRoute = useSavedRoutesStore((s) => s.addSavedRoute);
-  const deleteSavedRoute = useSavedRoutesStore((s) => s.deleteSavedRoute);
 
   // Every Modal presented over the MapView can drop PointAnnotation bitmaps (see
   // usePointAnnotationRefresh), so markers must re-register whenever any of them opens
@@ -98,7 +105,7 @@ export default function MapScreen() {
       : [];
   const routeWaypoints = allRouteWaypoints.filter(
     (w) =>
-      !search.mapPlaces.some((p) => isSameCoordinates(p.coordinates, w.coordinates)) &&
+      !places.some((p) => isSameCoordinates(p.coordinates, w.coordinates)) &&
       !searchResultMarkers.some((m) => isSameCoordinates(m.coordinates, w.coordinates)),
   );
 
@@ -134,14 +141,28 @@ export default function MapScreen() {
     [handleMapPress],
   );
 
+  const { onCameraSettled: onQuickSearchCameraSettled } = quickSearch;
+
   const onCameraChanged = useCallback(
     (state: { properties: { center: unknown; zoom: number } }) => {
       const center = state.properties.center as [number, number];
       currentCenter.current = center;
       currentZoom.current = state.properties.zoom;
+      onQuickSearchCameraSettled();
     },
-    [currentCenter, currentZoom],
+    [currentCenter, currentZoom, onQuickSearchCameraSettled],
   );
+
+  const { selectCategory: selectQuickCategory, searchHere: searchQuickCategoryHere } = quickSearch;
+  const onSelectQuickCategory = useCallback(
+    (categoryKey: string) => {
+      selectQuickCategory(categoryKey, getMapCenter());
+    },
+    [selectQuickCategory, getMapCenter],
+  );
+  const onSearchHere = useCallback(() => {
+    searchQuickCategoryHere(getMapCenter());
+  }, [searchQuickCategoryHere, getMapCenter]);
 
   // Tapping one of your own places in search should behave like tapping its map marker
   // would — recentre the map on it — not jump to the edit/detail screen.
@@ -160,12 +181,13 @@ export default function MapScreen() {
 
   const onClearSearchResults = useCallback(() => {
     handleClearSearchResultMarkers();
+    quickSearch.clear();
     search.resetFilters();
     // The route (if any) was built to one of these markers — once the marker's gone,
     // a route pointing at it doesn't make sense either. Clearing the route alone
     // (ClearRouteButton) must NOT touch these markers — that direction stays one-way.
     route.clearRoute();
-  }, [handleClearSearchResultMarkers, search, route]);
+  }, [handleClearSearchResultMarkers, quickSearch, search, route]);
 
   const onPlaceDirections = useCallback(
     (place: Place) => {
@@ -234,13 +256,6 @@ export default function MapScreen() {
     void Share.share({ message: `${destination.label}: ${url}`, url });
   }, [route]);
 
-  const onSelectSavedRoute = useCallback(
-    (savedRoute: SavedRoute) => {
-      route.loadSavedRoute(savedRoute.waypoints, savedRoute.profile);
-    },
-    [route],
-  );
-
   // Single top-right "clear" button covers both things that can be highlighted on the map
   // at once: an active route and pinned search results.
   const onClearAll = useCallback(() => {
@@ -281,7 +296,7 @@ export default function MapScreen() {
           />
         )}
         <MapMarkers
-          places={search.mapPlaces}
+          places={places}
           onMarkerPress={handleMarkerPress}
           onDeleteMarker={handleDeleteMarker}
           onDirections={onPlaceDirections}
@@ -353,11 +368,22 @@ export default function MapScreen() {
         <ClearMapButton onPress={onClearAll} />
       )}
 
+      <MapSearchBar
+        query={search.query}
+        activeCategory={quickSearch.activeCategory}
+        categoryLoading={quickSearch.loading}
+        canSearchHere={quickSearch.canSearchHere}
+        searchHereLoading={quickSearch.searchHereLoading}
+        onOpenSearch={search.open}
+        onSelectCategory={onSelectQuickCategory}
+        onSearchHere={onSearchHere}
+        onClearQuery={onClearSearchResults}
+      />
+
       <MapControls
         gpsCoords={gpsCoords}
         onCenterGPS={handleCenterGPS}
         onAdd={handleAddAtCurrentLocation}
-        onSearch={search.open}
         onFlyTo={flyTo.open}
       />
 
@@ -395,30 +421,15 @@ export default function MapScreen() {
       <SearchSheet
         visible={search.visible}
         query={search.query}
-        radiusM={search.radiusM}
-        radiusEnabled={search.radiusEnabled}
-        maxRadiusM={search.maxRadiusM}
-        activeCategories={search.activeCategories}
-        specialFilters={search.specialFilters}
-        alwaysShowFavorites={search.alwaysShowFavorites}
         filteredPlaces={search.filteredPlaces}
-        showExternal={search.showExternal}
         externalResults={search.externalResults}
         externalLoading={search.externalLoading}
         externalSearched={search.externalSearched}
         onChangeQuery={search.setQuery}
-        onRadiusChange={search.setRadiusM}
-        onToggleRadiusEnabled={search.setRadiusEnabled}
-        onToggleCategory={search.toggleCategory}
-        onToggleSpecial={search.toggleSpecial}
-        onToggleAlwaysShowFavorites={search.setAlwaysShowFavorites}
         onPlacePress={onSearchPlacePress}
         onExternalResultPress={onExternalResultPress}
         onSearchExternal={search.searchExternal}
         onClose={onSearchClose}
-        savedRoutes={savedRoutes}
-        onSelectSavedRoute={onSelectSavedRoute}
-        onDeleteSavedRoute={deleteSavedRoute}
       />
     </View>
   );

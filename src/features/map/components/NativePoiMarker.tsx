@@ -1,14 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { MarkerView, PointAnnotation } from '@rnmapbox/maps';
 import React, { useCallback } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { HIT_SLOP_8 } from '../constants';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { NativePoiMarker as NativePoiMarkerData } from '../types';
 import { iconForMaki } from '../utils/mapboxIcons';
+import { CalloutActionButton } from './CalloutActionButton';
 
 const PIN_SIZE = 40;
 // Distinct from CATEGORY_COLORS (food/coffee/nature/art/sports), SearchResultMarker's
@@ -73,26 +73,32 @@ export function NativePoiMarker({
         anchor={{ x: 0.5, y: 1.4 }}
       >
         <View style={styles.callout}>
-          <CircleCloseButton onPress={onClose} style={styles.calloutCloseButton} />
+          <View style={styles.calloutHeaderRow}>
+            <CircleCloseButton onPress={onClose} style={styles.calloutCloseButton} />
+          </View>
           <Text style={styles.calloutName} numberOfLines={1}>
             {marker.name}
           </Text>
           {marker.category && <Text style={styles.calloutCategory}>{marker.category}</Text>}
 
-          <TouchableOpacity
-            style={styles.directionsButton}
-            onPress={handleDirectionsPress}
-            hitSlop={HIT_SLOP_8}
-          >
-            <Text style={styles.directionsButtonText}>Directions</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddPlacePress}
-            hitSlop={HIT_SLOP_8}
-          >
-            <Text style={styles.addButtonText}>Add place</Text>
-          </TouchableOpacity>
+          <View style={styles.calloutActionsRow}>
+            <CalloutActionButton
+              icon="navigate-outline"
+              iconSize={24}
+              iconColor={Colors.brand.primary}
+              backgroundColor={Colors.brand.light}
+              borderColor={Colors.brand.primary}
+              onPress={handleDirectionsPress}
+            />
+            <CalloutActionButton
+              icon="add-circle-outline"
+              iconSize={24}
+              iconColor={Colors.accent.primary}
+              backgroundColor={Colors.accent.light}
+              borderColor={Colors.accent.primary}
+              onPress={handleAddPlacePress}
+            />
+          </View>
         </View>
       </MarkerView>
     </>
@@ -142,7 +148,8 @@ const styles = StyleSheet.create({
     borderRadius: Radii.md,
     minWidth: 200,
     maxWidth: 240,
-    padding: Spacing.s12,
+    paddingHorizontal: Spacing.s12,
+    paddingBottom: Spacing.s12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.neutral[200],
@@ -152,11 +159,20 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  // A normal in-flow row, not an absolutely-positioned overlay — MarkerView measures/
+  // rasterizes its content to the JS-measured layout box, so anything positioned outside
+  // that box (negative offsets) gets cut off rather than floating over the map.
+  calloutHeaderRow: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: Spacing.s4,
+  },
+  // A dark border keeps the button visible against whatever's under it on the map,
+  // instead of blending into busy map tiles.
   calloutCloseButton: {
-    position: 'absolute',
-    top: Spacing.s4,
-    right: Spacing.s4,
-    zIndex: 1,
+    borderWidth: 1.5,
+    borderColor: Colors.neutral[900],
   },
   calloutName: {
     ...Typography.headline,
@@ -170,31 +186,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textTransform: 'capitalize',
   },
-  directionsButton: {
+  calloutActionsRow: {
+    flexDirection: 'row',
     width: '100%',
+    gap: Spacing.s8,
     marginTop: Spacing.s12,
-    paddingVertical: Spacing.s8,
-    borderRadius: Radii.sm,
-    borderWidth: 1,
-    borderColor: Colors.brand.primary,
-    alignItems: 'center',
-  },
-  directionsButtonText: {
-    ...Typography.caption,
-    color: Colors.brand.primary,
-    fontWeight: '600',
-  },
-  addButton: {
-    width: '100%',
-    marginTop: Spacing.s8,
-    paddingVertical: Spacing.s8,
-    borderRadius: Radii.sm,
-    backgroundColor: Colors.brand.primary,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    ...Typography.caption,
-    color: Colors.white,
-    fontWeight: '600',
   },
 });

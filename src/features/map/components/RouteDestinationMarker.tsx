@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { MarkerView, PointAnnotation } from '@rnmapbox/maps';
 import React, { useCallback, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { HIT_SLOP_8 } from '../constants';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { RouteWaypoint } from '../types';
+import { CalloutActionButton } from './CalloutActionButton';
 
 const PIN_SIZE = 40;
 // Distinct from every other marker color on the map (turquoise = my places, red = search
@@ -142,27 +142,29 @@ export function RouteDestinationMarker({
           anchor={{ x: 0.5, y: 1.3 }}
         >
           <View style={styles.callout}>
-            <CircleCloseButton onPress={handleCloseCallout} style={styles.calloutCloseButton} />
+            <View style={styles.calloutHeaderRow}>
+              <CircleCloseButton onPress={handleCloseCallout} style={styles.calloutCloseButton} />
+            </View>
             <Text style={styles.calloutName} numberOfLines={1}>
               {selected.label}
             </Text>
             <View style={styles.calloutActionsRow}>
-              <TouchableOpacity
-                style={[styles.calloutActionButtonBase, styles.calloutSaveRouteButton]}
-                hitSlop={HIT_SLOP_8}
+              <CalloutActionButton
+                icon="bookmark-outline"
+                label="Save route"
+                iconColor={Colors.brand.primary}
+                backgroundColor={Colors.brand.light}
+                borderColor={Colors.brand.primary}
                 onPress={handleSaveRoutePress}
-              >
-                <Ionicons name="bookmark-outline" size={22} color={Colors.brand.primary} />
-                <Text style={styles.calloutActionLabel}>Save route</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.calloutActionButtonBase, styles.calloutSavePointButton]}
-                hitSlop={HIT_SLOP_8}
+              />
+              <CalloutActionButton
+                icon="location-outline"
+                label="Save point"
+                iconColor={Colors.accent.primary}
+                backgroundColor={Colors.accent.light}
+                borderColor={Colors.accent.primary}
                 onPress={handleSavePointPress}
-              >
-                <Ionicons name="location-outline" size={22} color={Colors.accent.primary} />
-                <Text style={styles.calloutActionLabel}>Save point</Text>
-              </TouchableOpacity>
+              />
             </View>
           </View>
         </MarkerView>
@@ -211,8 +213,8 @@ const styles = StyleSheet.create({
   callout: {
     backgroundColor: Colors.white,
     borderRadius: Radii.md,
-    padding: Spacing.s16,
-    paddingTop: Spacing.s24,
+    paddingHorizontal: Spacing.s16,
+    paddingBottom: Spacing.s16,
     minWidth: 220,
     borderWidth: 1,
     borderColor: Colors.neutral[200],
@@ -222,41 +224,28 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  // A normal in-flow row, not an absolutely-positioned overlay — MarkerView measures/
+  // rasterizes its content to the JS-measured layout box, so anything positioned outside
+  // that box (negative offsets) gets cut off rather than floating over the map.
+  calloutHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: Spacing.s8,
+  },
+  // A dark border keeps the button visible against whatever's under it on the map,
+  // instead of blending into busy map tiles.
   calloutCloseButton: {
-    position: 'absolute',
-    top: Spacing.s8,
-    right: Spacing.s8,
-    zIndex: 1,
+    borderWidth: 1.5,
+    borderColor: Colors.neutral[900],
   },
   calloutName: {
     ...Typography.title3,
     color: Colors.neutral[900],
+    marginTop: Spacing.s4,
     marginBottom: Spacing.s12,
   },
   calloutActionsRow: {
     flexDirection: 'row',
     gap: Spacing.s12,
-  },
-  calloutActionButtonBase: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.s4,
-    paddingVertical: Spacing.s12,
-    borderRadius: Radii.sm,
-    borderWidth: 1.5,
-  },
-  calloutSaveRouteButton: {
-    backgroundColor: Colors.brand.light,
-    borderColor: Colors.brand.primary,
-  },
-  calloutSavePointButton: {
-    backgroundColor: Colors.accent.light,
-    borderColor: Colors.accent.primary,
-  },
-  calloutActionLabel: {
-    ...Typography.caption,
-    color: Colors.neutral[900],
-    fontWeight: '600',
   },
 });

@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import RNSlider from '@react-native-community/slider';
 import { Image } from 'expo-image';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -9,7 +8,6 @@ import {
   Modal,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -18,26 +16,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
-import { PinChip } from '../../../design-system/components/PinChip';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { Place, PlaceCategory } from '../../../models/types';
+import { Place } from '../../../models/types';
 import { MapboxSearchResult } from '../../../services/mapboxSearch';
 import { usePlacesStore } from '../../../store/usePlacesStore';
-import { CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS } from '../constants';
-import { formatRadius, MIN_EXTERNAL_QUERY_LENGTH, SpecialFilter } from '../hooks/useSearchSheet';
-import { RouteProfile, SavedRoute } from '../types';
+import { CATEGORY_COLORS, CATEGORY_LABELS } from '../constants';
+import { MIN_EXTERNAL_QUERY_LENGTH } from '../hooks/useSearchSheet';
 import { getPlacePhotoPreview } from '../utils/placePhoto';
 
-const ROUTE_PROFILE_ICON: Record<RouteProfile, React.ComponentProps<typeof Ionicons>['name']> = {
-  walking: 'walk',
-  driving: 'car',
-  cycling: 'bicycle',
-};
-
-const SHEET_HEIGHT = Dimensions.get('window').height * 0.75;
+const SHEET_HEIGHT = Dimensions.get('window').height;
 const ANIMATION_DURATION = 280;
-const HIT_SLOP_8 = { top: 8, bottom: 8, left: 8, right: 8 };
 
 function formatSavedAt(createdAt: string): string {
   const date = new Date(createdAt);
@@ -116,129 +104,39 @@ const ExternalPlaceRow = React.memo(function ExternalPlaceRow({
   );
 });
 
-interface SavedRouteRowProps {
-  route: SavedRoute;
-  onPress: (route: SavedRoute) => void;
-  onDelete: (id: string) => void;
-}
-
-const SavedRouteRow = React.memo(function SavedRouteRow({
-  route,
-  onPress,
-  onDelete,
-}: SavedRouteRowProps) {
-  const handlePress = useCallback(() => onPress(route), [onPress, route]);
-  const handleDelete = useCallback(() => onDelete(route.id), [onDelete, route.id]);
-
-  return (
-    <TouchableOpacity style={styles.placeRow} onPress={handlePress} activeOpacity={0.7}>
-      <View style={styles.routeIconWrap}>
-        <Ionicons name={ROUTE_PROFILE_ICON[route.profile]} size={18} color={Colors.brand.primary} />
-      </View>
-      <View style={styles.placeInfo}>
-        <Text style={styles.placeName} numberOfLines={1}>
-          {route.name}
-        </Text>
-        <Text style={styles.placeMeta}>
-          {route.waypoints.length} {route.waypoints.length === 1 ? 'stop' : 'stops'}
-        </Text>
-        <Text style={styles.placeSavedAt}>Saved {formatSavedAt(route.createdAt)}</Text>
-      </View>
-      <TouchableOpacity onPress={handleDelete} hitSlop={HIT_SLOP_8}>
-        <Ionicons name="trash-outline" size={18} color={Colors.neutral[400]} />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-});
-
-interface CategoryChipProps {
-  category: PlaceCategory;
-  active: boolean;
-  onSelect: (category: PlaceCategory) => void;
-}
-
-const CategoryChip = React.memo(function CategoryChip({
-  category,
-  active,
-  onSelect,
-}: CategoryChipProps) {
-  const handlePress = useCallback(() => onSelect(category), [onSelect, category]);
-  return (
-    <PinChip
-      label={CATEGORY_LABELS[category]}
-      color={CATEGORY_COLORS[category]}
-      selected={active}
-      onPress={handlePress}
-    />
-  );
-});
-
 interface Props {
   visible: boolean;
   query: string;
-  radiusM: number;
-  radiusEnabled: boolean;
-  maxRadiusM: number;
-  activeCategories: Set<PlaceCategory>;
-  specialFilters: Set<SpecialFilter>;
-  alwaysShowFavorites: boolean;
   filteredPlaces: Place[];
-  showExternal: boolean;
   externalResults: MapboxSearchResult[];
   externalLoading: boolean;
   externalSearched: boolean;
   onChangeQuery: (q: string) => void;
-  onRadiusChange: (value: number) => void;
-  onToggleRadiusEnabled: (enabled: boolean) => void;
-  onToggleCategory: (cat: PlaceCategory) => void;
-  onToggleSpecial: (filter: SpecialFilter) => void;
-  onToggleAlwaysShowFavorites: (enabled: boolean) => void;
   onPlacePress: (placeId: string) => void;
   onExternalResultPress: (result: MapboxSearchResult) => void;
   onSearchExternal: () => void;
   onClose: () => void;
-  savedRoutes: SavedRoute[];
-  onSelectSavedRoute: (route: SavedRoute) => void;
-  onDeleteSavedRoute: (id: string) => void;
 }
 
+// Stripped to exactly what Google/Apple Maps' full-screen search shows: an input, the
+// "search" action, and results — no filter chips, tabs, or toggles.
 export function SearchSheet({
   visible,
   query,
-  radiusM,
-  radiusEnabled,
-  maxRadiusM,
-  activeCategories,
-  specialFilters,
-  alwaysShowFavorites,
   filteredPlaces,
-  showExternal,
   externalResults,
   externalLoading,
   externalSearched,
   onChangeQuery,
-  onRadiusChange,
-  onToggleRadiusEnabled,
-  onToggleCategory,
-  onToggleSpecial,
-  onToggleAlwaysShowFavorites,
   onPlacePress,
   onExternalResultPress,
   onSearchExternal,
   onClose,
-  savedRoutes,
-  onSelectSavedRoute,
-  onDeleteSavedRoute,
 }: Props) {
   const insets = useSafeAreaInsets();
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
-
-  // A view-mode toggle, not a persisted place filter — kept local rather than routed
-  // through useSearchFiltersStore's specialFilters, which drives place-list filtering logic
-  // that "show saved routes instead" doesn't belong in.
-  const [routesTabActive, setRoutesTabActive] = useState(false);
-  const toggleRoutesTab = useCallback(() => setRoutesTabActive((v) => !v), []);
+  const inputRef = useRef<TextInput>(null);
 
   const notes = usePlacesStore((s) => s.notes);
   const photoPreviews = useMemo(() => {
@@ -264,6 +162,10 @@ export function SearchSheet({
           useNativeDriver: true,
         }),
       ]).start();
+      // Full-screen search only makes sense as a typing surface — focus the field once the
+      // slide-up animation has mostly finished, matching Google/Apple Maps' search modal.
+      const focusTimer = setTimeout(() => inputRef.current?.focus(), ANIMATION_DURATION);
+      return () => clearTimeout(focusTimer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
@@ -299,18 +201,6 @@ export function SearchSheet({
     [handleClose, onExternalResultPress],
   );
 
-  const handleSelectSavedRoute = useCallback(
-    (route: SavedRoute) => {
-      handleClose();
-      onSelectSavedRoute(route);
-    },
-    [handleClose, onSelectSavedRoute],
-  );
-
-  const handleToggleMine = useCallback(() => onToggleSpecial('mine'), [onToggleSpecial]);
-  const handleToggleFavorites = useCallback(() => onToggleSpecial('favorites'), [onToggleSpecial]);
-  const handleToggleFavorite = useCallback(() => onToggleSpecial('favorite'), [onToggleSpecial]);
-
   return (
     <Modal
       visible={visible}
@@ -327,20 +217,18 @@ export function SearchSheet({
         <Animated.View
           style={[
             styles.sheet,
-            { paddingBottom: insets.bottom + Spacing.s16 },
+            { paddingTop: insets.top + Spacing.s12, paddingBottom: insets.bottom + Spacing.s16 },
             { transform: [{ translateY }] },
           ]}
         >
-          {/* Handle */}
-          <View style={styles.handleRow}>
-            <View style={styles.handle} />
-            <CircleCloseButton onPress={handleClose} style={styles.headerCloseButton} />
-          </View>
-
-          {/* Search input */}
+          {/* Search input — the back chevron doubles as the modal's only close affordance */}
           <View style={styles.inputWrap}>
+            <TouchableOpacity onPress={handleClose} hitSlop={styles.backHitSlop}>
+              <Ionicons name="arrow-back" size={20} color={Colors.neutral[700]} />
+            </TouchableOpacity>
             <Ionicons name="search" size={18} color={Colors.neutral[400]} />
             <TextInput
+              ref={inputRef}
               style={styles.input}
               value={query}
               onChangeText={onChangeQuery}
@@ -351,123 +239,24 @@ export function SearchSheet({
             />
           </View>
 
-          {/* Filter chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipsRow}
-            style={styles.chipsScroll}
+          <TouchableOpacity
+            style={[
+              styles.searchButton,
+              query.trim().length < MIN_EXTERNAL_QUERY_LENGTH && styles.searchButtonDisabled,
+            ]}
+            onPress={onSearchExternal}
+            disabled={query.trim().length < MIN_EXTERNAL_QUERY_LENGTH}
+            activeOpacity={0.85}
           >
-            <PinChip
-              label="My routes"
-              color={Colors.brand.primary}
-              selected={routesTabActive}
-              onPress={toggleRoutesTab}
-              leftIcon={
-                <Ionicons
-                  name="map"
-                  size={14}
-                  color={routesTabActive ? Colors.white : Colors.brand.primary}
-                />
-              }
-            />
-            <PinChip
-              label="Mine only"
-              color={Colors.brand.primary}
-              selected={specialFilters.has('mine')}
-              onPress={handleToggleMine}
-            />
-            <PinChip
-              label="⭐ Want to visit"
-              color={Colors.warning}
-              selected={specialFilters.has('favorites')}
-              onPress={handleToggleFavorites}
-            />
-            <PinChip
-              label="❤️ Favorite"
-              color={Colors.error}
-              selected={specialFilters.has('favorite')}
-              onPress={handleToggleFavorite}
-            />
-            {CATEGORIES.map((cat) => (
-              <CategoryChip
-                key={cat}
-                category={cat}
-                active={activeCategories.has(cat)}
-                onSelect={onToggleCategory}
-              />
-            ))}
-          </ScrollView>
-
-          {/* Radius slider — not meaningful for the saved-routes list */}
-          {!routesTabActive && (
-            <View style={styles.sliderRow}>
-              <View style={styles.sliderHeader}>
-                <Text style={styles.sliderLabel}>
-                  {radiusEnabled
-                    ? `Radius: ${formatRadius(radiusM)}`
-                    : 'Radius: off (search anywhere)'}
-                </Text>
-                <Switch
-                  value={radiusEnabled}
-                  onValueChange={onToggleRadiusEnabled}
-                  trackColor={{ false: Colors.neutral[200], true: Colors.brand.primary }}
-                  thumbColor={Colors.white}
-                />
-              </View>
-              <RNSlider
-                style={styles.sliderHost}
-                value={radiusM}
-                minimumValue={100}
-                maximumValue={maxRadiusM}
-                step={100}
-                onValueChange={onRadiusChange}
-                disabled={!radiusEnabled}
-                minimumTrackTintColor={Colors.brand.primary}
-                maximumTrackTintColor={Colors.neutral[200]}
-                thumbTintColor={Colors.brand.primary}
-              />
-            </View>
-          )}
-
-          {!routesTabActive && (
-            <View style={styles.favoritesToggleRow}>
-              <Text style={styles.favoritesToggleLabel}>
-                ⭐ Always show &quot;Want to visit&quot; on map
-              </Text>
-              <Switch
-                value={alwaysShowFavorites}
-                onValueChange={onToggleAlwaysShowFavorites}
-                trackColor={{ false: Colors.neutral[200], true: Colors.brand.primary }}
-                thumbColor={Colors.white}
-              />
-            </View>
-          )}
-
-          {!routesTabActive && showExternal && (
-            <TouchableOpacity
-              style={[
-                styles.searchButton,
-                query.trim().length < MIN_EXTERNAL_QUERY_LENGTH &&
-                  activeCategories.size === 0 &&
-                  styles.searchButtonDisabled,
-              ]}
-              onPress={onSearchExternal}
-              disabled={
-                query.trim().length < MIN_EXTERNAL_QUERY_LENGTH && activeCategories.size === 0
-              }
-              activeOpacity={0.85}
-            >
-              {externalLoading ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : (
-                <>
-                  <Ionicons name="search" size={18} color={Colors.white} />
-                  <Text style={styles.searchButtonText}>Search for new places</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          )}
+            {externalLoading ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <>
+                <Ionicons name="search" size={18} color={Colors.white} />
+                <Text style={styles.searchButtonText}>Search for new places</Text>
+              </>
+            )}
+          </TouchableOpacity>
 
           <ScrollView
             style={styles.listContainer}
@@ -475,66 +264,29 @@ export function SearchSheet({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {routesTabActive ? (
-              <>
-                <Text style={styles.sectionHeader}>My Routes</Text>
-                {savedRoutes.length > 0 ? (
-                  savedRoutes.map((route) => (
-                    <SavedRouteRow
-                      key={route.id}
-                      route={route}
-                      onPress={handleSelectSavedRoute}
-                      onDelete={onDeleteSavedRoute}
-                    />
-                  ))
-                ) : (
-                  <Text style={styles.emptyText}>
-                    No saved routes yet. Tap the bookmark on an active route to save it.
-                  </Text>
-                )}
-              </>
+            <Text style={styles.sectionHeader}>My Places</Text>
+            {filteredPlaces.length > 0 ? (
+              filteredPlaces.map((place) => (
+                <SearchPlaceRow
+                  key={place.id}
+                  place={place}
+                  photoUri={photoPreviews.get(place.id)}
+                  onPress={handleSelectPlace}
+                />
+              ))
             ) : (
-              <>
-                <Text style={styles.sectionHeader}>My Places</Text>
-                {filteredPlaces.length > 0 ? (
-                  filteredPlaces.map((place) => (
-                    <SearchPlaceRow
-                      key={place.id}
-                      place={place}
-                      photoUri={photoPreviews.get(place.id)}
-                      onPress={handleSelectPlace}
-                    />
-                  ))
-                ) : (
-                  <Text style={styles.emptyText}>No places match your filters</Text>
-                )}
+              <Text style={styles.emptyText}>No places match your search</Text>
+            )}
 
-                {showExternal && (
-                  <>
-                    <Text style={styles.sectionHeader}>Find New Place</Text>
-                    {externalLoading ? (
-                      <ActivityIndicator
-                        style={styles.loadingIndicator}
-                        color={Colors.brand.primary}
-                      />
-                    ) : externalResults.length > 0 ? (
-                      externalResults.map((result) => (
-                        <ExternalPlaceRow
-                          key={result.id}
-                          result={result}
-                          onPress={handleSelectExternal}
-                        />
-                      ))
-                    ) : (
-                      <ExternalEmptyState
-                        query={query}
-                        hasCategory={activeCategories.size > 0}
-                        searched={externalSearched}
-                      />
-                    )}
-                  </>
-                )}
-              </>
+            <Text style={styles.sectionHeader}>Find New Place</Text>
+            {externalLoading ? (
+              <ActivityIndicator style={styles.loadingIndicator} color={Colors.brand.primary} />
+            ) : externalResults.length > 0 ? (
+              externalResults.map((result) => (
+                <ExternalPlaceRow key={result.id} result={result} onPress={handleSelectExternal} />
+              ))
+            ) : (
+              <ExternalEmptyState query={query} searched={externalSearched} />
             )}
           </ScrollView>
         </Animated.View>
@@ -543,18 +295,10 @@ export function SearchSheet({
   );
 }
 
-function ExternalEmptyState({
-  query,
-  hasCategory,
-  searched,
-}: {
-  query: string;
-  hasCategory: boolean;
-  searched: boolean;
-}) {
+function ExternalEmptyState({ query, searched }: { query: string; searched: boolean }) {
   const message =
-    query.trim().length < MIN_EXTERNAL_QUERY_LENGTH && !hasCategory
-      ? 'Type at least 2 characters or pick a category, then tap Search'
+    query.trim().length < MIN_EXTERNAL_QUERY_LENGTH
+      ? 'Type at least 2 characters, then tap Search'
       : searched
         ? 'No results found'
         : 'Tap Search to find a place';
@@ -573,30 +317,8 @@ const styles = StyleSheet.create({
   sheet: {
     height: SHEET_HEIGHT,
     backgroundColor: Colors.background,
-    borderTopLeftRadius: Radii.lg,
-    borderTopRightRadius: Radii.lg,
-    overflow: 'hidden',
   },
-  // The close button is absolutely positioned (top: s8, 28pt tall) so it doesn't sit in
-  // normal flow — handleRow needs enough paddingBottom to clear it (8 + 28 = 36, minus the
-  // paddingTop/handle already accounted for) plus a real gap before the search input below.
-  handleRow: {
-    alignItems: 'center',
-    paddingTop: Spacing.s12,
-    paddingBottom: Spacing.s32,
-    position: 'relative',
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.neutral[200],
-  },
-  headerCloseButton: {
-    position: 'absolute',
-    top: Spacing.s8,
-    right: Spacing.s16,
-  },
+  backHitSlop: { top: 8, bottom: 8, left: 8, right: 8 },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -610,28 +332,11 @@ const styles = StyleSheet.create({
     borderColor: Colors.brand.primary,
     borderWidth: 1,
   },
-  inputIcon: {
-    fontSize: 18,
-    color: Colors.neutral[400],
-  },
   input: {
     flex: 1,
     ...Typography.body,
     color: Colors.neutral[900],
     paddingVertical: 0,
-  },
-  favoritesToggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: Spacing.s16,
-    marginBottom: Spacing.s12,
-    gap: Spacing.s8,
-  },
-  favoritesToggleLabel: {
-    ...Typography.subheadline,
-    color: Colors.neutral[700],
-    flex: 1,
   },
   searchButton: {
     flexDirection: 'row',
@@ -651,32 +356,6 @@ const styles = StyleSheet.create({
     ...Typography.callout,
     color: Colors.white,
     fontWeight: '600',
-  },
-  chipsScroll: {
-    flexGrow: 0,
-  },
-  chipsRow: {
-    paddingHorizontal: Spacing.s16,
-    gap: Spacing.s8,
-    paddingBottom: Spacing.s8,
-  },
-  sliderRow: {
-    paddingHorizontal: Spacing.s16,
-    paddingBottom: Spacing.s8,
-  },
-  sliderHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.s8,
-  },
-  sliderLabel: {
-    ...Typography.subheadline,
-    color: Colors.neutral[700],
-    marginBottom: Spacing.s4,
-  },
-  sliderHost: {
-    height: 32,
   },
   sectionHeader: {
     ...Typography.subheadline,
@@ -713,15 +392,6 @@ const styles = StyleSheet.create({
     borderRadius: Radii.sm,
     flexShrink: 0,
     backgroundColor: Colors.neutral[100],
-  },
-  routeIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: Radii.sm,
-    flexShrink: 0,
-    backgroundColor: Colors.brand.light,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   placeInfo: {
     flex: 1,

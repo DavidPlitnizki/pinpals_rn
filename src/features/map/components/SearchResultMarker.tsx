@@ -6,10 +6,10 @@ import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { HIT_SLOP_8 } from '../constants';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { PendingSearchMarker } from '../types';
 import { iconForMaki } from '../utils/mapboxIcons';
+import { CalloutActionButton } from './CalloutActionButton';
 
 const PIN_SIZE = 40;
 const DROP_RED = '#E4483C';
@@ -141,7 +141,9 @@ export function SearchResultMarker({
           anchor={{ x: 0.5, y: 1.4 }}
         >
           <View style={styles.callout}>
-            <CircleCloseButton onPress={handleCloseCallout} style={styles.calloutCloseButton} />
+            <View style={styles.calloutHeaderRow}>
+              <CircleCloseButton onPress={handleCloseCallout} style={styles.calloutCloseButton} />
+            </View>
             <View style={styles.calloutImageWrap}>
               {selected.imageUrl ? (
                 <Image source={{ uri: selected.imageUrl }} style={styles.calloutImage} />
@@ -173,20 +175,24 @@ export function SearchResultMarker({
                   </Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity
-                style={styles.directionsButton}
-                onPress={handleDirectionsPress}
-                hitSlop={HIT_SLOP_8}
-              >
-                <Text style={styles.directionsButtonText}>Directions</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={handleConfirmPress}
-                hitSlop={HIT_SLOP_8}
-              >
-                <Text style={styles.addButtonText}>Add place</Text>
-              </TouchableOpacity>
+              <View style={styles.calloutActionsRow}>
+                <CalloutActionButton
+                  icon="navigate-outline"
+                  iconSize={24}
+                  iconColor={Colors.brand.primary}
+                  backgroundColor={Colors.brand.light}
+                  borderColor={Colors.brand.primary}
+                  onPress={handleDirectionsPress}
+                />
+                <CalloutActionButton
+                  icon="add-circle-outline"
+                  iconSize={24}
+                  iconColor={Colors.accent.primary}
+                  backgroundColor={Colors.accent.light}
+                  borderColor={Colors.accent.primary}
+                  onPress={handleConfirmPress}
+                />
+              </View>
             </View>
           </View>
         </MarkerView>
@@ -238,7 +244,6 @@ const styles = StyleSheet.create({
     borderRadius: Radii.md,
     minWidth: 200,
     maxWidth: 240,
-    overflow: 'hidden',
     borderWidth: 1,
     borderColor: Colors.neutral[200],
     shadowColor: '#000',
@@ -247,15 +252,24 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  // A normal in-flow row, not an absolutely-positioned overlay — MarkerView measures/
+  // rasterizes its content to the JS-measured layout box, so anything positioned outside
+  // that box (negative offsets, or content clipped by a parent's overflow) gets cut off
+  // rather than floating over the map. Keeping the button in flow avoids both.
+  calloutHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingTop: Spacing.s8,
+    paddingRight: Spacing.s8,
+  },
+  // A dark border keeps the button visible against whatever's under it on the map,
+  // instead of blending into busy map tiles.
   calloutCloseButton: {
-    position: 'absolute',
-    top: Spacing.s4,
-    right: Spacing.s4,
-    zIndex: 1,
+    borderWidth: 1.5,
+    borderColor: Colors.neutral[900],
   },
   calloutImageWrap: {
     alignItems: 'center',
-    paddingTop: Spacing.s12,
   },
   calloutImage: {
     width: 64,
@@ -302,31 +316,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textDecorationLine: 'underline',
   },
-  directionsButton: {
+  calloutActionsRow: {
+    flexDirection: 'row',
     width: '100%',
+    gap: Spacing.s8,
     marginTop: Spacing.s12,
-    paddingVertical: Spacing.s8,
-    borderRadius: Radii.sm,
-    borderWidth: 1,
-    borderColor: Colors.brand.primary,
-    alignItems: 'center',
-  },
-  directionsButtonText: {
-    ...Typography.caption,
-    color: Colors.brand.primary,
-    fontWeight: '600',
-  },
-  addButton: {
-    width: '100%',
-    marginTop: Spacing.s8,
-    paddingVertical: Spacing.s8,
-    borderRadius: Radii.sm,
-    backgroundColor: Colors.brand.primary,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    ...Typography.caption,
-    color: Colors.white,
-    fontWeight: '600',
   },
 });
