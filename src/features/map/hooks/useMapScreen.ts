@@ -148,6 +148,27 @@ export function useMapScreen() {
     [showToast],
   );
 
+  const getMapCenter = useCallback((): Coordinates => {
+    const [longitude, latitude] = currentCenter.current;
+    return { latitude, longitude };
+  }, []);
+
+  // Mapbox's own service limits make a user-adjustable search radius pointless — search is
+  // scoped to whatever bbox is actually on screen instead, read fresh off the native map each
+  // time (not derived from currentCenter/zoom, which don't capture aspect ratio/tilt).
+  const getVisibleBbox = useCallback(async (): Promise<
+    [number, number, number, number] | undefined
+  > => {
+    try {
+      const bounds = await mapViewRef.current?.getVisibleBounds();
+      if (!bounds) return undefined;
+      const [[rightLon, topLat], [leftLon, bottomLat]] = bounds;
+      return [leftLon, bottomLat, rightLon, topLat];
+    } catch {
+      return undefined;
+    }
+  }, []);
+
   const handleCenterGPS = useCallback(() => {
     if (!gpsCoords) return;
     cameraRef.current?.setCamera({
@@ -373,6 +394,8 @@ export function useMapScreen() {
     showToast,
     currentCenter,
     currentZoom,
+    getMapCenter,
+    getVisibleBbox,
     handleCenterGPS,
     handleLongPress,
     handleMapPress,

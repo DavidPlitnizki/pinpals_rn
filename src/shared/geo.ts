@@ -1,5 +1,22 @@
 import { Coordinates } from '../models/types';
 
+// Whether `inner` (the currently visible viewport) still fits entirely within `outer` (the
+// bbox a search was last run against) — used to decide whether panning/zooming has moved the
+// map far enough that the on-screen results might be stale.
+export function bboxContains(
+  outer: [number, number, number, number],
+  inner: [number, number, number, number],
+): boolean {
+  const [outerMinLon, outerMinLat, outerMaxLon, outerMaxLat] = outer;
+  const [innerMinLon, innerMinLat, innerMaxLon, innerMaxLat] = inner;
+  return (
+    innerMinLon >= outerMinLon &&
+    innerMinLat >= outerMinLat &&
+    innerMaxLon <= outerMaxLon &&
+    innerMaxLat <= outerMaxLat
+  );
+}
+
 export function haversineMeters(a: Coordinates, b: Coordinates): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const dLat = toRad(b.latitude - a.latitude);

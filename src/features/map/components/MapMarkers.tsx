@@ -12,6 +12,7 @@ import { usePlacesStore } from '../../../store/usePlacesStore';
 import { CATEGORY_LABELS, HIT_SLOP_8 } from '../constants';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { getPlacePhotoPreview, PlacePhotoPreview } from '../utils/placePhoto';
+import { CalloutActionButton } from './CalloutActionButton';
 
 const PIN_SIZE = 46;
 const CALLOUT_DESCRIPTION_MAX_CHARS = 24;
@@ -216,18 +217,20 @@ export function MapMarkers({
           anchor={{ x: 0.5, y: 1.3 }}
         >
           <View style={styles.callout}>
-            <TouchableOpacity
-              style={styles.calloutShareButton}
-              onPress={handleSharePress}
-              hitSlop={HIT_SLOP_8}
-            >
-              <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
-            </TouchableOpacity>
-            <CircleCloseButton
-              onPress={handleCloseCallout}
-              style={styles.calloutCloseButton}
-              size={32}
-            />
+            <View style={styles.calloutHeaderRow}>
+              <TouchableOpacity
+                style={styles.calloutShareButton}
+                onPress={handleSharePress}
+                hitSlop={HIT_SLOP_8}
+              >
+                <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
+              </TouchableOpacity>
+              <CircleCloseButton
+                onPress={handleCloseCallout}
+                style={styles.calloutCloseButton}
+                size={32}
+              />
+            </View>
             <TouchableOpacity onPress={handleCalloutPress}>
               <View style={styles.calloutPhotoWrap}>
                 {selectedPreview?.photoUri ? (
@@ -269,20 +272,22 @@ export function MapMarkers({
             </TouchableOpacity>
             <View style={styles.calloutDivider} />
             <View style={styles.calloutActionsRow}>
-              <TouchableOpacity
-                style={[styles.calloutActionButtonBase, styles.calloutDirectionsButton]}
-                hitSlop={HIT_SLOP_8}
+              <CalloutActionButton
+                icon="navigate-outline"
+                iconSize={24}
+                iconColor={Colors.brand.primary}
+                backgroundColor={Colors.brand.light}
+                borderColor={Colors.brand.primary}
                 onPress={handleDirectionsPress}
-              >
-                <Ionicons name="navigate-outline" size={24} color={Colors.brand.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.calloutActionButtonBase, styles.calloutDeleteButton]}
-                hitSlop={HIT_SLOP_8}
+              />
+              <CalloutActionButton
+                icon="trash-outline"
+                iconSize={24}
+                iconColor={Colors.error}
+                backgroundColor="#FBE9E7"
+                borderColor={Colors.error}
                 onPress={handleDeletePress}
-              >
-                <Ionicons name="trash-outline" size={24} color={Colors.error} />
-              </TouchableOpacity>
+              />
             </View>
           </View>
         </MarkerView>
@@ -371,7 +376,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: Radii.md,
     padding: Spacing.s16,
-    paddingTop: Spacing.s24,
     minWidth: 200,
     borderWidth: 1,
     borderColor: Colors.neutral[200],
@@ -381,25 +385,27 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  // A normal in-flow row, not absolutely-positioned overlays — MarkerView measures/
+  // rasterizes its content to the JS-measured layout box, so anything positioned outside
+  // that box (negative offsets) gets cut off rather than floating over the map.
+  calloutHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.s8,
+  },
+  // A dark border keeps the button visible against whatever's under it on the map,
+  // instead of blending into busy map tiles.
   calloutCloseButton: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    zIndex: 1,
     borderWidth: 1.5,
-    borderColor: Colors.neutral[200],
+    borderColor: Colors.neutral[900],
   },
   calloutShareButton: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    zIndex: 1,
     width: 32,
     height: 32,
     borderRadius: 16,
     backgroundColor: Colors.neutral[100],
     borderWidth: 1.5,
-    borderColor: Colors.neutral[200],
+    borderColor: Colors.neutral[900],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -477,22 +483,5 @@ const styles = StyleSheet.create({
   calloutActionsRow: {
     flexDirection: 'row',
     gap: Spacing.s12,
-  },
-  calloutActionButtonBase: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.s16,
-    paddingVertical: Spacing.s8,
-    borderRadius: Radii.sm,
-    borderWidth: 1.5,
-  },
-  calloutDirectionsButton: {
-    backgroundColor: Colors.brand.light,
-    borderColor: Colors.brand.primary,
-  },
-  calloutDeleteButton: {
-    backgroundColor: '#FBE9E7',
-    borderColor: Colors.error,
   },
 });

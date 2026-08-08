@@ -11,8 +11,9 @@ import { useSearchSheet } from '../useSearchSheet';
 import { useSearchFiltersStore } from '../../../../store/useSearchFiltersStore';
 // eslint-disable-next-line import/first
 import { Place } from '../../../../models/types';
-// eslint-disable-next-line import/first
-import { DEFAULT_RADIUS_M } from '../../constants';
+
+const getMapCenter = () => ({ latitude: 0, longitude: 0 });
+const getVisibleBbox = async () => undefined;
 
 function makePlace(overrides: Partial<Place> = {}): Place {
   return {
@@ -32,87 +33,38 @@ function makePlace(overrides: Partial<Place> = {}): Place {
 
 beforeEach(async () => {
   await AsyncStorage.clear();
-  useSearchFiltersStore.setState({
-    query: '',
-    activeCategories: [],
-    specialFilters: [],
-    radiusM: DEFAULT_RADIUS_M,
-    radiusEnabled: true,
-    alwaysShowFavorites: true,
-  });
+  useSearchFiltersStore.setState({ query: '' });
 });
 
-describe('activeCategories / specialFilters Set round-trip', () => {
-  it('toggleCategory persists as an array and is exposed as a working Set', async () => {
+describe('filteredPlaces', () => {
+  it('filters own places by name against the debounced query', async () => {
     const places = [
-      makePlace({ id: 'coffee-1', category: 'coffee' }),
-      makePlace({ id: 'food-1', category: 'food' }),
+      makePlace({ id: 'coffee-1', name: 'Blue Bottle Coffee' }),
+      makePlace({ id: 'food-1', name: 'Pizza Place' }),
     ];
-    const { result } = renderHook(() => useSearchSheet(places, null));
+    const { result } = renderHook(() => useSearchSheet(places, getMapCenter, getVisibleBbox));
 
-    await act(async () => result.current.toggleCategory('coffee'));
+    await act(async () => result.current.setQuery('coffee'));
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 350))); // let debounce settle
 
-    expect(result.current.activeCategories).toBeInstanceOf(Set);
-    expect(result.current.activeCategories.has('coffee')).toBe(true);
-    expect(useSearchFiltersStore.getState().activeCategories).toEqual(['coffee']);
     expect(result.current.filteredPlaces.map((p) => p.id)).toEqual(['coffee-1']);
   });
 
-  it('rehydrated array-backed categories filter places correctly (round-trip)', async () => {
-    // Simulate a value already persisted from a previous session.
-    await AsyncStorage.setItem(
-      'pinpals-search-filters',
-      JSON.stringify({
-        state: {
-          query: '',
-          activeCategories: ['food'],
-          specialFilters: [],
-          radiusM: DEFAULT_RADIUS_M,
-          radiusEnabled: true,
-          alwaysShowFavorites: true,
-        },
-        version: 0,
-      }),
-    );
-    await useSearchFiltersStore.persist.rehydrate();
+  it('returns every place when the query is empty', () => {
+    const places = [makePlace({ id: 'coffee-1' }), makePlace({ id: 'food-1' })];
+    const { result } = renderHook(() => useSearchSheet(places, getMapCenter, getVisibleBbox));
 
-    const places = [
-      makePlace({ id: 'coffee-1', category: 'coffee' }),
-      makePlace({ id: 'food-1', category: 'food' }),
-    ];
-    const { result } = renderHook(() => useSearchSheet(places, null));
-
-    expect(result.current.activeCategories.has('food')).toBe(true);
-    expect(result.current.filteredPlaces.map((p) => p.id)).toEqual(['food-1']);
-  });
-
-  it('toggleSpecial adds and removes a filter from the Set/array', async () => {
-    const { result } = renderHook(() => useSearchSheet([], null));
-
-    await act(async () => result.current.toggleSpecial('favorites'));
-    expect(result.current.specialFilters.has('favorites')).toBe(true);
-    expect(useSearchFiltersStore.getState().specialFilters).toEqual(['favorites']);
-
-    await act(async () => result.current.toggleSpecial('favorites'));
-    expect(result.current.specialFilters.has('favorites')).toBe(false);
-    expect(useSearchFiltersStore.getState().specialFilters).toEqual([]);
+    expect(result.current.filteredPlaces.map((p) => p.id)).toEqual(['coffee-1', 'food-1']);
   });
 });
 
 describe('resetFilters', () => {
-  it('clears query, categories, special filters, and radius but keeps alwaysShowFavorites', async () => {
-    const { result } = renderHook(() => useSearchSheet([], null));
+  it('clears the query', async () => {
+    const { result } = renderHook(() => useSearchSheet([], getMapCenter, getVisibleBbox));
 
     await act(async () => result.current.setQuery('sushi'));
-    await act(async () => result.current.toggleCategory('food'));
-    await act(async () => result.current.toggleSpecial('favorites'));
-    await act(async () => result.current.setAlwaysShowFavorites(false));
-
     await act(async () => result.current.resetFilters());
 
     expect(result.current.query).toBe('');
-    expect(result.current.activeCategories.size).toBe(0);
-    expect(result.current.specialFilters.size).toBe(0);
-    expect(result.current.alwaysShowFavorites).toBe(false); // preference, not reset
   });
 });

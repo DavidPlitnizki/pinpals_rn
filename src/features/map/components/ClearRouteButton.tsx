@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Spacing } from '../../../design-system/tokens';
+import { MAP_SEARCH_BAR_HEIGHT } from '../constants';
 import { RoundMapButton } from './RoundMapButton';
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
 
 const BUTTON_SIZE = 44;
 // Sits directly below ClearMapButton, same top-right column.
-const COLUMN_OFFSET = Spacing.s16 + BUTTON_SIZE + Spacing.s8;
+const COLUMN_OFFSET = MAP_SEARCH_BAR_HEIGHT + Spacing.s12 + BUTTON_SIZE + Spacing.s8;
 
 export function ClearRouteButton({ onPress, onLongPress }: Props) {
   return (
