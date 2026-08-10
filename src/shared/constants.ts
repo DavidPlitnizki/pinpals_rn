@@ -1,3 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
+import { ComponentProps } from 'react';
+
 import { PlaceCategory } from '../models/types';
 
 export const CATEGORY_COLORS: Record<PlaceCategory, string> = {
@@ -6,6 +9,16 @@ export const CATEGORY_COLORS: Record<PlaceCategory, string> = {
   nature: '#4A7C59',
   art: '#9C6ADE',
   sports: '#3D9BE9',
+};
+
+// Ultimate cover-image fallback (no photo, no Wikipedia hit, no Mapbox token) — a plain
+// category-colored icon block instead of a generic gray box.
+export const CATEGORY_ICONS: Record<PlaceCategory, ComponentProps<typeof Ionicons>['name']> = {
+  food: 'restaurant-outline',
+  coffee: 'cafe-outline',
+  nature: 'leaf-outline',
+  art: 'color-palette-outline',
+  sports: 'basketball-outline',
 };
 
 export const CATEGORIES: PlaceCategory[] = ['food', 'nature', 'art', 'sports', 'coffee'];

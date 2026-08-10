@@ -49,6 +49,9 @@ export interface Place {
   favorite: boolean; // true favorite/starred place, distinct from "want to visit" above
   pinColor?: string; // user-chosen map pin color; falls back to Colors.myPlace when unset
   mainPhotoUri?: string; // user-picked "main" photo (long-press in the gallery) shown on the map pin
+  address?: string; // captured from the search result at add-time, when available
+  phone?: string;
+  website?: string;
   tags: string[];
   visitCount: number;
   lastVisited?: string; // ISO date

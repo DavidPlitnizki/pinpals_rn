@@ -1,75 +1,70 @@
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { useAuth } from '../../../contexts/AuthContext';
 
 export function useLoginScreen() {
-  const { login, skipAuth } = useAuth();
+  const { signInWithGoogle, signInWithApple, skipAuth } = useAuth();
   const router = useRouter();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function validate(): string | null {
-    if (!email.includes('@')) return 'Enter a valid email address.';
-    if (password.length < 6) return 'Password must be at least 6 characters.';
-    return null;
-  }
-
-  async function handleLogin() {
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+  async function handleGooglePress() {
     setError(null);
     setIsLoading(true);
     try {
-      await login(email, password);
+      await signInWithGoogle();
       // AuthGate handles redirect
     } catch (e: any) {
-      setError(e?.message ?? 'Login failed. Please try again.');
+      setError(e?.message ?? 'Google sign-in failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   }
 
-  function handleGooglePress() {
-    Alert.alert('Coming soon', 'Social login is not available yet.');
-  }
-
-  function handleApplePress() {
-    Alert.alert('Coming soon', 'Social login is not available yet.');
+  async function handleApplePress() {
+    setError(null);
+    setIsLoading(true);
+    try {
+      await signInWithApple();
+      // AuthGate handles redirect
+    } catch (e: any) {
+      setError(e?.message ?? 'Apple sign-in failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   async function handleSkip() {
-    await skipAuth();
-    // AuthGate handles redirect
+    setError(null);
+    setIsLoading(true);
+    try {
+      await skipAuth();
+      // AuthGate handles redirect
+    } catch (e: any) {
+      setError(e?.message ?? 'Couldn’t continue as guest. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
-  function goToSignUp() {
-    router.push('/(auth)/sign-up' as any);
-  }
-
-  function goToResetPassword() {
-    router.push('/(auth)/reset-password' as any);
-  }
+  const goToTerms = useCallback(
+    () => router.push('/legal?type=terms' as any),
+    [router],
+  );
+  const goToPrivacy = useCallback(
+    () => router.push('/legal?type=privacy' as any),
+    [router],
+  );
 
   return {
-    email,
-    setEmail,
-    password,
-    setPassword,
     isLoading,
     error,
-    handleLogin,
     handleGooglePress,
     handleApplePress,
     handleSkip,
-    goToSignUp,
-    goToResetPassword,
+    goToTerms,
+    goToPrivacy,
   };
 }

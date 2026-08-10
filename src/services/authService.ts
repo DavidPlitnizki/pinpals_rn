@@ -1,11 +1,11 @@
 export type { AuthData } from './firebaseAuth';
 
 export {
-  login,
-  signUp,
   logout,
   loginAnonymously,
-  sendPasswordReset,
+  signInWithGoogle,
+  signInWithApple,
+  deleteAccount,
   onAuthStateChanged,
   getCurrentUser,
   mapFirebaseError,

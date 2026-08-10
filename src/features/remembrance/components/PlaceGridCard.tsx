@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { usePlaceCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { MOOD_CONFIG, Place } from '../../../models/types';
 import { CATEGORY_COLORS, CATEGORY_LABELS } from '../../../shared/constants';
 import { usePlacesStore } from '../../../store/usePlacesStore';
@@ -20,6 +21,7 @@ export function PlaceGridCard({ place, onPress, allTags = [] }: Props) {
   const { addTagToPlace, removeTagFromPlace } = usePlacesStore();
   const mood = getLatestMoodForPlace(place.id);
   const accentColor = mood ? MOOD_CONFIG[mood].color : CATEGORY_COLORS[place.category];
+  const coverUri = usePlaceCoverImage(place);
 
   const handlePress = useCallback(() => onPress(place.id), [onPress, place.id]);
   const handleAddTag = useCallback(
@@ -33,7 +35,11 @@ export function PlaceGridCard({ place, onPress, allTags = [] }: Props) {
 
   return (
     <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.75}>
-      <View style={[styles.accent, { backgroundColor: accentColor }]} />
+      {coverUri ? (
+        <Image source={{ uri: coverUri }} style={styles.cover} resizeMode="cover" />
+      ) : (
+        <View style={[styles.accent, { backgroundColor: accentColor }]} />
+      )}
       <View style={styles.body}>
         <View style={styles.titleRow}>
           <Text style={styles.name} numberOfLines={2}>
@@ -79,6 +85,11 @@ const styles = StyleSheet.create({
   },
   accent: {
     height: 4,
+  },
+  cover: {
+    height: 96,
+    width: '100%',
+    backgroundColor: Colors.neutral[100],
   },
   body: {
     padding: Spacing.s12,

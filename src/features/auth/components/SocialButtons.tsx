@@ -1,25 +1,39 @@
 import { AntDesign } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 
 interface SocialButtonsProps {
   onGooglePress: () => void;
   onApplePress: () => void;
+  disabled?: boolean;
 }
 
-export function SocialButtons({ onGooglePress, onApplePress }: SocialButtonsProps) {
+export function SocialButtons({ onGooglePress, onApplePress, disabled }: SocialButtonsProps) {
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={onGooglePress} activeOpacity={0.75}>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={onGooglePress}
+        activeOpacity={0.75}
+        disabled={disabled}
+      >
         <AntDesign name="google" size={20} color={Colors.brand.primary} />
         <Text style={styles.label}>Continue with Google</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={onApplePress} activeOpacity={0.75}>
-        <AntDesign name="apple" size={20} color={Colors.brand.primary} />
-        <Text style={styles.label}>Continue with Apple</Text>
-      </TouchableOpacity>
+      {/* Apple Sign-In is iOS-only — expo-apple-authentication has no Android backing. */}
+      {Platform.OS === 'ios' && (
+        <TouchableOpacity
+          style={styles.button}
+          onPress={onApplePress}
+          activeOpacity={0.75}
+          disabled={disabled}
+        >
+          <AntDesign name="apple" size={20} color={Colors.brand.primary} />
+          <Text style={styles.label}>Continue with Apple</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -39,11 +53,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.s24,
     paddingVertical: Spacing.s16,
     backgroundColor: Colors.white,
-    shadowColor: Colors.brand.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
   label: {
     ...Typography.headline,

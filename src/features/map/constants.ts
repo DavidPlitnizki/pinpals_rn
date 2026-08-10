@@ -68,9 +68,11 @@ export const HIT_SLOP_16 = {
 };
 
 // Height of MapSearchBar's content (pill + quick-chip row, safe-area top padding excluded):
-// pill marginTop(8) + pill height(48) + chips row paddingTop(8) + chip height(32). The red
-// clear buttons anchor below this so they never sit under the search bar/chips.
-export const MAP_SEARCH_BAR_HEIGHT = 96;
+// pill marginTop(28) + pill height(48) + chips row paddingTop(8) + chip height(32). The red
+// clear buttons anchor below this so they never sit under the search bar/chips. marginTop was
+// nudged down twice (+10px, then +10px again) from the base 8px so the pill/weather badge
+// clear Mapbox's own top-left scale bar ornament instead of overlapping it.
+export const MAP_SEARCH_BAR_HEIGHT = 116;
 
 export const DEFAULT_CENTER: [number, number] = [0, 0];
 export const DEFAULT_ZOOM = 13;

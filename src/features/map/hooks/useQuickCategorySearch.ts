@@ -94,17 +94,20 @@ export function useQuickCategorySearch(
     setCanSearchHere(false);
   }, []);
 
+  const checkBoundsForSearchHere = useCallback(async () => {
+    if (!activeCategoryRef.current) return;
+    const bbox = await getVisibleBbox();
+    if (!bbox || !lastSearchedBboxRef.current) return;
+    setCanSearchHere(!bboxContains(lastSearchedBboxRef.current, bbox));
+  }, [getVisibleBbox]);
+
   const onCameraSettled = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      if (!activeCategoryRef.current) return;
-      void (async () => {
-        const bbox = await getVisibleBbox();
-        if (!bbox || !lastSearchedBboxRef.current) return;
-        setCanSearchHere(!bboxContains(lastSearchedBboxRef.current, bbox));
-      })();
-    }, CAMERA_SETTLE_DEBOUNCE_MS);
-  }, [getVisibleBbox]);
+    debounceRef.current = setTimeout(
+      () => void checkBoundsForSearchHere(),
+      CAMERA_SETTLE_DEBOUNCE_MS,
+    );
+  }, [checkBoundsForSearchHere]);
 
   useEffect(() => {
     return () => {

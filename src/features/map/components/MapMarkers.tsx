@@ -2,12 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { MarkerView, PointAnnotation } from '@rnmapbox/maps';
 import { Image } from 'expo-image';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { Place, MOOD_CONFIG } from '../../../models/types';
+import { usePlaceCoverImage } from '../../../hooks/usePlaceCoverImage';
+import { MemoryMood, Place, MOOD_CONFIG } from '../../../models/types';
 import { buildGoogleMapsSearchUrl } from '../../../shared/mapLinks';
+import { CATEGORY_COLORS, CATEGORY_ICONS } from '../../../shared/constants';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { CATEGORY_LABELS, HIT_SLOP_8 } from '../constants';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
@@ -89,7 +91,13 @@ const MarkerPin = React.memo(function MarkerPin({
               />
             </View>
           ) : (
-            <View style={styles.pinBadge} />
+            <View style={styles.pinBadge}>
+              <Ionicons
+                name={CATEGORY_ICONS[place.category]}
+                size={14}
+                color={CATEGORY_COLORS[place.category]}
+              />
+            </View>
           )}
           {preview?.mood && (
             <View style={styles.moodBadge}>
@@ -101,6 +109,138 @@ const MarkerPin = React.memo(function MarkerPin({
     </PointAnnotation>
   );
 });
+
+interface MarkerCalloutProps {
+  place: Place;
+  preview: PlacePhotoPreview | null;
+  mood: MemoryMood | undefined;
+  onClose: () => void;
+  onSharePress: () => void;
+  onCalloutPress: () => void;
+  onDirectionsPress: () => void;
+  onDeletePress: () => void;
+}
+
+function MarkerCallout({
+  place,
+  preview,
+  mood,
+  onClose,
+  onSharePress,
+  onCalloutPress,
+  onDirectionsPress,
+  onDeletePress,
+}: MarkerCalloutProps) {
+  const coverUri = usePlaceCoverImage(place, preview?.photoUri);
+  const categoryColor = CATEGORY_COLORS[place.category];
+
+  const handleCallPhone = useCallback(() => {
+    if (place.phone) void Linking.openURL(`tel:${place.phone}`);
+  }, [place.phone]);
+
+  const handleOpenWebsite = useCallback(() => {
+    if (place.website) void Linking.openURL(place.website);
+  }, [place.website]);
+
+  return (
+    <View style={styles.callout}>
+      <View style={styles.calloutHeaderRow}>
+        <TouchableOpacity style={styles.calloutShareButton} onPress={onSharePress} hitSlop={HIT_SLOP_8}>
+          <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
+        </TouchableOpacity>
+        <CircleCloseButton onPress={onClose} style={styles.calloutCloseButton} size={32} />
+      </View>
+      <TouchableOpacity onPress={onCalloutPress}>
+        <View style={styles.calloutPhotoWrap}>
+          {coverUri ? (
+            <Image source={{ uri: coverUri }} style={styles.calloutPhoto} contentFit="cover" />
+          ) : (
+            <View
+              style={[
+                styles.calloutPhoto,
+                styles.calloutPhotoMock,
+                { backgroundColor: categoryColor + '22' },
+              ]}
+            >
+              <Ionicons name={CATEGORY_ICONS[place.category]} size={28} color={categoryColor} />
+            </View>
+          )}
+          {mood && (
+            <View style={styles.calloutPhotoMoodBadge}>
+              <Text style={styles.calloutPhotoMoodEmoji}>{MOOD_CONFIG[mood].emoji}</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.calloutNameRow}>
+          <Text style={styles.calloutName}>{place.name}</Text>
+          {place.favorite && <Text style={styles.calloutBadgeIcon}>❤️</Text>}
+          {place.isFavorite && <Text style={styles.calloutBadgeIcon}>⭐</Text>}
+        </View>
+        {!!place.description && (
+          <Text style={styles.calloutDescription} numberOfLines={1}>
+            {truncate(place.description, CALLOUT_DESCRIPTION_MAX_CHARS)}
+          </Text>
+        )}
+        <Text style={styles.calloutCategory}>{CATEGORY_LABELS[place.category]}</Text>
+        {mood && (
+          <Text style={styles.calloutMood}>
+            {MOOD_CONFIG[mood].emoji} {MOOD_CONFIG[mood].label}
+          </Text>
+        )}
+        <Text style={styles.calloutTap}>Details →</Text>
+      </TouchableOpacity>
+
+      {(place.address || place.phone || place.website) && (
+        <View style={styles.calloutInfoSection}>
+          {place.address && (
+            <View style={styles.calloutInfoRow}>
+              <Ionicons name="location-outline" size={14} color={Colors.neutral[500]} />
+              <Text style={styles.calloutInfoText} numberOfLines={2}>
+                {place.address}
+              </Text>
+            </View>
+          )}
+          {place.phone && (
+            <TouchableOpacity style={styles.calloutInfoRow} onPress={handleCallPhone}>
+              <Ionicons name="call-outline" size={14} color={Colors.neutral[500]} />
+              <Text style={[styles.calloutInfoText, styles.calloutInfoLink]} numberOfLines={1}>
+                {place.phone}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {place.website && (
+            <TouchableOpacity style={styles.calloutInfoRow} onPress={handleOpenWebsite}>
+              <Ionicons name="globe-outline" size={14} color={Colors.neutral[500]} />
+              <Text style={[styles.calloutInfoText, styles.calloutInfoLink]} numberOfLines={1}>
+                {place.website}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      <View style={styles.calloutDivider} />
+      <View style={styles.calloutActionsRow}>
+        <CalloutActionButton
+          icon="navigate-outline"
+          iconSize={24}
+          iconColor={Colors.brand.primary}
+          backgroundColor={Colors.brand.light}
+          borderColor={Colors.brand.primary}
+          onPress={onDirectionsPress}
+        />
+        <CalloutActionButton
+          icon="trash-outline"
+          iconSize={24}
+          iconColor={Colors.error}
+          backgroundColor="#FBE9E7"
+          borderColor={Colors.error}
+          onPress={onDeletePress}
+        />
+      </View>
+    </View>
+  );
+}
 
 export function MapMarkers({
   places,
@@ -216,80 +356,16 @@ export function MapMarkers({
           coordinate={[selectedPlace.coordinates.longitude, selectedPlace.coordinates.latitude]}
           anchor={{ x: 0.5, y: 1.3 }}
         >
-          <View style={styles.callout}>
-            <View style={styles.calloutHeaderRow}>
-              <TouchableOpacity
-                style={styles.calloutShareButton}
-                onPress={handleSharePress}
-                hitSlop={HIT_SLOP_8}
-              >
-                <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
-              </TouchableOpacity>
-              <CircleCloseButton
-                onPress={handleCloseCallout}
-                style={styles.calloutCloseButton}
-                size={32}
-              />
-            </View>
-            <TouchableOpacity onPress={handleCalloutPress}>
-              <View style={styles.calloutPhotoWrap}>
-                {selectedPreview?.photoUri ? (
-                  <Image
-                    source={{ uri: selectedPreview.photoUri }}
-                    style={styles.calloutPhoto}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <View style={[styles.calloutPhoto, styles.calloutPhotoMock]}>
-                    <Ionicons name="image-outline" size={28} color={Colors.neutral[300]} />
-                  </View>
-                )}
-                {selectedMood && (
-                  <View style={styles.calloutPhotoMoodBadge}>
-                    <Text style={styles.calloutPhotoMoodEmoji}>
-                      {MOOD_CONFIG[selectedMood].emoji}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.calloutNameRow}>
-                <Text style={styles.calloutName}>{selectedPlace.name}</Text>
-                {selectedPlace.favorite && <Text style={styles.calloutBadgeIcon}>❤️</Text>}
-                {selectedPlace.isFavorite && <Text style={styles.calloutBadgeIcon}>⭐</Text>}
-              </View>
-              {!!selectedPlace.description && (
-                <Text style={styles.calloutDescription} numberOfLines={1}>
-                  {truncate(selectedPlace.description, CALLOUT_DESCRIPTION_MAX_CHARS)}
-                </Text>
-              )}
-              <Text style={styles.calloutCategory}>{CATEGORY_LABELS[selectedPlace.category]}</Text>
-              {selectedMood && (
-                <Text style={styles.calloutMood}>
-                  {MOOD_CONFIG[selectedMood].emoji} {MOOD_CONFIG[selectedMood].label}
-                </Text>
-              )}
-              <Text style={styles.calloutTap}>Details →</Text>
-            </TouchableOpacity>
-            <View style={styles.calloutDivider} />
-            <View style={styles.calloutActionsRow}>
-              <CalloutActionButton
-                icon="navigate-outline"
-                iconSize={24}
-                iconColor={Colors.brand.primary}
-                backgroundColor={Colors.brand.light}
-                borderColor={Colors.brand.primary}
-                onPress={handleDirectionsPress}
-              />
-              <CalloutActionButton
-                icon="trash-outline"
-                iconSize={24}
-                iconColor={Colors.error}
-                backgroundColor="#FBE9E7"
-                borderColor={Colors.error}
-                onPress={handleDeletePress}
-              />
-            </View>
-          </View>
+          <MarkerCallout
+            place={selectedPlace}
+            preview={selectedPreview ?? null}
+            mood={selectedMood}
+            onClose={handleCloseCallout}
+            onSharePress={handleSharePress}
+            onCalloutPress={handleCalloutPress}
+            onDirectionsPress={handleDirectionsPress}
+            onDeletePress={handleDeletePress}
+          />
         </MarkerView>
       )}
     </React.Fragment>
@@ -328,11 +404,13 @@ const styles = StyleSheet.create({
   // QuickAddPreviewMarker so an un-photographed place still reads as a pin, not a blob.
   pinBadge: {
     position: 'absolute',
-    top: 10,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    top: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // The photo sits as a circle on top of the drop shape (near its wide end), not in place
   // of it — keeps the pin silhouette intact instead of replacing it with a plain circle.
@@ -473,6 +551,24 @@ const styles = StyleSheet.create({
     ...Typography.subheadline,
     color: Colors.brand.primary,
     marginTop: Spacing.s8,
+    fontWeight: '600',
+  },
+  calloutInfoSection: {
+    marginTop: Spacing.s8,
+    gap: Spacing.s4,
+  },
+  calloutInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.s8,
+  },
+  calloutInfoText: {
+    ...Typography.caption,
+    color: Colors.neutral[600],
+    flex: 1,
+  },
+  calloutInfoLink: {
+    color: Colors.brand.primary,
     fontWeight: '600',
   },
   calloutDivider: {

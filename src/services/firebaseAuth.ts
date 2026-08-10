@@ -1,21 +1,25 @@
 import {
   getAuth,
   onAuthStateChanged as _onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   updateProfile,
-  reload,
-  sendPasswordResetEmail,
   signInAnonymously,
+  signInWithCredential,
+  linkWithCredential,
+  deleteUser,
+  GoogleAuthProvider,
+  AppleAuthProvider,
   signOut,
   FirebaseAuthTypes,
 } from '@react-native-firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-// Mirrors Firebase's own providerId values ('google.com', 'apple.com', 'password') plus an
-// 'anonymous' fallback for guest sessions, which have no entry in providerData at all.
-export type AuthProviderId = 'google.com' | 'apple.com' | 'password' | 'anonymous';
+// Mirrors Firebase's own providerId values ('google.com', 'apple.com') plus an 'anonymous'
+// fallback for guest sessions, which have no entry in providerData at all.
+export type AuthProviderId = 'google.com' | 'apple.com' | 'anonymous';
 
 export interface AuthData {
   uid: string;
@@ -35,20 +39,18 @@ function userToAuthData(user: FirebaseAuthTypes.User): AuthData {
     isAnonymous: user.isAnonymous,
     providerId: user.isAnonymous
       ? 'anonymous'
-      : ((user.providerData[0]?.providerId as AuthProviderId | undefined) ?? 'password'),
+      : ((user.providerData[0]?.providerId as AuthProviderId | undefined) ?? 'google.com'),
   };
 }
 
 const ERROR_MAP: Record<string, string> = {
   'auth/email-already-in-use': 'An account with this email already exists.',
   'auth/invalid-email': 'Invalid email address.',
-  'auth/wrong-password': 'Incorrect password.',
-  'auth/user-not-found': 'No account found with this email.',
   'auth/too-many-requests': 'Too many attempts. Try again later.',
   'auth/network-request-failed': 'Network error. Check your connection.',
   'auth/invalid-credential': 'Invalid credentials. Please try again.',
-  'auth/weak-password': 'Password is too weak. Use at least 6 characters.',
   'auth/user-disabled': 'This account has been disabled.',
+  'auth/requires-recent-login': 'Please sign out and sign in again, then retry.',
 };
 
 export function mapFirebaseError(error: any): string {
@@ -57,39 +59,131 @@ export function mapFirebaseError(error: any): string {
   return error?.message ?? 'Something went wrong. Please try again.';
 }
 
-// ── Email / Password ─────────────────────────────────────────────────────────
-
-export async function login(email: string, password: string): Promise<AuthData> {
-  try {
-    const credential = await signInWithEmailAndPassword(getAuth(), email, password);
-    return userToAuthData(credential.user);
-  } catch (error) {
-    throw new Error(mapFirebaseError(error));
-  }
-}
-
-export async function signUp(email: string, password: string, name: string): Promise<AuthData> {
-  try {
-    const credential = await createUserWithEmailAndPassword(getAuth(), email, password);
-    await updateProfile(credential.user, { displayName: name });
-    await reload(credential.user);
-    return userToAuthData(credential.user);
-  } catch (error) {
-    throw new Error(mapFirebaseError(error));
-  }
-}
-
-// ── Password Reset ───────────────────────────────────────────────────────────
-
-export async function sendPasswordReset(email: string): Promise<void> {
-  await sendPasswordResetEmail(getAuth(), email);
-}
-
 // ── Anonymous (Guest) ────────────────────────────────────────────────────────
 
 export async function loginAnonymously(): Promise<AuthData> {
   const credential = await signInAnonymously(getAuth());
   return userToAuthData(credential.user);
+}
+
+// ── Social (Google / Apple) ─────────────────────────────────────────────────
+
+// A guest (anonymous) user signing in with a real provider should keep their local data —
+// linking preserves the existing uid. If that credential already belongs to a different
+// account (they'd used Google/Apple here before, as a different guest session), linking
+// fails and we fall back to signing into that existing account instead, abandoning this
+// guest session's data.
+async function linkOrSignIn(credential: FirebaseAuthTypes.AuthCredential): Promise<AuthData> {
+  const auth = getAuth();
+  const current = auth.currentUser;
+
+  if (current?.isAnonymous) {
+    try {
+      const result = await linkWithCredential(current, credential);
+      return userToAuthData(result.user);
+    } catch (error: any) {
+      const code = error?.code as string | undefined;
+      if (code !== 'auth/credential-already-in-use' && code !== 'auth/email-already-in-use') {
+        throw error;
+      }
+      // Fall through to a plain sign-in below.
+    }
+  }
+
+  const result = await signInWithCredential(auth, credential);
+  return userToAuthData(result.user);
+}
+
+let googleConfigured = false;
+function ensureGoogleConfigured(): void {
+  if (googleConfigured) return;
+  GoogleSignin.configure({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  });
+  googleConfigured = true;
+}
+
+export async function signInWithGoogle(): Promise<AuthData> {
+  try {
+    ensureGoogleConfigured();
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    const response = await GoogleSignin.signIn();
+    if (response.type !== 'success') {
+      throw new Error('Google Sign-In was cancelled.');
+    }
+    const idToken = response.data.idToken;
+    if (!idToken) throw new Error('Google Sign-In did not return an ID token.');
+
+    const credential = GoogleAuthProvider.credential(idToken);
+    return await linkOrSignIn(credential);
+  } catch (error) {
+    throw new Error(mapFirebaseError(error));
+  }
+}
+
+export async function signInWithApple(): Promise<AuthData> {
+  try {
+    // Apple requires a nonce round-trip for replay protection: the hashed nonce goes to
+    // Apple, the raw one goes to Firebase (as the credential's `secret`) alongside the
+    // identity token Apple returns.
+    const rawNonce = Crypto.randomUUID();
+    const hashedNonce = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      rawNonce,
+    );
+
+    const appleCredential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+      nonce: hashedNonce,
+    });
+
+    if (!appleCredential.identityToken) {
+      throw new Error('Apple Sign-In did not return an identity token.');
+    }
+
+    // AppleAuthProvider.credential is a static method (not `new OAuthProvider(...)`) —
+    // that's the RNFB-specific provider built for this native flow.
+    const credential = AppleAuthProvider.credential(appleCredential.identityToken, rawNonce);
+
+    const authData = await linkOrSignIn(credential);
+
+    // Apple only ever returns the user's name on their very first authorization — Firebase
+    // won't pick it up from the credential alone, so persist it to the profile ourselves.
+    const fullName = appleCredential.fullName;
+    const displayName = [fullName?.givenName, fullName?.familyName].filter(Boolean).join(' ');
+    if (displayName && !authData.name) {
+      const current = getAuth().currentUser;
+      if (current) {
+        await updateProfile(current, { displayName });
+        authData.name = displayName;
+      }
+    }
+
+    return authData;
+  } catch (error: any) {
+    if (error?.code === 'ERR_REQUEST_CANCELED') {
+      throw new Error('Apple Sign-In was cancelled.');
+    }
+    throw new Error(mapFirebaseError(error));
+  }
+}
+
+// ── Account Deletion ─────────────────────────────────────────────────────────
+
+// Guideline 5.1.1(v) requires actually deleting the account, not just signing out. Firebase
+// can refuse this with `auth/requires-recent-login` if the session is stale — the caller
+// surfaces that as a "sign in again and retry" message rather than a silent no-op.
+export async function deleteAccount(): Promise<void> {
+  const user = getAuth().currentUser;
+  if (!user) throw new Error('No signed-in user to delete.');
+  try {
+    await deleteUser(user);
+  } catch (error) {
+    throw new Error(mapFirebaseError(error));
+  }
 }
 
 // ── Logout ───────────────────────────────────────────────────────────────────

@@ -53,7 +53,10 @@ function AppearanceEffects() {
     void SystemUI.setBackgroundColorAsync(resolvedTheme === 'dark' ? '#1C2B22' : '#FAF8F4');
   }, [resolvedTheme]);
 
-  return <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />;
+  // Screens are light-background regardless of theme preference, so the status bar icons
+  // stay dark everywhere rather than following resolvedTheme (which would turn them white
+  // and make them disappear against those light backgrounds).
+  return <StatusBar style="dark" />;
 }
 
 export default function RootLayout() {
@@ -81,6 +84,10 @@ export default function RootLayout() {
               options={{ title: 'New Memory', presentation: 'modal', headerShown: false }}
             />
             <Stack.Screen name="legal" options={{ title: '', presentation: 'modal' }} />
+            <Stack.Screen
+              name="weather-detail"
+              options={{ title: '', presentation: 'modal', headerShown: false }}
+            />
             <Stack.Screen
               name="paywall"
               options={{ title: '', presentation: 'modal', headerShown: false }}

@@ -8,6 +8,7 @@ export interface MapboxSearchResult {
   category?: string;
   maki?: string;
   website?: string;
+  phone?: string;
   coordinates: Coordinates;
 }
 
@@ -16,6 +17,7 @@ export interface MapboxSearchOptions {
 }
 
 const SEARCH_BOX_FORWARD_URL = 'https://api.mapbox.com/search/searchbox/v1/forward';
+const GEOCODE_REVERSE_URL = 'https://api.mapbox.com/search/geocode/v6/reverse';
 
 interface MapboxFeature {
   id?: string;
@@ -30,6 +32,7 @@ interface MapboxFeature {
     metadata?: {
       photos?: { original?: string; url?: string }[];
       website?: string;
+      phone?: string;
     };
   };
 }
@@ -124,9 +127,52 @@ export async function searchMapboxPlaces(
     category: formatCategory(feature),
     maki: feature.properties?.maki,
     website: getOwnWebsite(feature),
+    phone: feature.properties?.metadata?.phone,
     coordinates: {
       longitude: feature.geometry.coordinates[0],
       latitude: feature.geometry.coordinates[1],
     },
   }));
+}
+
+// City/country for a raw coordinate — the weather screen's default location label (before the
+// user searches somewhere else), naming wherever the map camera was pointed. Reuses the same
+// Mapbox token/account as forward search, no separate vendor.
+export async function reverseGeocodePlace(coords: Coordinates): Promise<string | null> {
+  const token = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
+  if (!token) return null;
+
+  const params = new URLSearchParams({
+    longitude: String(coords.longitude),
+    latitude: String(coords.latitude),
+    types: 'place',
+    access_token: token,
+  });
+
+  const url = `${GEOCODE_REVERSE_URL}?${params.toString()}`;
+  console.log('[mapboxSearch] reverse request →', url.replace(token, '***'));
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.log('[mapboxSearch] reverse response ← error', response.status, await response.text());
+      return null;
+    }
+
+    const data = (await response.json()) as {
+      features?: {
+        properties?: { name?: string; context?: { country?: { name?: string } } };
+      }[];
+    };
+    console.log('[mapboxSearch] reverse response ←', JSON.stringify(data));
+
+    const feature = data.features?.[0];
+    const city = feature?.properties?.name;
+    const country = feature?.properties?.context?.country?.name;
+    if (!city && !country) return null;
+    return [city, country].filter(Boolean).join(', ');
+  } catch (err) {
+    console.log('[mapboxSearch] reverse request failed', err);
+    return null;
+  }
 }

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   Modal,
   StyleSheet,
   Text,
@@ -21,6 +22,11 @@ interface ModeOption {
   label: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
 }
+
+// Pushes the centered card down 20% of the window height, off dead-center, per explicit
+// request — keeps the same center-aligned backdrop but biases the resting position lower.
+const WINDOW_HEIGHT = Dimensions.get('window').height;
+const CARD_VERTICAL_OFFSET = WINDOW_HEIGHT * 0.2;
 
 const MODE_OPTIONS: ModeOption[] = [
   { profile: 'walking', label: 'Walk', icon: 'walk' },
@@ -200,6 +206,7 @@ const styles = StyleSheet.create({
     borderRadius: Radii.lg,
     padding: Spacing.s20,
     position: 'relative',
+    marginTop: CARD_VERTICAL_OFFSET,
   },
   closeButton: {
     position: 'absolute',

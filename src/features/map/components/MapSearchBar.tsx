@@ -1,11 +1,13 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useCallback } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { CurrentWeather } from '../../../services/weather';
 import { HIT_SLOP_8, QUICK_SEARCH_CATEGORIES, QuickSearchCategory } from '../constants';
+import { colorForWeatherCode, iconForWeatherCode } from '../utils/weatherIcons';
 
 interface ChipProps {
   category: QuickSearchCategory;
@@ -45,11 +47,13 @@ const QuickCategoryChip = React.memo(function QuickCategoryChip({
 
 interface Props {
   query: string;
+  weather: CurrentWeather | null;
   activeCategory: string | null;
   categoryLoading: boolean;
   canSearchHere: boolean;
   searchHereLoading: boolean;
   onOpenSearch: () => void;
+  onOpenWeather: () => void;
   onSelectCategory: (key: string) => void;
   onSearchHere: () => void;
   onClearQuery: () => void;
@@ -64,28 +68,45 @@ interface Props {
 // re-searching.
 export function MapSearchBar({
   query,
+  weather,
   activeCategory,
   categoryLoading,
   canSearchHere,
   searchHereLoading,
   onOpenSearch,
+  onOpenWeather,
   onSelectCategory,
   onSearchHere,
   onClearQuery,
 }: Props) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']} pointerEvents="box-none">
-      <TouchableOpacity style={styles.pill} onPress={onOpenSearch} activeOpacity={0.85}>
-        <Ionicons name="search" size={18} color={Colors.neutral[400]} />
-        <Text style={[styles.pillText, query.length > 0 && styles.pillTextFilled]} numberOfLines={1}>
-          {query.length > 0 ? query : 'Search places, restaurants, cafes…'}
-        </Text>
-        {query.length > 0 && (
-          <TouchableOpacity onPress={onClearQuery} hitSlop={HIT_SLOP_8}>
-            <Ionicons name="close-circle" size={18} color={Colors.neutral[400]} />
+      <View style={styles.topRow}>
+        {weather && (
+          <TouchableOpacity style={styles.weatherBadge} onPress={onOpenWeather} activeOpacity={0.85}>
+            <Ionicons
+              name={iconForWeatherCode(weather.weatherCode)}
+              size={18}
+              color={colorForWeatherCode(weather.weatherCode)}
+            />
+            <Text style={styles.weatherTemp}>{Math.round(weather.temperatureC)}°</Text>
           </TouchableOpacity>
         )}
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.pill} onPress={onOpenSearch} activeOpacity={0.85}>
+          <Ionicons name="search" size={18} color={Colors.neutral[400]} />
+          <Text
+            style={[styles.pillText, query.length > 0 && styles.pillTextFilled]}
+            numberOfLines={1}
+          >
+            {query.length > 0 ? query : 'Search places, restaurants, cafes…'}
+          </Text>
+          {query.length > 0 && (
+            <TouchableOpacity onPress={onClearQuery} hitSlop={HIT_SLOP_8}>
+              <Ionicons name="close-circle" size={18} color={Colors.neutral[400]} />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      </View>
 
       <ScrollView
         horizontal
@@ -139,12 +160,41 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  pill: {
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.s8,
     marginHorizontal: Spacing.s16,
-    marginTop: Spacing.s8,
+    // Nudged down from the base 8px (twice, +10px each time) so the pill/weather badge clear
+    // Mapbox's own top-left scale bar ornament instead of overlapping it.
+    marginTop: Spacing.s16 + Spacing.s2 + Spacing.s8 + Spacing.s2,
+  },
+  weatherBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.s4,
+    height: 48,
+    paddingHorizontal: Spacing.s12,
+    backgroundColor: Colors.white,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  weatherTemp: {
+    ...Typography.caption,
+    fontWeight: '700',
+    color: Colors.neutral[900],
+  },
+  pill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.s8,
     height: 48,
     backgroundColor: Colors.white,
     borderRadius: Radii.full,

@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { formatSlugLabel } from '../../../shared/format';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { NativePoiMarker as NativePoiMarkerData } from '../types';
 import { iconForMaki } from '../utils/mapboxIcons';
@@ -76,10 +77,15 @@ export function NativePoiMarker({
           <View style={styles.calloutHeaderRow}>
             <CircleCloseButton onPress={onClose} style={styles.calloutCloseButton} />
           </View>
+          <View style={styles.calloutPhotoWrap}>
+            <Ionicons name={iconForMaki(marker.maki)} size={32} color={POI_COLOR} />
+          </View>
           <Text style={styles.calloutName} numberOfLines={1}>
             {marker.name}
           </Text>
-          {marker.category && <Text style={styles.calloutCategory}>{marker.category}</Text>}
+          {marker.category && (
+            <Text style={styles.calloutCategory}>{formatSlugLabel(marker.category)}</Text>
+          )}
 
           <View style={styles.calloutActionsRow}>
             <CalloutActionButton
@@ -174,10 +180,20 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.neutral[900],
   },
+  calloutPhotoWrap: {
+    alignSelf: 'stretch',
+    height: 100,
+    borderRadius: Radii.sm,
+    backgroundColor: Colors.warning + '22',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.s4,
+  },
   calloutName: {
     ...Typography.headline,
     color: Colors.neutral[900],
     textAlign: 'center',
+    marginTop: Spacing.s8,
   },
   calloutCategory: {
     ...Typography.caption,
