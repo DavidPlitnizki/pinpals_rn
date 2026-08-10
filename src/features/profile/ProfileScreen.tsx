@@ -28,7 +28,6 @@ const PROVIDER_BADGE: Record<
 > = {
   'google.com': { icon: 'logo-google' },
   'apple.com': { icon: 'logo-apple' },
-  password: { icon: 'mail' },
   anonymous: { icon: 'eye-off' },
 };
 

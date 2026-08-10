@@ -67,7 +67,9 @@ const MarkerPin = React.memo(function MarkerPin({
         </View>
         <View style={styles.pinWrap}>
           <Ionicons name="location-sharp" size={PIN_SIZE} color={DESTINATION_COLOR} />
-          <View style={styles.pinBadge} />
+          <View style={styles.pinBadge}>
+            <Ionicons name="flag" size={12} color={DESTINATION_COLOR} />
+          </View>
         </View>
       </View>
     </PointAnnotation>
@@ -144,6 +146,9 @@ export function RouteDestinationMarker({
           <View style={styles.callout}>
             <View style={styles.calloutHeaderRow}>
               <CircleCloseButton onPress={handleCloseCallout} style={styles.calloutCloseButton} />
+            </View>
+            <View style={styles.calloutIconWrap}>
+              <Ionicons name="flag" size={28} color={DESTINATION_COLOR} />
             </View>
             <Text style={styles.calloutName} numberOfLines={1}>
               {selected.label}
@@ -238,10 +243,20 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.neutral[900],
   },
+  calloutIconWrap: {
+    alignSelf: 'flex-start',
+    width: 44,
+    height: 44,
+    borderRadius: Radii.md,
+    backgroundColor: Colors.accent.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.s4,
+  },
   calloutName: {
     ...Typography.title3,
     color: Colors.neutral[900],
-    marginTop: Spacing.s4,
+    marginTop: Spacing.s8,
     marginBottom: Spacing.s12,
   },
   calloutActionsRow: {

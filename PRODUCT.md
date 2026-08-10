@@ -248,23 +248,46 @@ Step-by-step: фото → настроение → с кем → заметка
 - [x] Mapbox Search → результат → «Сохранить пин»
 - [ ] Поиск по своим местам (теги, mood, companions) внутри Map sheet — сейчас
   полноценные фильтры есть только в Remembrance (`FiltersSheet`), не в Map-поиске
-- [ ] «Год назад» кнопка на карте
-- [ ] Маленький значок погоды в углу карты (нужен погодный API — уточнить вендора/лимиты
-  бесплатного тарифа перед реализацией)
+- [x] Значок погоды в углу карты — выросло за пределы исходного скоупа (2026-08-09):
+  Open-Meteo (бесплатно, без ключа, non-commercial use до paywall'а), обновляется раз в
+  час, тап открывает отдельный `weather-detail` экран (текущая погода/ощущается как/
+  ветер/влажность/давление/закат, почасовой прогноз на 48ч, 10-дневный прогноз,
+  поиск города для просмотра погоды в другом месте) с автоматическим reverse-geocode
+  названия текущей локации через Mapbox
+- [x] Обложка/фото места — приоритет: своё фото → Wikipedia (для категорий nature/art)
+  → Mapbox Static Images как карта-превью → цветная иконка категории как последний
+  fallback (`usePlaceCoverImage`, переиспользуется в Remembrance-карточках и в callout
+  пина на карте). Callout пина, поиска и нативного POI на карте больше не показывают
+  пустой серый блок без фото
 - [ ] Onboarding (3 экрана)
 - [ ] Кешировать сетевые запросы (Mapbox Search, Directions) — TTL-кеш, чтобы не
   дублировать одинаковые запросы
+- [x] ~~«Год назад» кнопка на карте~~ — вырезано из MVP (2026-08-08): чистое
+  retention/engagement-полирование, не двигает share/invite rate. Кандидат на
+  возврат после подтверждённого роста
 
 **Launch-readiness / App Store review (найдено при аудите 2026-08-07):**
-- [ ] **Delete Account реально удаляет данные** — сейчас `handleDeleteAccount` в
-  `useProfileScreen.ts` вызывает только `logout()`, аккаунт и данные в Firebase не
-  удаляются. Guideline 5.1.1(v) требует настоящего удаления — блокер ревью
-- [ ] **Скрыть или реализовать Google/Apple кнопки на LoginScreen** — сейчас
-  `SocialButtons` рендерятся, но по нажатию показывают alert "Coming soon"
-  (`useLoginScreen.ts`) — риск отклонения по Guideline 2.1 (App Completeness)
-- [ ] **Уточнить permission strings** — `expo-location`/`expo-image-picker` подключены
-  в `app.json` без кастомного текста разрешения (используется дефолтный от Expo-плагина).
-  Guideline 5.1.1 требует объяснение конкретно под кейс приложения
+- [x] ~~Delete Account реально удаляет данные~~ — реализовано (2026-08-09):
+  `deleteAccount()` в `firebaseAuth.ts` (`deleteUser` из modular API) реально удаляет
+  Firebase-аккаунт, `useProfileScreen.ts` дополнительно очищает локальные места/заметки/
+  встречи/сохранённые маршруты/профиль после успешного удаления. При
+  `auth/requires-recent-login` показывает alert с просьбой перелогиниться
+- [x] ~~Скрыть или реализовать Google/Apple кнопки на LoginScreen~~ — реализовано и
+  сконфигурировано end-to-end (2026-08-08/09): `signInWithGoogle`/`signInWithApple` в
+  `firebaseAuth.ts` (`@react-native-google-signin/google-signin` +
+  `expo-apple-authentication`, anonymous-гость апгрейдится через `linkWithCredential`,
+  Apple-кнопка скрыта на Android). Google/Apple провайдеры включены в Firebase Console,
+  `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`/`iosUrlScheme`/`GoogleService-Info.plist`
+  прописаны. Найден и исправлен баг Apple-входа: `AppleAuthProvider.credential()` —
+  статический метод, не метод инстанса `OAuthProvider`
+- [x] ~~Bundle id рассинхронизирован между Xcode-проектом и Firebase~~ — исправлено
+  (2026-08-09): единый `com.dpdevstudio.pinpals` в `app.json`, Xcode
+  (Signing & Capabilities) и Firebase (зарегистрировано новое iOS-приложение,
+  `GoogleService-Info.plist` обновлён и в корне, и в `ios/Pinpals/`)
+- [x] ~~Email/password логин~~ — удалён по прямому запросу (2026-08-09): вход теперь
+  только Google/Apple/гость — см. «Логины» ниже
+- [x] ~~Уточнить permission strings~~ — уже кастомные (`locationWhenInUsePermission`,
+  `photosPermission`, `cameraPermission` в `app.json`), пункт был устаревшим
 - [ ] Privacy Policy — реальный контент в `LegalScreen.tsx`, публичный URL для App Store
   Connect (не просто экран-заглушка)
 
@@ -278,14 +301,16 @@ Step-by-step: фото → настроение → с кем → заметка
 - [ ] Простой internal-дашборд или Firebase Analytics консоль — не нужен кастомный
   admin-экран в приложении на этом этапе
 
-**Логины (Phase 1 — уточнение скоупа, 2026-08-07):**
-- [ ] Email/password + анонимный гость — уже реализовано, менять не нужно
-- [ ] Google/Apple Sign-In **не нужны на Phase 1** — по Apple Guideline 4.8 Sign in with
-  Apple обязателен только если предлагается другой сторонний логин (Google и т.п.);
-  у нас на Phase 1 только email+анонимный — требования нет. Сдвинуто в Phase 2 вместе
-  с друзьями (см. ниже) — там оно оправдано, потому что снижает трение при
-  регистрации приглашённых на встречу
-- [ ] До того момента — см. пункт выше про скрытие нефункциональных кнопок
+**Логины (Phase 1 — уточнение скоупа, 2026-08-07; апдейт 2026-08-09):**
+- [x] ~~Email/password~~ — удалено (2026-08-09, по прямому запросу): LoginScreen
+  теперь только Google/Apple/гость. `sign-up`/`reset-password` экраны и хуки
+  удалены целиком (существовали только для email-флоу). `login`/`signUp`/
+  `sendPasswordReset` убраны из `firebaseAuth.ts`/`AuthContext`
+- [x] Google/Apple Sign-In — реализовано раньше плана (2026-08-08, есть платный Apple
+  Developer аккаунт), кнопки — единственный способ входа помимо гостя (2026-08-09).
+  По Apple Guideline 4.8 обязательным Sign in with Apple делает не факт наличия
+  email-логина, а именно наличие *другого* стороннего логина (Google) — раз
+  добавили Google, Apple обязателен, поэтому оба сразу
 
 **Маршруты — ✅ ЗАВЕРШЕНО:**
 - [x] Маршрут до места (Directions) — mode-picker (walking/driving/cycling), четыре
@@ -315,11 +340,19 @@ Step-by-step: фото → настроение → с кем → заметка
 
 - [x] Создание встречи — `CreateMeetingScreen` + `useCreateMeeting`, одноэтапная форма
 - [x] `MeetingStatus` enum + миграция модели
-- [ ] `proposedPlaces` — список кандидатов (поле есть, не заполняется/не используется в UI)
-- [ ] Переделать CreateMeeting под step-by-step flow
-- [ ] Экран MeetingDetail — карточки мест-кандидатов, статус
-- [ ] Share Sheet интеграция для встречи как текст/ссылка
-- [ ] Map — особый пин для места встречи
+
+> **Для MVP на этом фаза закрыта.** Встреча после создания — read-only карточка в
+> Remembrance-таймлайне (`MeetingCard`), без отдельного роута/экрана — это
+> самодостаточный флоу для соло-теста. Ниже — то, что сознательно вырезано и
+> отложено (2026-08-08, ничем в коде пока не заблокировано, безопасно резать):
+> - ~~`proposedPlaces` — список кандидатов~~ (поле есть, не используется в UI) —
+>   часть Phase 2 голосования, не нужна без него
+> - ~~Переделать CreateMeeting под step-by-step flow~~ — текущая одноэтапная форма
+>   рабочая, полировка UX, не влияет на share rate
+> - ~~Экран MeetingDetail~~ — нет роута, ничего на него не ссылается
+> - ~~Share Sheet для встречи~~ — приглашать пока некого: Phase 1 без друзей/аккаунтов
+>   других людей, реальный смысл появляется вместе с Phase 2 (друзья + голосование)
+> - ~~Спецпин места встречи на карте~~ — чисто косметика
 
 ---
 
@@ -347,16 +380,8 @@ Step-by-step: фото → настроение → с кем → заметка
 - [ ] Друзья — поиск, добавление
 - [ ] Голосование за место встречи (синхронное) — приглашённый обязан
   открыть/установить приложение, чтобы проголосовать → реальный growth loop
-- [ ] **Auth — Google Sign-In + Apple Sign-In** (здесь уже оправдано — снижает
-  трение регистрации именно для приглашённых)
-  - Пакеты: `npx expo install @react-native-google-signin/google-signin expo-apple-authentication`
-  - Firebase Console: включить Google provider (`webClientId`), Apple provider
-    (Service ID + key в Apple Developer portal)
-  - `app.json` plugins: `["@react-native-google-signin/google-signin", { "iosUrlScheme": "<REVERSED_CLIENT_ID>" }]`, `"expo-apple-authentication"`
-  - `src/services/firebaseAuth.ts` — `signInWithGoogle()` / `signInWithApple()`
-  - `src/contexts/AuthContext.tsx` — прокинуть social-методы
-  - `SocialButtons.tsx` — уже есть UI, подключить реальные обработчики
-  - Анонимные пользователи — привязка аккаунта через `linkWithCredential()`
+- [x] ~~Auth — Google Sign-In + Apple Sign-In~~ — реализовано раньше плана, см.
+  PHASE 1D launch-readiness выше (2026-08-08)
 - [ ] Companions из контактов/друзей
 
 **Приоритет 2 — retention/engagement (не создаёт роста, делать после приоритета 1):**
@@ -408,7 +433,21 @@ Step-by-step: фото → настроение → с кем → заметка
 
 ---
 
-*Последнее обновление (2026-08-07): полный пересмотр стратегии после разбора
+*Последнее обновление (2026-08-09): Google/Apple Sign-In реализован и полностью
+настроен (Firebase Console + `.env.local` + `app.json` + Apple Developer, платный
+аккаунт уже есть), найден и исправлен баг Apple-входа (`AppleAuthProvider.credential`
+— статический метод). Email/password логин удалён по прямому запросу — вход только
+Google/Apple/гость. Delete Account теперь реально удаляет Firebase-аккаунт и локальные
+данные, не просто разлогинивает. Исправлен рассинхрон bundle id между Xcode и Firebase
+(`com.dpdevstudio.pinpals` везде). Значок погоды вырос в полноценный экран (почасовой +
+10-дневный прогноз, поиск города, reverse-geocode локации). Добавлен fallback-каскад
+для фото места (своё фото → Wikipedia → Mapbox static map → цветная иконка категории),
+устранены пустые serые callout'ы на карте. LoginScreen визуально переработан (фон —
+карта-иллюстрация с лого, вместо формы — только Google/Apple/Skip, ссылки на
+Terms/Privacy). Permission strings оказались уже кастомными — пункт закрыт как
+устаревший.
+
+Ранее (2026-08-07): полный пересмотр стратегии после разбора
 монетизации — сдвинут фокус с "поиска мест" на "разметку того, чего нет на карте",
 добавлена секция "Стратегия валидации" (TestFlight-тест на share/invite rate перед
 любыми новыми фичами), зафиксировано решение сменить рендер карты на Apple Maps

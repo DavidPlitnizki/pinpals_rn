@@ -39,6 +39,7 @@ const GOLD = '#D4AF37';
 interface Props {
   visible: boolean;
   coordinates: Coordinates | null;
+  address?: string;
   onSave: (data: QuickAddSaveData) => void;
   onClose: () => void;
   onDirections: (name: string) => void;
@@ -80,7 +81,14 @@ const PhotoThumb = React.memo(function PhotoThumb({
 // Mirrors SearchSheet's structure deliberately: Modal stays mounted and is toggled via
 // `visible`, there is no KeyboardAvoidingView and no animated `height` — those are what
 // broke the keyboard here before (see git history). Content just scrolls under the keyboard.
-export function QuickAddPlaceSheet({ visible, coordinates, onSave, onClose, onDirections }: Props) {
+export function QuickAddPlaceSheet({
+  visible,
+  coordinates,
+  address,
+  onSave,
+  onClose,
+  onDirections,
+}: Props) {
   const insets = useSafeAreaInsets();
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
@@ -318,9 +326,17 @@ export function QuickAddPlaceSheet({ visible, coordinates, onSave, onClose, onDi
             >
               {coordinates && (
                 <View style={styles.coordsRow}>
-                  <Text style={styles.coordsText}>
-                    📍 {coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)}
-                  </Text>
+                  <View style={styles.coordsTextCol}>
+                    {address ? (
+                      <Text style={styles.addressText} numberOfLines={2}>
+                        📍 {address}
+                      </Text>
+                    ) : null}
+                    <Text style={styles.coordsText}>
+                      {address ? '' : '📍 '}
+                      {coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)}
+                    </Text>
+                  </View>
                   <TouchableOpacity onPress={handleDirectionsPress} hitSlop={8}>
                     <Text style={styles.directionsLink}>Get directions</Text>
                   </TouchableOpacity>
@@ -528,6 +544,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.s16,
+    gap: Spacing.s8,
+  },
+  coordsTextCol: {
+    flex: 1,
+    gap: Spacing.s2,
+  },
+  addressText: {
+    ...Typography.caption,
+    color: Colors.neutral[700],
+    fontWeight: '600',
   },
   coordsText: {
     ...Typography.caption,

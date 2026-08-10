@@ -1,6 +1,8 @@
 import { Camera, MapView, UserLocation } from '@rnmapbox/maps';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useRef } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { ClearMapButton } from './components/ClearMapButton';
 import { ClearRouteButton } from './components/ClearRouteButton';
@@ -24,6 +26,7 @@ import { useMapScreen } from './hooks/useMapScreen';
 import { useQuickCategorySearch } from './hooks/useQuickCategorySearch';
 import { useRouteDirections } from './hooks/useRouteDirections';
 import { useSearchSheet } from './hooks/useSearchSheet';
+import { useWeather } from './hooks/useWeather';
 import { NativePoiMarker as NativePoiMarkerData, RouteWaypoint } from './types';
 import { Coordinates, Place } from '../../models/types';
 import { MapboxSearchResult } from '../../services/mapboxSearch';
@@ -44,6 +47,7 @@ export default function MapScreen() {
     handleConfirmFlyTo,
     showQuickAddSheet,
     pendingPlaceCoords,
+    pendingPlaceMeta,
     searchResultMarkers,
     nativePoiMarker,
     dismissSignal,
@@ -85,8 +89,10 @@ export default function MapScreen() {
     [showToast],
   );
   const route = useRouteDirections(gpsCoords, locationGranted, onWaypointReached);
+  const weather = useWeather(gpsCoords, getMapCenter, getVisibleBbox);
   const resultWasTappedRef = useRef(false);
   const addSavedRoute = useSavedRoutesStore((s) => s.addSavedRoute);
+  const router = useRouter();
 
   // Every Modal presented over the MapView can drop PointAnnotation bitmaps (see
   // usePointAnnotationRefresh), so markers must re-register whenever any of them opens
@@ -142,6 +148,7 @@ export default function MapScreen() {
   );
 
   const { onCameraSettled: onQuickSearchCameraSettled } = quickSearch;
+  const { onCameraSettled: onWeatherCameraSettled, refresh: refreshWeather } = weather;
 
   const onCameraChanged = useCallback(
     (state: { properties: { center: unknown; zoom: number } }) => {
@@ -149,9 +156,26 @@ export default function MapScreen() {
       currentCenter.current = center;
       currentZoom.current = state.properties.zoom;
       onQuickSearchCameraSettled();
+      onWeatherCameraSettled();
     },
-    [currentCenter, currentZoom, onQuickSearchCameraSettled],
+    [currentCenter, currentZoom, onQuickSearchCameraSettled, onWeatherCameraSettled],
   );
+
+  // Coming back from the weather detail screen (which may have searched a different
+  // city) should re-sync the map badge with wherever the camera actually is now.
+  useFocusEffect(
+    useCallback(() => {
+      void refreshWeather();
+    }, [refreshWeather]),
+  );
+
+  const onOpenWeather = useCallback(() => {
+    const { latitude, longitude } = getMapCenter();
+    router.push({
+      pathname: '/weather-detail',
+      params: { latitude: String(latitude), longitude: String(longitude) },
+    });
+  }, [getMapCenter, router]);
 
   const { selectCategory: selectQuickCategory, searchHere: searchQuickCategoryHere } = quickSearch;
   const onSelectQuickCategory = useCallback(
@@ -345,8 +369,13 @@ export default function MapScreen() {
       <MapToast toastAnim={toastAnim} toastMsg={toastMsg} toastGPS={toastGPS} />
 
       {route.activeRoute?.status === 'success' &&
-        route.activeRoute.distanceMeters !== null &&
-        route.activeRoute.durationSeconds !== null && (
+      route.activeRoute.distanceMeters !== null &&
+      route.activeRoute.durationSeconds !== null ? (
+        <Animated.View
+          style={styles.topOverlay}
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(150)}
+        >
           <RouteInfoCard
             destinationLabel={
               route.activeRoute.waypoints[route.activeRoute.waypoints.length - 1]?.label ?? ''
@@ -358,7 +387,28 @@ export default function MapScreen() {
             nearestStepIndex={route.nearestStepIndex}
             onShareRoute={onShareRoute}
           />
-        )}
+        </Animated.View>
+      ) : (
+        <Animated.View
+          style={styles.topOverlay}
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(150)}
+        >
+          <MapSearchBar
+            query={search.query}
+            weather={weather.weather}
+            activeCategory={quickSearch.activeCategory}
+            categoryLoading={quickSearch.loading}
+            canSearchHere={quickSearch.canSearchHere}
+            searchHereLoading={quickSearch.searchHereLoading}
+            onOpenSearch={search.open}
+            onOpenWeather={onOpenWeather}
+            onSelectCategory={onSelectQuickCategory}
+            onSearchHere={onSearchHere}
+            onClearQuery={onClearSearchResults}
+          />
+        </Animated.View>
+      )}
 
       {route.activeRoute?.status === 'success' && (
         <ClearRouteButton onPress={route.removeLastWaypoint} onLongPress={route.clearRoute} />
@@ -367,18 +417,6 @@ export default function MapScreen() {
       {(route.activeRoute?.status === 'success' || searchResultMarkers.length > 0) && (
         <ClearMapButton onPress={onClearAll} />
       )}
-
-      <MapSearchBar
-        query={search.query}
-        activeCategory={quickSearch.activeCategory}
-        categoryLoading={quickSearch.loading}
-        canSearchHere={quickSearch.canSearchHere}
-        searchHereLoading={quickSearch.searchHereLoading}
-        onOpenSearch={search.open}
-        onSelectCategory={onSelectQuickCategory}
-        onSearchHere={onSearchHere}
-        onClearQuery={onClearSearchResults}
-      />
 
       <MapControls
         gpsCoords={gpsCoords}
@@ -390,6 +428,7 @@ export default function MapScreen() {
       <QuickAddPlaceSheet
         visible={showQuickAddSheet}
         coordinates={pendingPlaceCoords}
+        address={pendingPlaceMeta?.address}
         onSave={handleSaveQuickAddPlace}
         onClose={handleCloseQuickAddSheet}
         onDirections={onQuickAddDirections}
@@ -438,4 +477,14 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
+  // MapSearchBar/RouteInfoCard already position themselves absolutely (top:0/left:0/right:0)
+  // internally — this wrapper must match that positioning too, otherwise it participates in
+  // the container's normal flex flow (pushed below MapView's flex:1, off-screen) instead of
+  // overlaying the map.
+  topOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
 });

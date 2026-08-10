@@ -27,7 +27,9 @@ const PROFILE_ICON: Record<RouteProfile, React.ComponentProps<typeof Ionicons>['
 // ClearMapButton floats top-right (44pt button, Spacing.s16 top inset). A long
 // destination label can grow this card up to its maxWidth and reach that corner,
 // so push the card below the button's row instead of relying on horizontal luck.
-const CLEAR_BUTTON_CLEARANCE = Spacing.s16 + 44 + Spacing.s12;
+// The extra 1.2x pushes the card down another 20% below that clearance so it sits clear of
+// the search bar/chips row above it too.
+const CLEAR_BUTTON_CLEARANCE = (Spacing.s16 + 44 + Spacing.s12) * 1.2;
 const STEPS_LIST_MAX_HEIGHT = 220;
 
 export function RouteInfoCard({

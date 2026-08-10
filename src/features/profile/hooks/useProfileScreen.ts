@@ -15,7 +15,7 @@ export function useProfileScreen() {
   const { places } = usePlacesStore();
   const { meetings } = useMeetingsStore();
   const { savedRoutes } = useSavedRoutesStore();
-  const { logout, isGuest, authData } = useAuth();
+  const { logout, deleteAccount, isGuest, authData } = useAuth();
   const { fontScale, setFontScale, theme, setTheme } = useSettingsStore();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile.name);
@@ -82,14 +82,24 @@ export function useProfileScreen() {
   function handleDeleteAccount() {
     Alert.alert(
       'Delete Account',
-      'Are you sure you want to delete your account? This action cannot be undone.',
+      'Are you sure you want to delete your account? This permanently deletes your account and all your places, memories, meetings, and saved routes. This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete Account',
           style: 'destructive',
           onPress: async () => {
-            await logout();
+            try {
+              await deleteAccount();
+              // Firebase signs the user out as part of deleting the account — clear local
+              // content too, so nothing from the deleted account lingers on the device.
+              usePlacesStore.setState({ places: [], notes: [] });
+              useMeetingsStore.setState({ meetings: [] });
+              useSavedRoutesStore.setState({ savedRoutes: [] });
+              useProfileStore.setState({ profile: { id: '1', name: 'User', bio: '' } });
+            } catch (e: any) {
+              Alert.alert('Couldn’t delete account', e?.message ?? 'Please try again.');
+            }
           },
         },
       ],

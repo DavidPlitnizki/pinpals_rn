@@ -2,16 +2,21 @@ import { renderHook, act } from '@testing-library/react-native';
 
 // ─── mocks ─────────────────────────────────────────────────────────────────
 
-const mockLogin = jest.fn();
+const mockSignInWithGoogle = jest.fn();
+const mockSignInWithApple = jest.fn();
 const mockSkipAuth = jest.fn();
 const mockPush = jest.fn();
 
-jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: mockPush }),
+jest.mock('../../../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    signInWithGoogle: mockSignInWithGoogle,
+    signInWithApple: mockSignInWithApple,
+    skipAuth: mockSkipAuth,
+  }),
 }));
 
-jest.mock('../../../../contexts/AuthContext', () => ({
-  useAuth: () => ({ login: mockLogin, skipAuth: mockSkipAuth }),
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockPush }),
 }));
 
 // eslint-disable-next-line import/first
@@ -23,103 +28,64 @@ function renderLogin() {
   return renderHook(() => useLoginScreen());
 }
 
-// ─── validation ────────────────────────────────────────────────────────────
-
-describe('validation (via handleLogin)', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('sets error for email without @', async () => {
-    const { result } = renderLogin();
-    act(() => result.current.setEmail('notanemail'));
-    act(() => result.current.setPassword('password123'));
-    await act(() => result.current.handleLogin());
-    expect(result.current.error).toMatch(/valid email/i);
-    expect(mockLogin).not.toHaveBeenCalled();
-  });
-
-  it('sets error for password shorter than 6 characters', async () => {
-    const { result } = renderLogin();
-    act(() => result.current.setEmail('user@test.com'));
-    act(() => result.current.setPassword('abc'));
-    await act(() => result.current.handleLogin());
-    expect(result.current.error).toMatch(/6 characters/i);
-    expect(mockLogin).not.toHaveBeenCalled();
-  });
-
-  it('clears previous error and calls login when credentials are valid', async () => {
-    mockLogin.mockResolvedValue(undefined);
-    const { result } = renderLogin();
-    // First set an error
-    act(() => result.current.setEmail('bad'));
-    await act(() => result.current.handleLogin());
-    expect(result.current.error).not.toBeNull();
-
-    // Now fix credentials
-    act(() => result.current.setEmail('good@test.com'));
-    act(() => result.current.setPassword('secret123'));
-    await act(() => result.current.handleLogin());
-    expect(result.current.error).toBeNull();
-    expect(mockLogin).toHaveBeenCalledWith('good@test.com', 'secret123');
-  });
+beforeEach(() => {
+  jest.clearAllMocks();
 });
 
-// ─── handleLogin ───────────────────────────────────────────────────────────
+// ─── handleGooglePress ─────────────────────────────────────────────────────
 
-describe('handleLogin', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('sets isLoading to true while logging in then false after', async () => {
+describe('handleGooglePress', () => {
+  it('sets isLoading to true while signing in then false after', async () => {
     let resolve: () => void;
-    mockLogin.mockReturnValue(
+    mockSignInWithGoogle.mockReturnValue(
       new Promise<void>((r) => {
         resolve = r;
       }),
     );
 
     const { result } = renderLogin();
-    act(() => result.current.setEmail('user@test.com'));
-    act(() => result.current.setPassword('password123'));
 
-    let loginPromise: Promise<void>;
+    let pressPromise: Promise<void>;
     act(() => {
-      loginPromise = result.current.handleLogin();
+      pressPromise = result.current.handleGooglePress();
     });
     expect(result.current.isLoading).toBe(true);
 
     await act(async () => {
       resolve!();
-      await loginPromise;
+      await pressPromise;
     });
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('sets error when login throws', async () => {
-    mockLogin.mockRejectedValue(new Error('Invalid credentials'));
+  it('sets error when sign-in throws', async () => {
+    mockSignInWithGoogle.mockRejectedValue(new Error('Google sign-in failed.'));
     const { result } = renderLogin();
-    act(() => result.current.setEmail('user@test.com'));
-    act(() => result.current.setPassword('password123'));
-    await act(() => result.current.handleLogin());
-    expect(result.current.error).toBe('Invalid credentials');
+    await act(() => result.current.handleGooglePress());
+    expect(result.current.error).toBe('Google sign-in failed.');
+  });
+
+  it('clears a previous error on a new attempt', async () => {
+    mockSignInWithGoogle.mockRejectedValueOnce(new Error('first failure'));
+    const { result } = renderLogin();
+    await act(() => result.current.handleGooglePress());
+    expect(result.current.error).toBe('first failure');
+
+    mockSignInWithGoogle.mockResolvedValueOnce(undefined);
+    await act(() => result.current.handleGooglePress());
+    expect(result.current.error).toBeNull();
   });
 });
 
-// ─── navigation helpers ────────────────────────────────────────────────────
+// ─── handleApplePress ──────────────────────────────────────────────────────
 
-describe('goToSignUp / goToResetPassword', () => {
-  it('goToSignUp pushes to sign-up route', () => {
+describe('handleApplePress', () => {
+  it('calls signInWithApple and sets error on failure', async () => {
+    mockSignInWithApple.mockRejectedValue(new Error('Apple sign-in failed.'));
     const { result } = renderLogin();
-    act(() => result.current.goToSignUp());
-    expect(mockPush).toHaveBeenCalledWith('/(auth)/sign-up');
-  });
-
-  it('goToResetPassword pushes to reset-password route', () => {
-    const { result } = renderLogin();
-    act(() => result.current.goToResetPassword());
-    expect(mockPush).toHaveBeenCalledWith('/(auth)/reset-password');
+    await act(() => result.current.handleApplePress());
+    expect(mockSignInWithApple).toHaveBeenCalled();
+    expect(result.current.error).toBe('Apple sign-in failed.');
   });
 });
 
@@ -131,5 +97,28 @@ describe('handleSkip', () => {
     const { result } = renderLogin();
     await act(() => result.current.handleSkip());
     expect(mockSkipAuth).toHaveBeenCalled();
+  });
+
+  it('sets error when skipAuth throws', async () => {
+    mockSkipAuth.mockRejectedValue(new Error('Anonymous sign-in disabled.'));
+    const { result } = renderLogin();
+    await act(() => result.current.handleSkip());
+    expect(result.current.error).toBe('Anonymous sign-in disabled.');
+  });
+});
+
+// ─── goToTerms / goToPrivacy ───────────────────────────────────────────────
+
+describe('goToTerms / goToPrivacy', () => {
+  it('goToTerms pushes the terms legal route', () => {
+    const { result } = renderLogin();
+    act(() => result.current.goToTerms());
+    expect(mockPush).toHaveBeenCalledWith('/legal?type=terms');
+  });
+
+  it('goToPrivacy pushes the privacy legal route', () => {
+    const { result } = renderLogin();
+    act(() => result.current.goToPrivacy());
+    expect(mockPush).toHaveBeenCalledWith('/legal?type=privacy');
   });
 });

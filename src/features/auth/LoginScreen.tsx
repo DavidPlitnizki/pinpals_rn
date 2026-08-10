@@ -1,195 +1,269 @@
-import React from 'react';
-import {
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect } from 'react';
+import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PinButton } from '../../design-system/components/PinButton';
-import { PinTextField } from '../../design-system/components/PinTextField';
-import { Colors, Spacing, Typography } from '../../design-system/tokens';
-import { AuthDivider } from './components/AuthDivider';
+import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
 import { SocialButtons } from './components/SocialButtons';
 import { useLoginScreen } from './hooks/useLoginScreen';
 
+const DROP_SIZE = 40;
+// Staggered so the five pins pop in one after another instead of all at once.
+const PIN_STAGGER_MS = 130;
+
+// Shared entrance: scales up from nothing with a springy (non-linear) overshoot, while also
+// kicking sideways from an offset back to center with a looser, wobblier spring — the two
+// running concurrently is what reads as "grows in with a left-right jiggle" rather than a
+// plain scale-in.
+function usePinEntrance(delay: number) {
+  const scale = useSharedValue(0);
+  const translateX = useSharedValue(-14);
+
+  useEffect(() => {
+    scale.value = withDelay(delay, withSpring(1, { damping: 9, stiffness: 200 }));
+    translateX.value = withDelay(delay, withSpring(0, { damping: 3.5, stiffness: 160, mass: 0.5 }));
+  }, [delay, scale, translateX]);
+
+  return useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }, { translateX: translateX.value }],
+  }));
+}
+
+interface DecorPinProps {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  color: string;
+  style: object;
+  delay: number;
+}
+
+// Decorative map-pin markers scattered above the background image's own logo — same drop +
+// white icon-badge shape used for real place pins on the map (see MapMarkers.tsx), just
+// smaller and non-interactive.
+function DecorPin({ icon, color, style, delay }: DecorPinProps) {
+  const animatedStyle = usePinEntrance(delay);
+  return (
+    <Animated.View style={[styles.decorPin, style, animatedStyle]} pointerEvents="none">
+      <Ionicons name="location-sharp" size={DROP_SIZE} color={color} />
+      <View style={styles.decorPinBadge}>
+        <Ionicons name={icon} size={14} color={color} />
+      </View>
+    </Animated.View>
+  );
+}
+
+interface DecorPinMciProps {
+  icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+  color: string;
+  style: object;
+  delay: number;
+}
+
+// Same shape as DecorPin, for the two markers whose closest icon lives in
+// MaterialCommunityIcons instead of Ionicons (castle, parking — matches the icon set already
+// used for these same categories in the map's quick-search chips).
+function DecorPinMci({ icon, color, style, delay }: DecorPinMciProps) {
+  const animatedStyle = usePinEntrance(delay);
+  return (
+    <Animated.View style={[styles.decorPin, style, animatedStyle]} pointerEvents="none">
+      <Ionicons name="location-sharp" size={DROP_SIZE} color={color} />
+      <View style={styles.decorPinBadge}>
+        <MaterialCommunityIcons name={icon} size={14} color={color} />
+      </View>
+    </Animated.View>
+  );
+}
+
 export default function LoginScreen() {
   const {
-    email,
-    setEmail,
-    password,
-    setPassword,
     isLoading,
     error,
-    handleLogin,
     handleGooglePress,
     handleApplePress,
     handleSkip,
-    goToSignUp,
-    goToResetPassword,
+    goToTerms,
+    goToPrivacy,
   } = useLoginScreen();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Logo */}
-          <View style={styles.logoSection}>
-            <View style={styles.logoRow}>
-              <Image
-                source={require('../../../assets/images/pinpals-logo.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-              <Text style={styles.logoTitle}>Pinpals</Text>
-            </View>
-            <Text style={styles.tagline}>Your places, your memories</Text>
-          </View>
+    <ImageBackground
+      source={require('../../../assets/images/splash-screen.png')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      {/* Restaurant (left, roughly centered), park and shop (right, staggered heights),
+          landmark (below-left of restaurant), parking (just above/right of the logo) —
+          scattered above the logo baked into the background image. */}
+      <DecorPin
+        icon="restaurant"
+        color="#E8834A"
+        style={styles.decorPinLeft}
+        delay={0 * PIN_STAGGER_MS}
+      />
+      <DecorPin
+        icon="leaf"
+        color="#4A7C59"
+        style={styles.decorPinRightHigh}
+        delay={1 * PIN_STAGGER_MS}
+      />
+      <DecorPin
+        icon="storefront"
+        color="#3D9BE9"
+        style={styles.decorPinRightLow}
+        delay={2 * PIN_STAGGER_MS}
+      />
+      <DecorPinMci
+        icon="castle"
+        color="#607D8B"
+        style={styles.decorPinLandmark}
+        delay={3 * PIN_STAGGER_MS}
+      />
+      <DecorPinMci
+        icon="parking"
+        color="#6C63FF"
+        style={styles.decorPinParking}
+        delay={4 * PIN_STAGGER_MS}
+      />
 
-          {/* Form */}
-          <View style={styles.form}>
-            <PinTextField
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-            />
-            <View style={styles.fieldGap} />
-            <PinTextField
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              secureTextEntry
-              autoComplete="password"
-            />
-
-            <TouchableOpacity style={styles.forgotRow} onPress={goToResetPassword}>
-              <Text style={styles.forgotText}>Forgot password?</Text>
-            </TouchableOpacity>
-
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-            <PinButton
-              title="Log In"
-              onPress={handleLogin}
-              variant="primary"
-              size="lg"
-              fullWidth
-              loading={isLoading}
-            />
-          </View>
-
-          {/* Social */}
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        {/* The background image already carries the logo/title/tagline — content here just
+            sits in its lower, empty portion. */}
+        <View style={styles.content}>
           <View style={styles.social}>
-            <AuthDivider />
-            <View style={styles.socialButtons}>
-              <SocialButtons onGooglePress={handleGooglePress} onApplePress={handleApplePress} />
-            </View>
+            <SocialButtons
+              onGooglePress={handleGooglePress}
+              onApplePress={handleApplePress}
+              disabled={isLoading}
+            />
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </View>
 
-          {/* Skip */}
-          <PinButton title="Skip for now" onPress={handleSkip} variant="ghost" fullWidth />
+          <TouchableOpacity
+            onPress={handleSkip}
+            activeOpacity={0.7}
+            style={styles.skipButtonWrap}
+          >
+            <View style={styles.skipButton}>
+              <Text style={styles.skipText}>Skip for now</Text>
+            </View>
+          </TouchableOpacity>
 
-          {/* Sign up link */}
-          <View style={styles.signUpRow}>
-            <Text style={styles.signUpPrompt}>Don&apos;t have an account? </Text>
-            <TouchableOpacity onPress={goToSignUp}>
-              <Text style={styles.signUpLink}>Sign up</Text>
+          <View style={styles.legalRow}>
+            <TouchableOpacity onPress={goToTerms}>
+              <Text style={styles.legalLink}>Terms of Service</Text>
+            </TouchableOpacity>
+            <Text style={styles.legalDivider}>·</Text>
+            <TouchableOpacity onPress={goToPrivacy}>
+              <Text style={styles.legalLink}>Privacy Policy</Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </View>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: { flex: 1, backgroundColor: Colors.white },
-  scroll: {
-    flexGrow: 1,
+  background: {
+    flex: 1,
+    // Off-white with a warm vanilla tint, matching the map illustration's own background —
+    // not the splash screen's yellow.
+    backgroundColor: '#F7F2E7',
+  },
+  container: { flex: 1 },
+  content: {
+    flex: 1,
+    justifyContent: 'flex-end',
     paddingHorizontal: Spacing.s24,
-    paddingTop: Spacing.s48,
     paddingBottom: Spacing.s32,
+    gap: Spacing.s24,
   },
-  logoSection: {
+  decorPin: {
+    position: 'absolute',
+    width: DROP_SIZE,
+    height: DROP_SIZE,
     alignItems: 'center',
-    marginBottom: Spacing.s48,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
   },
-  logoRow: {
-    flexDirection: 'row',
+  decorPinBadge: {
+    position: 'absolute',
+    top: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Colors.white,
     alignItems: 'center',
-    marginBottom: Spacing.s8,
-    gap: Spacing.s12,
+    justifyContent: 'center',
   },
-  logoImage: {
-    width: 72,
-    height: 72,
-    marginInlineStart: -12,
+  // Left pin sits closer to center than the screen edge; the two right pins are staggered,
+  // one noticeably higher than the other.
+  decorPinLeft: {
+    top: '16%',
+    left: '32%',
   },
-  logoTitle: {
-    ...Typography.largeTitle,
-    color: Colors.brand.primary,
+  decorPinRightHigh: {
+    top: '9%',
+    right: '20%',
   },
-  tagline: {
-    ...Typography.subheadline,
-    color: Colors.neutral[500],
+  decorPinRightLow: {
+    top: '20%',
+    right: '14%',
   },
-  form: {
-    marginBottom: Spacing.s24,
+  decorPinLandmark: {
+    top: '26%',
+    left: '14%',
   },
-  fieldGap: { height: Spacing.s16 },
-  forgotRow: {
-    alignItems: 'flex-end',
-    marginTop: Spacing.s8,
-    marginBottom: Spacing.s4,
+  decorPinParking: {
+    top: '30%',
+    left: '46%',
   },
-  forgotText: {
-    ...Typography.footnote,
-    color: Colors.brand.primary,
-    fontWeight: '600',
+  social: {
+    gap: Spacing.s16,
   },
   errorText: {
     ...Typography.footnote,
     color: Colors.error,
-    marginBottom: Spacing.s12,
+    textAlign: 'center',
   },
-  social: {
-    marginBottom: Spacing.s8,
-    gap: Spacing.s16,
+  skipButtonWrap: {
+    alignItems: 'center',
   },
-  socialButtons: {
-    marginTop: Spacing.s4,
+  skipButton: {
+    paddingHorizontal: Spacing.s32,
+    paddingVertical: Spacing.s12,
+    borderRadius: Radii.full,
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: Colors.brand.primary,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  signUpRow: {
+  skipText: {
+    ...Typography.headline,
+    fontWeight: '600',
+    color: Colors.brand.primary,
+  },
+  legalRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: Spacing.s24,
+    gap: Spacing.s8,
   },
-  signUpPrompt: {
-    ...Typography.subheadline,
-    color: Colors.neutral[600],
-  },
-  signUpLink: {
-    ...Typography.subheadline,
+  legalLink: {
+    ...Typography.footnote,
     color: Colors.brand.primary,
     fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  legalDivider: {
+    ...Typography.caption,
+    color: Colors.neutral[400],
   },
 });

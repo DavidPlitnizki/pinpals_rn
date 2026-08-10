@@ -53,6 +53,14 @@ export function useMapScreen() {
   // sheet and the green preview pin at the chosen point.
   const [showQuickAddSheet, setShowQuickAddSheet] = useState(false);
   const [pendingPlaceCoords, setPendingPlaceCoords] = useState<Coordinates | null>(null);
+  // Address/phone/website carried over from a search result's Mapbox metadata, if the
+  // pending place came from one — native basemap POI taps and route-waypoint saves have no
+  // such metadata to offer, so this is null for those flows.
+  const [pendingPlaceMeta, setPendingPlaceMeta] = useState<{
+    address?: string;
+    phone?: string;
+    website?: string;
+  } | null>(null);
 
   const [searchResultMarkers, setSearchResultMarkers] = useState<PendingSearchMarker[]>([]);
   const [nativePoiMarker, setNativePoiMarker] = useState<NativePoiMarker | null>(null);
@@ -260,6 +268,7 @@ export function useMapScreen() {
 
   const handleConfirmNativePoiMarker = useCallback((marker: NativePoiMarker) => {
     setPendingPlaceCoords(marker.coordinates);
+    setPendingPlaceMeta(null);
     setNativePoiMarker(null);
     setShowQuickAddSheet(true);
   }, []);
@@ -267,12 +276,14 @@ export function useMapScreen() {
   const handleCloseQuickAddSheet = useCallback(() => {
     setShowQuickAddSheet(false);
     setPendingPlaceCoords(null);
+    setPendingPlaceMeta(null);
   }, []);
 
   // Opens the quick-add sheet at a route waypoint's coordinates — used by "Save this point"
   // in the RouteDestinationMarker callout, same as confirming a search result or POI.
   const handleSaveWaypointAsPlace = useCallback((coordinates: Coordinates) => {
     setPendingPlaceCoords(coordinates);
+    setPendingPlaceMeta(null);
     setShowQuickAddSheet(true);
   }, []);
 
@@ -299,6 +310,9 @@ export function useMapScreen() {
         favorite: data.favorite,
         pinColor: data.pinColor,
         mainPhotoUri,
+        address: pendingPlaceMeta?.address,
+        phone: pendingPlaceMeta?.phone,
+        website: pendingPlaceMeta?.website,
       });
 
       if (description || photoUris.length > 0 || data.mood) {
@@ -315,8 +329,9 @@ export function useMapScreen() {
 
       setShowQuickAddSheet(false);
       setPendingPlaceCoords(null);
+      setPendingPlaceMeta(null);
     },
-    [pendingPlaceCoords, addPlace, addNote],
+    [pendingPlaceCoords, pendingPlaceMeta, addPlace, addNote],
   );
 
   const handleSelectSearchResult = useCallback((result: MapboxSearchResult) => {
@@ -338,6 +353,11 @@ export function useMapScreen() {
 
   const handleConfirmSearchResultMarker = useCallback((marker: PendingSearchMarker) => {
     setPendingPlaceCoords(marker.coordinates);
+    setPendingPlaceMeta({
+      address: marker.fullAddress,
+      phone: marker.phone,
+      website: marker.website,
+    });
     setSearchResultMarkers((prev) => prev.filter((m) => m.id !== marker.id));
     setShowQuickAddSheet(true);
   }, []);
@@ -350,6 +370,7 @@ export function useMapScreen() {
       longitude: currentCenter.current[0],
     };
     setPendingPlaceCoords(coords);
+    setPendingPlaceMeta(null);
     setShowQuickAddSheet(true);
   }, [gpsCoords]);
 
@@ -385,6 +406,7 @@ export function useMapScreen() {
     showProfileMenu,
     showQuickAddSheet,
     pendingPlaceCoords,
+    pendingPlaceMeta,
     searchResultMarkers,
     nativePoiMarker,
     dismissSignal,

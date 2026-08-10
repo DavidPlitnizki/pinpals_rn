@@ -11,8 +11,6 @@ export default function AuthLayout() {
       }}
     >
       <Stack.Screen name="login" options={{ gestureEnabled: false }} />
-      <Stack.Screen name="sign-up" />
-      <Stack.Screen name="reset-password" />
     </Stack>
   );
 }

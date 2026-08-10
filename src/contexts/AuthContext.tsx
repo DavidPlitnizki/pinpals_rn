@@ -4,9 +4,10 @@ import {
   AuthData,
   loginAnonymously,
   onAuthStateChanged,
-  login as serviceLogin,
   logout as serviceLogout,
-  signUp as serviceSignUp,
+  signInWithGoogle as serviceSignInWithGoogle,
+  signInWithApple as serviceSignInWithApple,
+  deleteAccount as serviceDeleteAccount,
 } from '../services/authService';
 
 interface AuthContextValue {
@@ -14,10 +15,11 @@ interface AuthContextValue {
   isGuest: boolean;
   isLoading: boolean;
   authData: AuthData | null;
-  login: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signInWithApple: () => Promise<void>;
   logout: () => Promise<void>;
   skipAuth: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -39,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           providerId: firebaseUser.isAnonymous
             ? 'anonymous'
             : ((firebaseUser.providerData[0]?.providerId as AuthData['providerId'] | undefined) ??
-              'password'),
+              'google.com'),
         });
         setIsAuth(!firebaseUser.isAnonymous);
         setIsGuest(firebaseUser.isAnonymous);
@@ -54,12 +56,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    await serviceLogin(email, password);
+  const signInWithGoogle = useCallback(async () => {
+    await serviceSignInWithGoogle();
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string, name: string) => {
-    await serviceSignUp(email, password, name);
+  const signInWithApple = useCallback(async () => {
+    await serviceSignInWithApple();
   }, []);
 
   const logout = useCallback(async () => {
@@ -70,6 +72,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await loginAnonymously();
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    await serviceDeleteAccount();
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -77,10 +83,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isGuest,
         isLoading,
         authData,
-        login,
-        signUp,
+        signInWithGoogle,
+        signInWithApple,
         logout,
         skipAuth,
+        deleteAccount,
       }}
     >
       {children}
