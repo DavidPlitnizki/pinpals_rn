@@ -148,14 +148,19 @@ export default function LoginScreen() {
             </View>
           </TouchableOpacity>
 
-          <View style={styles.legalRow}>
-            <TouchableOpacity onPress={goToTerms}>
-              <Text style={styles.legalLink}>Terms of Service</Text>
-            </TouchableOpacity>
-            <Text style={styles.legalDivider}>·</Text>
-            <TouchableOpacity onPress={goToPrivacy}>
-              <Text style={styles.legalLink}>Privacy Policy</Text>
-            </TouchableOpacity>
+          <View style={styles.legalBlock}>
+            <Text style={styles.legalDisclaimer}>
+              By continuing, you agree to our
+            </Text>
+            <View style={styles.legalRow}>
+              <TouchableOpacity onPress={goToTerms}>
+                <Text style={styles.legalLink}>Terms of Service</Text>
+              </TouchableOpacity>
+              <Text style={styles.legalDivider}>·</Text>
+              <TouchableOpacity onPress={goToPrivacy}>
+                <Text style={styles.legalLink}>Privacy Policy</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </SafeAreaView>
@@ -249,6 +254,14 @@ const styles = StyleSheet.create({
     ...Typography.headline,
     fontWeight: '600',
     color: Colors.brand.primary,
+  },
+  legalBlock: {
+    alignItems: 'center',
+    gap: Spacing.s4,
+  },
+  legalDisclaimer: {
+    ...Typography.caption,
+    color: Colors.neutral[600],
   },
   legalRow: {
     flexDirection: 'row',
