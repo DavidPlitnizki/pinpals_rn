@@ -6,6 +6,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { formatSlugLabel } from '../../../shared/format';
+import { openPlaceSearch } from '../../../services/webSearch';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { NativePoiMarker as NativePoiMarkerData } from '../types';
 import { iconForMaki } from '../utils/mapboxIcons';
@@ -43,6 +44,10 @@ export function NativePoiMarker({
   const handleSelected = useCallback(() => onAnnotationSelected?.(), [onAnnotationSelected]);
   const handleDirectionsPress = useCallback(() => onDirections(marker), [onDirections, marker]);
   const handleAddPlacePress = useCallback(() => onAddPlace(marker), [onAddPlace, marker]);
+  const handleSearchPress = useCallback(
+    () => void openPlaceSearch(marker.name, marker.coordinates),
+    [marker.name, marker.coordinates],
+  );
 
   return (
     <>
@@ -88,6 +93,14 @@ export function NativePoiMarker({
           )}
 
           <View style={styles.calloutActionsRow}>
+            <CalloutActionButton
+              icon="globe-outline"
+              iconSize={24}
+              iconColor={Colors.neutral[600]}
+              backgroundColor={Colors.neutral[100]}
+              borderColor={Colors.neutral[400]}
+              onPress={handleSearchPress}
+            />
             <CalloutActionButton
               icon="navigate-outline"
               iconSize={24}

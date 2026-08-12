@@ -6,6 +6,7 @@ import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { openPlaceSearch } from '../../../services/webSearch';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { PendingSearchMarker } from '../types';
 import { iconForMaki } from '../utils/mapboxIcons';
@@ -123,6 +124,11 @@ export function SearchResultMarker({
     onConfirm(selected);
   }, [onConfirm, selected]);
 
+  const handleSearchPress = useCallback(() => {
+    if (!selected) return;
+    void openPlaceSearch(selected.name, selected.coordinates);
+  }, [selected]);
+
   return (
     <>
       {markers.map((marker) => (
@@ -176,6 +182,14 @@ export function SearchResultMarker({
                 </TouchableOpacity>
               )}
               <View style={styles.calloutActionsRow}>
+                <CalloutActionButton
+                  icon="globe-outline"
+                  iconSize={24}
+                  iconColor={Colors.neutral[600]}
+                  backgroundColor={Colors.neutral[100]}
+                  borderColor={Colors.neutral[400]}
+                  onPress={handleSearchPress}
+                />
                 <CalloutActionButton
                   icon="navigate-outline"
                   iconSize={24}

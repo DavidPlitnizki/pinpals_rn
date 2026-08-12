@@ -10,6 +10,7 @@ import { usePlaceCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { MemoryMood, Place, MOOD_CONFIG } from '../../../models/types';
 import { buildGoogleMapsSearchUrl } from '../../../shared/mapLinks';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '../../../shared/constants';
+import { openPlaceSearch } from '../../../services/webSearch';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { CATEGORY_LABELS, HIT_SLOP_8 } from '../constants';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
@@ -142,6 +143,11 @@ function MarkerCallout({
     if (place.website) void Linking.openURL(place.website);
   }, [place.website]);
 
+  const handleSearchPress = useCallback(
+    () => void openPlaceSearch(place.name, place.coordinates),
+    [place.name, place.coordinates],
+  );
+
   return (
     <View style={styles.callout}>
       <View style={styles.calloutHeaderRow}>
@@ -221,6 +227,14 @@ function MarkerCallout({
 
       <View style={styles.calloutDivider} />
       <View style={styles.calloutActionsRow}>
+        <CalloutActionButton
+          icon="globe-outline"
+          iconSize={24}
+          iconColor={Colors.neutral[600]}
+          backgroundColor={Colors.neutral[100]}
+          borderColor={Colors.neutral[400]}
+          onPress={handleSearchPress}
+        />
         <CalloutActionButton
           icon="navigate-outline"
           iconSize={24}
