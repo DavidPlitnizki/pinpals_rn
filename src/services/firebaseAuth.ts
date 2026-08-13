@@ -25,6 +25,9 @@ export interface AuthData {
   uid: string;
   email: string | null;
   name: string | null;
+  // Only Google ever populates this — Sign in with Apple never returns a profile photo,
+  // by design of Apple's privacy model.
+  photoURL: string | null;
   isAnonymous: boolean;
   providerId: AuthProviderId;
 }
@@ -36,6 +39,7 @@ function userToAuthData(user: FirebaseAuthTypes.User): AuthData {
     uid: user.uid,
     email: user.email,
     name: user.displayName,
+    photoURL: user.photoURL,
     isAnonymous: user.isAnonymous,
     providerId: user.isAnonymous
       ? 'anonymous'

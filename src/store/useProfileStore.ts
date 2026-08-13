@@ -15,7 +15,6 @@ export const useProfileStore = create<ProfileState>()(
       profile: {
         id: '1',
         name: 'User',
-        bio: '',
       },
 
       updateProfile: (updates) => {

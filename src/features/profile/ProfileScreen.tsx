@@ -3,7 +3,6 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,11 +13,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Avatar } from '../../design-system/components/Avatar';
 import { PinButton } from '../../design-system/components/PinButton';
 import { PinCard } from '../../design-system/components/PinCard';
 import { PinTextField } from '../../design-system/components/PinTextField';
 import { Colors, Spacing, Typography } from '../../design-system/tokens';
 import { AuthProviderId } from '../../services/firebaseAuth';
+import { AvatarPickerSheet } from './components/AvatarPickerSheet';
 import { useProfileScreen } from './hooks/useProfileScreen';
 import { getInitials } from './utils/getInitials';
 
@@ -43,9 +44,12 @@ export default function ProfileScreen() {
     setIsEditing,
     name,
     setName,
-    bio,
-    setBio,
-    handlePickAvatar,
+    avatarSheetVisible,
+    openAvatarSheet,
+    closeAvatarSheet,
+    handlePickPhoto,
+    handleSelectAvatarPreset,
+    handleClearAvatarPreset,
     handleSave,
     handleCancelEdit,
     handleLogout,
@@ -56,7 +60,6 @@ export default function ProfileScreen() {
   const providerBadge = PROVIDER_BADGE[authData?.providerId ?? 'anonymous'];
 
   const handleStartEdit = useCallback(() => setIsEditing(true), [setIsEditing]);
-  const handleOpenPaywall = useCallback(() => router.push('/paywall' as any), [router]);
   const handleOpenPrivacy = useCallback(() => router.push('/legal?type=privacy' as any), [router]);
   const handleOpenTerms = useCallback(() => router.push('/legal?type=terms' as any), [router]);
 
@@ -66,8 +69,9 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
         {!isEditing ? (
-          <TouchableOpacity onPress={handleStartEdit} hitSlop={HIT_SLOP}>
-            <Ionicons name="create-outline" size={22} color={Colors.brand.primary} />
+          <TouchableOpacity onPress={handleStartEdit} hitSlop={HIT_SLOP} style={styles.editRow}>
+            <Ionicons name="create-outline" size={18} color={Colors.brand.primary} />
+            <Text style={styles.editLink}>Edit</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity onPress={handleCancelEdit} hitSlop={HIT_SLOP}>
@@ -78,31 +82,27 @@ export default function ProfileScreen() {
 
       {/* Fixed avatar */}
       <View style={styles.avatarSection}>
-        <TouchableOpacity
-          style={styles.avatarContainer}
-          onPress={isGuest ? undefined : handlePickAvatar}
-          activeOpacity={isGuest ? 1 : 0.7}
-        >
-          {isGuest ? (
+        <View style={styles.avatarContainer}>
+          {isGuest && !profile.avatarUri && !profile.avatarPreset ? (
             <View style={styles.avatarPlaceholderGuest}>
               <MaterialCommunityIcons name="incognito" size={48} color={Colors.neutral[400]} />
             </View>
-          ) : profile.avatarUri ? (
-            <Image source={{ uri: profile.avatarUri }} style={styles.avatar} />
           ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitials}>{getInitials(profile.name)}</Text>
-            </View>
+            <Avatar profile={profile} size={96} getInitials={getInitials} />
           )}
-          {!isGuest && (
-            <View style={styles.avatarBadge}>
-              <Ionicons name="pencil" size={13} color={Colors.neutral[700]} />
-            </View>
+          {isEditing && (
+            <TouchableOpacity
+              style={styles.avatarEditBadge}
+              onPress={openAvatarSheet}
+              hitSlop={HIT_SLOP}
+            >
+              <Ionicons name="camera" size={15} color={Colors.white} />
+            </TouchableOpacity>
           )}
           <View style={styles.providerBadge}>
             <Ionicons name={providerBadge.icon} size={12} color={Colors.white} />
           </View>
-        </TouchableOpacity>
+        </View>
       </View>
 
       {/* Scrollable content */}
@@ -124,25 +124,10 @@ export default function ProfileScreen() {
                     placeholder="Your name"
                   />
                   <View style={styles.fieldSpacing} />
-                  <PinTextField
-                    label="Bio"
-                    value={bio}
-                    onChangeText={setBio}
-                    placeholder="Tell us about yourself..."
-                    multiline
-                  />
-                  <View style={styles.fieldSpacing} />
                   <PinButton title="Save Changes" onPress={handleSave} fullWidth />
                 </View>
               ) : (
-                <View>
-                  <Text style={styles.profileName}>{profile.name}</Text>
-                  {profile.bio ? (
-                    <Text style={styles.profileBio}>{profile.bio}</Text>
-                  ) : (
-                    <Text style={styles.placeholderBio}>No bio yet. Tap Edit to add one.</Text>
-                  )}
-                </View>
+                <Text style={styles.profileName}>{profile.name}</Text>
               )}
             </PinCard>
 
@@ -168,20 +153,6 @@ export default function ProfileScreen() {
                   <Text style={styles.statLabel}>Want to Visit</Text>
                 </View>
               </View>
-            </PinCard>
-
-            {/* Billing */}
-            <PinCard style={styles.accountCard}>
-              <TouchableOpacity style={styles.accountRow} onPress={handleOpenPaywall}>
-                <Ionicons
-                  name="card-outline"
-                  size={20}
-                  color={Colors.neutral[700]}
-                  style={styles.accountIcon}
-                />
-                <Text style={styles.accountRowText}>Payment Method & Billing</Text>
-                <Ionicons name="chevron-forward" size={18} color={Colors.neutral[300]} />
-              </TouchableOpacity>
             </PinCard>
 
             {/* Legal */}
@@ -247,6 +218,15 @@ export default function ProfileScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <AvatarPickerSheet
+        visible={avatarSheetVisible}
+        selectedPresetId={profile.avatarPreset}
+        onClose={closeAvatarSheet}
+        onPickPhoto={handlePickPhoto}
+        onSelectPreset={handleSelectAvatarPreset}
+        onClearPreset={handleClearAvatarPreset}
+      />
     </SafeAreaView>
   );
 }
@@ -266,17 +246,10 @@ const styles = StyleSheet.create({
   },
   title: { ...Typography.largeTitle, color: Colors.neutral[900] },
   cancelLink: { ...Typography.body, color: Colors.neutral[500] },
+  editRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.s4 },
+  editLink: { ...Typography.body, color: Colors.brand.primary, fontWeight: '600' },
   avatarSection: { alignItems: 'center', paddingBottom: Spacing.s16 },
   avatarContainer: { position: 'relative' },
-  avatar: { width: 96, height: 96, borderRadius: 48 },
-  avatarPlaceholder: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: Colors.brand.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   avatarPlaceholderGuest: {
     width: 96,
     height: 96,
@@ -285,19 +258,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarInitials: { fontSize: 36, fontWeight: '700', color: Colors.white },
-  avatarBadge: {
+  avatarEditBadge: {
     position: 'absolute',
-    bottom: 0,
+    top: 0,
     right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.white,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: Colors.brand.primary,
     borderWidth: 2,
-    borderColor: Colors.neutral[100],
+    borderColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   providerBadge: {
     position: 'absolute',
@@ -319,17 +296,6 @@ const styles = StyleSheet.create({
   profileName: {
     ...Typography.title2,
     color: Colors.neutral[900],
-    marginBottom: Spacing.s4,
-  },
-  profileBio: {
-    ...Typography.body,
-    color: Colors.neutral[600],
-    lineHeight: 22,
-  },
-  placeholderBio: {
-    ...Typography.body,
-    color: Colors.neutral[400],
-    fontStyle: 'italic',
   },
   statsCard: { marginBottom: 0 },
   statsTitleRow: {

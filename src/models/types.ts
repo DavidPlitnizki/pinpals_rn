@@ -89,5 +89,7 @@ export interface UserProfile {
   id: string;
   name: string;
   avatarUri?: string;
-  bio?: string;
+  // Id into AVATAR_PRESETS (src/shared/avatarPresets.ts) — mutually exclusive with
+  // avatarUri; picking one clears the other.
+  avatarPreset?: string;
 }

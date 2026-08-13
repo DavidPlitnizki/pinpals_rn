@@ -1,5 +1,6 @@
+import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 
 import { useAuth } from '../../../contexts/AuthContext';
@@ -19,9 +20,16 @@ export function useProfileScreen() {
   const { fontScale, setFontScale, theme, setTheme } = useSettingsStore();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile.name);
-  const [bio, setBio] = useState(profile.bio ?? '');
+  const [avatarSheetVisible, setAvatarSheetVisible] = useState(false);
 
-  async function handlePickAvatar() {
+  const openAvatarSheet = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setAvatarSheetVisible(true);
+  }, []);
+
+  const closeAvatarSheet = useCallback(() => setAvatarSheetVisible(false), []);
+
+  async function handlePickPhoto() {
     const source = await promptPhotoSource();
     if (!source) return;
 
@@ -39,7 +47,8 @@ export function useProfileScreen() {
         quality: 0.8,
       });
       if (!result.canceled && result.assets[0]) {
-        updateProfile({ avatarUri: result.assets[0].uri });
+        updateProfile({ avatarUri: result.assets[0].uri, avatarPreset: undefined });
+        setAvatarSheetVisible(false);
       }
       return;
     }
@@ -56,8 +65,19 @@ export function useProfileScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      updateProfile({ avatarUri: result.assets[0].uri });
+      updateProfile({ avatarUri: result.assets[0].uri, avatarPreset: undefined });
+      setAvatarSheetVisible(false);
     }
+  }
+
+  function handleSelectAvatarPreset(id: string) {
+    updateProfile({ avatarPreset: id, avatarUri: undefined });
+    setAvatarSheetVisible(false);
+  }
+
+  function handleClearAvatarPreset() {
+    updateProfile({ avatarPreset: undefined, avatarUri: undefined });
+    setAvatarSheetVisible(false);
   }
 
   function handleSave() {
@@ -65,13 +85,12 @@ export function useProfileScreen() {
       Alert.alert('Name required', 'Please enter your name.');
       return;
     }
-    updateProfile({ name: name.trim(), bio: bio.trim() || undefined });
+    updateProfile({ name: name.trim() });
     setIsEditing(false);
   }
 
   function handleCancelEdit() {
     setName(profile.name);
-    setBio(profile.bio ?? '');
     setIsEditing(false);
   }
 
@@ -96,7 +115,7 @@ export function useProfileScreen() {
               usePlacesStore.setState({ places: [], notes: [] });
               useMeetingsStore.setState({ meetings: [] });
               useSavedRoutesStore.setState({ savedRoutes: [] });
-              useProfileStore.setState({ profile: { id: '1', name: 'User', bio: '' } });
+              useProfileStore.setState({ profile: { id: '1', name: 'User' } });
             } catch (e: any) {
               Alert.alert('Couldn’t delete account', e?.message ?? 'Please try again.');
             }
@@ -122,9 +141,12 @@ export function useProfileScreen() {
     setIsEditing,
     name,
     setName,
-    bio,
-    setBio,
-    handlePickAvatar,
+    avatarSheetVisible,
+    openAvatarSheet,
+    closeAvatarSheet,
+    handlePickPhoto,
+    handleSelectAvatarPreset,
+    handleClearAvatarPreset,
     handleSave,
     handleCancelEdit,
     handleLogout,
