@@ -17,6 +17,12 @@ jest.mock('@react-native-firebase/auth', () => () => ({
   onAuthStateChanged: jest.fn(() => () => {}),
   currentUser: null,
 }));
+jest.mock('@react-native-firebase/analytics', () => ({
+  getAnalytics: jest.fn(),
+  logEvent: jest.fn(),
+  setUserId: jest.fn(),
+  setUserProperty: jest.fn(),
+}));
 
 jest.mock('react-native/Libraries/Alert/Alert', () => ({
   alert: jest.fn(),

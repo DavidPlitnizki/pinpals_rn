@@ -144,7 +144,7 @@ function MarkerCallout({
   }, [place.website]);
 
   const handleSearchPress = useCallback(
-    () => void openPlaceSearch(place.name, place.coordinates),
+    () => void openPlaceSearch(place.name, place.coordinates, 'map_pin'),
     [place.name, place.coordinates],
   );
 

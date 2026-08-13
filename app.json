@@ -71,7 +71,8 @@
           "iosUrlScheme": "com.googleusercontent.apps.679174491874-hala7k0hd1ve0v7p9vmn842hm32ful94"
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      "@react-native-firebase/analytics"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -9,6 +9,7 @@ import {
   signInWithApple as serviceSignInWithApple,
   deleteAccount as serviceDeleteAccount,
 } from '../services/authService';
+import { setAnalyticsUserId, setAnalyticsUserProperty } from '../services/analytics';
 
 interface AuthContextValue {
   isAuth: boolean;
@@ -33,22 +34,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged((firebaseUser) => {
       if (firebaseUser) {
+        const providerId: AuthData['providerId'] = firebaseUser.isAnonymous
+          ? 'anonymous'
+          : ((firebaseUser.providerData[0]?.providerId as AuthData['providerId'] | undefined) ??
+            'google.com');
         setAuthData({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           name: firebaseUser.displayName,
           isAnonymous: firebaseUser.isAnonymous,
-          providerId: firebaseUser.isAnonymous
-            ? 'anonymous'
-            : ((firebaseUser.providerData[0]?.providerId as AuthData['providerId'] | undefined) ??
-              'google.com'),
+          providerId,
         });
         setIsAuth(!firebaseUser.isAnonymous);
         setIsGuest(firebaseUser.isAnonymous);
+        // Ties analytics events to a stable per-user id (not per-install) so returning-user
+        // and retention reports hold up across reinstalls/devices for the same account.
+        setAnalyticsUserId(firebaseUser.uid);
+        setAnalyticsUserProperty('auth_provider', providerId);
       } else {
         setAuthData(null);
         setIsAuth(false);
         setIsGuest(false);
+        setAnalyticsUserId(null);
       }
       setIsLoading(false);
     });

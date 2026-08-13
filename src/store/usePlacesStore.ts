@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Place, PlaceNote, MemoryMood } from '../models/types';
+import { setPlacesCount } from '../services/analytics';
 import { deletePhotoFile, deletePhotoFiles } from '../shared/photoStorage';
 
 function notePhotoUris(note: PlaceNote): string[] {
@@ -47,6 +48,7 @@ export const usePlacesStore = create<PlacesState>()(
           visitCount: (placeData as Partial<Place>).visitCount ?? 0,
         };
         set((state) => ({ places: [...state.places, place] }));
+        setPlacesCount(get().places.length);
         return place.id;
       },
 
@@ -68,6 +70,7 @@ export const usePlacesStore = create<PlacesState>()(
           places: s.places.filter((p) => p.id !== id),
           notes: s.notes.filter((n) => n.placeId !== id),
         }));
+        setPlacesCount(get().places.length);
       },
 
       toggleFavorite: (id) => {
