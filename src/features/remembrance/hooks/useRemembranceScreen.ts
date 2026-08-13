@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 
 import { Place, PlaceCategory, PlaceNote } from '../../../models/types';
+import { logFilterUsed } from '../../../services/analytics';
 import { CATEGORY_LABELS } from '../../../shared/constants';
 import { useMeetingsStore } from '../../../store/useMeetingsStore';
 import { usePlacesStore } from '../../../store/usePlacesStore';
@@ -240,6 +241,7 @@ export function useRemembranceScreen() {
   }
 
   function toggleTag(tag: string) {
+    logFilterUsed('tag', tag);
     setFilters((f) => ({
       ...f,
       tags: f.tags.includes(tag) ? f.tags.filter((t) => t !== tag) : [...f.tags, tag],
@@ -247,6 +249,7 @@ export function useRemembranceScreen() {
   }
 
   function toggleMood(mood: string) {
+    logFilterUsed('mood', mood);
     setFilters((f) => ({
       ...f,
       moods: f.moods.includes(mood) ? f.moods.filter((m) => m !== mood) : [...f.moods, mood],
@@ -254,14 +257,17 @@ export function useRemembranceScreen() {
   }
 
   function setPeriod(period: FilterPeriod) {
+    logFilterUsed('period', period);
     setFilters((f) => ({ ...f, period }));
   }
 
   function toggleWantToVisit() {
+    logFilterUsed('want_to_visit');
     setFilters((f) => ({ ...f, wantToVisit: !f.wantToVisit }));
   }
 
   function setSortBy(sortBy: SortOption) {
+    logFilterUsed('sort', sortBy);
     setFilters((f) => ({ ...f, sortBy }));
   }
 

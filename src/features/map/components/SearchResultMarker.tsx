@@ -126,7 +126,7 @@ export function SearchResultMarker({
 
   const handleSearchPress = useCallback(() => {
     if (!selected) return;
-    void openPlaceSearch(selected.name, selected.coordinates);
+    void openPlaceSearch(selected.name, selected.coordinates, 'search_result');
   }, [selected]);
 
   return (

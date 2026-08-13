@@ -45,7 +45,7 @@ export function NativePoiMarker({
   const handleDirectionsPress = useCallback(() => onDirections(marker), [onDirections, marker]);
   const handleAddPlacePress = useCallback(() => onAddPlace(marker), [onAddPlace, marker]);
   const handleSearchPress = useCallback(
-    () => void openPlaceSearch(marker.name, marker.coordinates),
+    () => void openPlaceSearch(marker.name, marker.coordinates, 'native_poi'),
     [marker.name, marker.coordinates],
   );
 
