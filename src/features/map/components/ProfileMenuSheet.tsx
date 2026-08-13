@@ -1,13 +1,16 @@
 import { useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
-import { Image, Modal, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Avatar } from '../../../design-system/components/Avatar';
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { PinButton } from '../../../design-system/components/PinButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { Place, UserProfile } from '../../../models/types';
 import { getInitials } from '../utils/getInitials';
+
+const AVATAR_SIZE = 64;
 
 interface Props {
   visible: boolean;
@@ -39,20 +42,9 @@ export function ProfileMenuSheet({ visible, onClose, profile, places }: Props) {
 
         <View style={styles.content}>
           <View style={styles.avatarRow}>
-            {profile.avatarUri ? (
-              <Image source={{ uri: profile.avatarUri }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarInitials}>{getInitials(profile.name)}</Text>
-              </View>
-            )}
+            <Avatar profile={profile} size={AVATAR_SIZE} getInitials={getInitials} />
             <View style={styles.nameCol}>
               <Text style={styles.name}>{profile.name}</Text>
-              {!!profile.bio && (
-                <Text style={styles.bio} numberOfLines={2}>
-                  {profile.bio}
-                </Text>
-              )}
             </View>
           </View>
 
@@ -90,19 +82,8 @@ const styles = StyleSheet.create({
   title: { ...Typography.title3, color: Colors.neutral[900] },
   content: { padding: Spacing.s20, gap: Spacing.s20 },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.s16 },
-  avatar: { width: 64, height: 64, borderRadius: 32 },
-  avatarPlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: Colors.brand.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitials: { fontSize: 24, fontWeight: '700', color: Colors.white },
   nameCol: { flex: 1 },
-  name: { ...Typography.title3, color: Colors.neutral[900], marginBottom: Spacing.s4 },
-  bio: { ...Typography.subheadline, color: Colors.neutral[500] },
+  name: { ...Typography.title3, color: Colors.neutral[900] },
   stats: {
     flexDirection: 'row',
     backgroundColor: Colors.white,

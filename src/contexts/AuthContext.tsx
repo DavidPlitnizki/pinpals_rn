@@ -10,6 +10,7 @@ import {
   deleteAccount as serviceDeleteAccount,
 } from '../services/authService';
 import { setAnalyticsUserId, setAnalyticsUserProperty } from '../services/analytics';
+import { useProfileStore } from '../store/useProfileStore';
 
 interface AuthContextValue {
   isAuth: boolean;
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           name: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
           isAnonymous: firebaseUser.isAnonymous,
           providerId,
         });
@@ -51,6 +53,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // and retention reports hold up across reinstalls/devices for the same account.
         setAnalyticsUserId(firebaseUser.uid);
         setAnalyticsUserProperty('auth_provider', providerId);
+        // Adopt the provider's photo as the profile avatar only if the user hasn't already
+        // set one locally (photo or preset) — never clobber their choice.
+        if (firebaseUser.photoURL) {
+          const { profile, updateProfile } = useProfileStore.getState();
+          if (!profile.avatarUri && !profile.avatarPreset) {
+            updateProfile({ avatarUri: firebaseUser.photoURL });
+          }
+        }
       } else {
         setAuthData(null);
         setIsAuth(false);
