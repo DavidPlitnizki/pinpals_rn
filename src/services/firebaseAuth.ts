@@ -15,6 +15,8 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 
+import { logLogin } from './analytics';
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 // Mirrors Firebase's own providerId values ('google.com', 'apple.com') plus an 'anonymous'
@@ -67,6 +69,7 @@ export function mapFirebaseError(error: any): string {
 
 export async function loginAnonymously(): Promise<AuthData> {
   const credential = await signInAnonymously(getAuth());
+  logLogin('anonymous');
   return userToAuthData(credential.user);
 }
 
@@ -119,7 +122,9 @@ export async function signInWithGoogle(): Promise<AuthData> {
     if (!idToken) throw new Error('Google Sign-In did not return an ID token.');
 
     const credential = GoogleAuthProvider.credential(idToken);
-    return await linkOrSignIn(credential);
+    const authData = await linkOrSignIn(credential);
+    logLogin('google.com');
+    return authData;
   } catch (error) {
     throw new Error(mapFirebaseError(error));
   }
@@ -153,6 +158,7 @@ export async function signInWithApple(): Promise<AuthData> {
     const credential = AppleAuthProvider.credential(appleCredential.identityToken, rawNonce);
 
     const authData = await linkOrSignIn(credential);
+    logLogin('apple.com');
 
     // Apple only ever returns the user's name on their very first authorization — Firebase
     // won't pick it up from the credential alone, so persist it to the profile ourselves.

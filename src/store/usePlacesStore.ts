@@ -17,12 +17,15 @@ interface PlacesState {
   places: Place[];
   notes: PlaceNote[];
 
-  addPlace: (place: Omit<Place, 'id' | 'createdAt' | 'tags' | 'visitCount'>) => string;
+  addPlace: (
+    place: Omit<Place, 'id' | 'createdAt' | 'tags' | 'visitCount'> & { tags?: string[] },
+  ) => string;
   updatePlace: (id: string, updates: Partial<Place>) => void;
   deletePlace: (id: string) => void;
   toggleFavorite: (id: string) => void;
 
   addNote: (note: Omit<PlaceNote, 'id' | 'createdAt'> & { createdAt?: string }) => void;
+  updateNote: (id: string, updates: Partial<Omit<PlaceNote, 'id' | 'placeId'>>) => void;
   deleteNote: (id: string) => void;
   deleteNotePhoto: (noteId: string, photoUri: string) => void;
   getNotesForPlace: (placeId: string) => PlaceNote[];
@@ -44,7 +47,7 @@ export const usePlacesStore = create<PlacesState>()(
           ...placeData,
           id: generateId(),
           createdAt: new Date().toISOString(),
-          tags: (placeData as Partial<Place>).tags ?? [],
+          tags: placeData.tags ?? [],
           visitCount: (placeData as Partial<Place>).visitCount ?? 0,
         };
         set((state) => ({ places: [...state.places, place] }));
@@ -103,6 +106,35 @@ export const usePlacesStore = create<PlacesState>()(
             ),
           }));
         }
+      },
+
+      // Photos dropped by an edit are deleted from app storage here — the create/edit screen
+      // hands over the full photo list it ended up with, so anything the note used to hold
+      // and no longer does would otherwise be orphaned on disk.
+      updateNote: (id, updates) => {
+        const note = get().notes.find((n) => n.id === id);
+        if (!note) return;
+
+        if (updates.photoUris || updates.photoUri !== undefined) {
+          const nextUris = new Set(
+            updates.photoUris ?? (updates.photoUri ? [updates.photoUri] : []),
+          );
+          const removed = notePhotoUris(note).filter((uri) => !nextUris.has(uri));
+          if (removed.length > 0) {
+            deletePhotoFiles(removed);
+            set((s) => ({
+              places: s.places.map((p) =>
+                p.mainPhotoUri && removed.includes(p.mainPhotoUri)
+                  ? { ...p, mainPhotoUri: undefined }
+                  : p,
+              ),
+            }));
+          }
+        }
+
+        set((s) => ({
+          notes: s.notes.map((n) => (n.id === id ? { ...n, ...updates } : n)),
+        }));
       },
 
       deleteNote: (id) => {
@@ -185,7 +217,7 @@ export const usePlacesStore = create<PlacesState>()(
     }),
     {
       name: 'pinpals-places',
-      version: 4,
+      version: 5,
       storage: createJSONStorage(() => AsyncStorage),
       migrate: (persistedState: unknown, version: number) => {
         let state = persistedState as { places?: Place[]; notes?: PlaceNote[] };
@@ -210,6 +242,17 @@ export const usePlacesStore = create<PlacesState>()(
             ...p,
             favorite: p.favorite ?? false,
           }));
+          state = { ...state, places };
+        }
+        // Migrate v4 → v5: drop `category`. Nothing ever asked the user for one — every
+        // place saved from the map was stamped 'nature' — so the stored value carries no
+        // meaning and only showed up as a bogus "Nature" label. A place now simply has no
+        // category unless one is set explicitly.
+        if (version < 5) {
+          const places = (state.places || []).map((p) => {
+            const { category: _dropped, ...rest } = p;
+            return rest as Place;
+          });
           state = { ...state, places };
         }
         return state;

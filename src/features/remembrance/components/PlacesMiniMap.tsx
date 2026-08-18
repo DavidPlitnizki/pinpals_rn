@@ -5,7 +5,7 @@ import { LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View } from 'rea
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { MemoryMood, MOOD_CONFIG, Place } from '../../../models/types';
-import { CATEGORY_COLORS } from '../../../shared/constants';
+import { categoryColor } from '../../../shared/constants';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 
 interface Props {
@@ -19,7 +19,7 @@ function getPinColor(
   getLatestMoodForPlace: (placeId: string) => MemoryMood | undefined,
 ): string {
   const mood = getLatestMoodForPlace(place.id);
-  return mood ? MOOD_CONFIG[mood].color : CATEGORY_COLORS[place.category];
+  return mood ? MOOD_CONFIG[mood].color : (place.pinColor ?? categoryColor(place.category));
 }
 
 interface MiniMapPinProps {

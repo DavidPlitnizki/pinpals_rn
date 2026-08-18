@@ -22,6 +22,10 @@ function isManagedPhotoUri(uri: string): boolean {
 }
 
 export async function copyPhotoToAppStorage(sourceUri: string): Promise<string> {
+  // Already ours — an edit flow re-saving a note hands back its existing photos alongside
+  // newly picked ones, and copying those again would just duplicate files on disk.
+  if (isManagedPhotoUri(sourceUri)) return sourceUri;
+
   const dir = new Directory(Paths.document, PHOTOS_ROOT, todayFolder());
   if (!dir.exists) dir.create({ intermediates: true });
 

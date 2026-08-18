@@ -12,7 +12,8 @@ interface Props {
 }
 
 // Top-right, below MapSearchBar's pill + quick-chip row so it never overlaps them — clears
-// whatever's currently highlighted on the map (an active route and/or search result pins).
+// pinned search results only. ClearRouteButton (the crossed-out-road icon) is the dedicated
+// control for the route; this button never touches it.
 export function ClearMapButton({ onPress }: Props) {
   return (
     <SafeAreaView style={styles.wrap} pointerEvents="box-none">

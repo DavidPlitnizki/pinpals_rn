@@ -10,41 +10,73 @@ const LANDMARK_CATEGORIES: PlaceCategory[] = ['nature', 'art'];
 
 // Module-level so the same place doesn't re-fetch its Wikipedia thumbnail every time its card
 // remounts (e.g. scrolling a grid in and out of the FlatList's render window, or reselecting
-// the same map pin).
+// the same map pin). Doubles as the render-time source of truth, so the value survives a
+// remount without any state to re-sync.
 const wikiThumbnailCache = new Map<string, string | null>();
 
 function cacheKey(coords: Coordinates): string {
   return `${coords.latitude.toFixed(4)},${coords.longitude.toFixed(4)}`;
 }
 
-// Cover image priority: a local photo (the caller's own resolved "best photo" for the place —
-// defaults to its mainPhotoUri pick), then (for landmark-ish categories) a Wikipedia lead
-// image, then a Mapbox static map crop centered on the pin, then null (caller renders its own
-// category-icon placeholder — e.g. no Mapbox token configured).
-export function usePlaceCoverImage(place: Place, localPhotoUri?: string | null): string | null {
-  const localPhoto = localPhotoUri ?? place.mainPhotoUri;
-  const isLandmarkish = LANDMARK_CATEGORIES.includes(place.category);
-  const key = cacheKey(place.coordinates);
-  const [wikiPhoto, setWikiPhoto] = useState<string | null>(
-    () => wikiThumbnailCache.get(key) ?? null,
-  );
-  const requestedRef = useRef(false);
+export interface CoverImage {
+  uri: string | null;
+  // True only while the Wikipedia lookup is in flight — the caller shows a spinner instead of
+  // a placeholder that would flip to a photo a moment later.
+  loading: boolean;
+}
+
+// Cover image priority: a local photo (the caller's own resolved "best photo" for the point),
+// then (when the point is landmark-ish) a Wikipedia lead image, then a Mapbox static map crop
+// centered on it, then null (caller renders its own icon placeholder — e.g. no Mapbox token).
+// Takes plain coordinates rather than a Place so an unsaved map selection (a basemap POI, a
+// search result) gets the same cover art as a saved pin, without having to be saved first.
+export function useCoverImage(
+  coordinates: Coordinates,
+  options?: { localPhotoUri?: string | null; wikipedia?: boolean },
+): CoverImage {
+  const localPhoto = options?.localPhotoUri ?? undefined;
+  const wikipediaEnabled = options?.wikipedia ?? false;
+  const key = cacheKey(coordinates);
+  const { latitude, longitude } = coordinates;
+
+  // The cache is what's actually read at render time; this counter only exists to schedule a
+  // re-render once an in-flight lookup has filled it in.
+  const [, bumpVersion] = useState(0);
+  const requestedKeyRef = useRef<string | null>(null);
+  const wantsLookup = !localPhoto && wikipediaEnabled;
+  const isCached = wikiThumbnailCache.has(key);
 
   useEffect(() => {
-    if (localPhoto || !isLandmarkish) return;
-    if (wikiThumbnailCache.has(key)) return;
-    if (requestedRef.current) return;
-    requestedRef.current = true;
+    if (!wantsLookup || isCached) return;
+    if (requestedKeyRef.current === key) return;
+    requestedKeyRef.current = key;
 
-    async function loadWikiThumbnail() {
-      const result = await fetchWikipediaThumbnail(place.coordinates);
+    let cancelled = false;
+    void (async () => {
+      const result = await fetchWikipediaThumbnail({ latitude, longitude });
       wikiThumbnailCache.set(key, result);
-      setWikiPhoto(result);
-    }
-    void loadWikiThumbnail();
-  }, [localPhoto, isLandmarkish, key, place.coordinates]);
+      if (!cancelled) bumpVersion((n) => n + 1);
+    })();
 
-  if (localPhoto) return localPhoto;
-  if (wikiPhoto) return wikiPhoto;
-  return getMapboxStaticImageUrl(place.coordinates);
+    return () => {
+      cancelled = true;
+    };
+  }, [wantsLookup, isCached, key, latitude, longitude]);
+
+  if (localPhoto) return { uri: localPhoto, loading: false };
+  if (wantsLookup && !isCached) return { uri: null, loading: true };
+
+  const wikiPhoto = wikiThumbnailCache.get(key) ?? null;
+  if (wikiPhoto) return { uri: wikiPhoto, loading: false };
+  return { uri: getMapboxStaticImageUrl({ latitude, longitude }), loading: false };
+}
+
+// Place-shaped wrapper kept for the saved-place surfaces (cards, rows, pin callout).
+export function usePlaceCoverImage(place: Place, localPhotoUri?: string | null): string | null {
+  return useCoverImage(place.coordinates, {
+    localPhotoUri: localPhotoUri ?? place.mainPhotoUri,
+    // No category set (the normal case) is treated as "might be notable" rather than
+    // "definitely a café" — otherwise no saved place would ever get a Wikipedia cover.
+    wikipedia: !place.category || LANDMARK_CATEGORIES.includes(place.category),
+  }).uri;
 }

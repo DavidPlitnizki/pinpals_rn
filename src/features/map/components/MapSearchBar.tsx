@@ -45,10 +45,42 @@ const QuickCategoryChip = React.memo(function QuickCategoryChip({
   );
 });
 
+interface HideMyPlacesChipProps {
+  hidden: boolean;
+  onToggle: () => void;
+}
+
+// Sits at the head of the filter row: active (struck-through pin) = the user's own saved
+// places are hidden from the map, so only search/POI results are left on it.
+const HideMyPlacesChip = React.memo(function HideMyPlacesChip({
+  hidden,
+  onToggle,
+}: HideMyPlacesChipProps) {
+  return (
+    <TouchableOpacity
+      style={[styles.chip, styles.hideChip, hidden && styles.hideChipActive]}
+      onPress={onToggle}
+      activeOpacity={0.75}
+      accessibilityLabel={hidden ? 'Show my places' : 'Hide my places'}
+    >
+      <MaterialCommunityIcons
+        name={hidden ? 'map-marker-off' : 'map-marker'}
+        size={16}
+        color={hidden ? Colors.white : Colors.neutral[600]}
+      />
+      <Text style={[styles.chipLabel, hidden && styles.chipLabelActive]}>
+        {hidden ? 'My places hidden' : 'Hide my places'}
+      </Text>
+    </TouchableOpacity>
+  );
+});
+
 interface Props {
   query: string;
   weather: CurrentWeather | null;
   activeCategory: string | null;
+  myPlacesHidden: boolean;
+  onToggleMyPlaces: () => void;
   categoryLoading: boolean;
   canSearchHere: boolean;
   searchHereLoading: boolean;
@@ -70,6 +102,8 @@ export function MapSearchBar({
   query,
   weather,
   activeCategory,
+  myPlacesHidden,
+  onToggleMyPlaces,
   categoryLoading,
   canSearchHere,
   searchHereLoading,
@@ -114,6 +148,7 @@ export function MapSearchBar({
         contentContainerStyle={styles.chipsRow}
         style={styles.chipsScroll}
       >
+        <HideMyPlacesChip hidden={myPlacesHidden} onToggle={onToggleMyPlaces} />
         {QUICK_SEARCH_CATEGORIES.map((category) => (
           <QuickCategoryChip
             key={category.key}
@@ -222,6 +257,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.s16,
     paddingTop: Spacing.s8,
     gap: Spacing.s8,
+  },
+  hideChip: {
+    borderColor: Colors.neutral[400],
+  },
+  hideChipActive: {
+    backgroundColor: Colors.neutral[600],
+    borderColor: Colors.neutral[600],
   },
   chip: {
     flexDirection: 'row',

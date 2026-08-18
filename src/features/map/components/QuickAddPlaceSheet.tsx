@@ -22,8 +22,10 @@ import { CircleCloseButton } from '../../../design-system/components/CircleClose
 import { MoodPicker } from '../../../design-system/components/MoodPicker';
 import { PinColorPicker } from '../../../design-system/components/PinColorPicker';
 import { PinRatingView } from '../../../design-system/components/PinRatingView';
+import { TagPicker } from '../../../design-system/components/TagPicker';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { Coordinates, MemoryMood, MOOD_CONFIG } from '../../../models/types';
+import { PRESET_TAGS } from '../../../shared/constants';
 import { promptPhotoSource } from '../../../shared/photoSourcePrompt';
 import { QuickAddSaveData } from '../hooks/useMapScreen';
 
@@ -39,6 +41,11 @@ const GOLD = '#D4AF37';
 interface Props {
   visible: boolean;
   coordinates: Coordinates | null;
+  // Phone as the map knows it (search results carry one) — seeds the field, still editable.
+  suggestedPhone?: string;
+  // Name and address as the map itself knows them (basemap POI / search result), used to
+  // seed the form — the user can still overwrite the name before saving.
+  suggestedName?: string;
   address?: string;
   onSave: (data: QuickAddSaveData) => void;
   onClose: () => void;
@@ -84,6 +91,8 @@ const PhotoThumb = React.memo(function PhotoThumb({
 export function QuickAddPlaceSheet({
   visible,
   coordinates,
+  suggestedPhone,
+  suggestedName,
   address,
   onSave,
   onClose,
@@ -111,13 +120,15 @@ export function QuickAddPlaceSheet({
   const [wantToVisit, setWantToVisit] = useState(false);
   const [pinColor, setPinColor] = useState<string | undefined>(undefined);
   const [mainPhotoUri, setMainPhotoUri] = useState<string | undefined>(undefined);
+  const [tags, setTags] = useState<string[]>([]);
+  const [phone, setPhone] = useState('');
 
   const wasVisibleRef = useRef(visible);
   // Reset to a clean form synchronously during render on the closed->open transition
   // (React's "adjusting state during render" pattern), rather than in an effect — avoids an
   // extra render pass right as the sheet appears.
   if (visible && !wasVisibleRef.current) {
-    setName('');
+    setName(suggestedName ?? '');
     setDescription('');
     setPhotoUris([]);
     setMood(undefined);
@@ -127,6 +138,8 @@ export function QuickAddPlaceSheet({
     setWantToVisit(false);
     setPinColor(undefined);
     setMainPhotoUri(undefined);
+    setTags([]);
+    setPhone(suggestedPhone ?? '');
   }
   wasVisibleRef.current = visible;
 
@@ -209,6 +222,8 @@ export function QuickAddPlaceSheet({
       wantToVisit,
       pinColor,
       mainPhotoUri,
+      tags,
+      phone: phone.trim() || undefined,
     });
   }, [
     onSave,
@@ -221,6 +236,8 @@ export function QuickAddPlaceSheet({
     wantToVisit,
     pinColor,
     mainPhotoUri,
+    tags,
+    phone,
   ]);
 
   const handleDirectionsPress = useCallback(() => {
@@ -236,6 +253,10 @@ export function QuickAddPlaceSheet({
   }, [onClose, onDirections, name]);
 
   const handleToggleMoodPicker = useCallback(() => setMoodPickerOpen((open) => !open), []);
+
+  const handleToggleTag = useCallback((tag: string) => {
+    setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  }, []);
 
   const handleToggleFavorite = useCallback(() => setFavorite((v) => !v), []);
   const handleToggleWantToVisit = useCallback(() => setWantToVisit((v) => !v), []);
@@ -325,8 +346,13 @@ export function QuickAddPlaceSheet({
               showsVerticalScrollIndicator={false}
             >
               {coordinates && (
-                <View style={styles.coordsRow}>
-                  <View style={styles.coordsTextCol}>
+                <View style={styles.locationRow}>
+                  <View style={styles.locationTextCol}>
+                    {suggestedName ? (
+                      <Text style={styles.locationName} numberOfLines={1}>
+                        {suggestedName}
+                      </Text>
+                    ) : null}
                     {address ? (
                       <Text style={styles.addressText} numberOfLines={2}>
                         📍 {address}
@@ -372,6 +398,25 @@ export function QuickAddPlaceSheet({
                     textAlignVertical="top"
                   />
                 </View>
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Phone</Text>
+                <View style={styles.inputWrap}>
+                  <TextInput
+                    style={styles.input}
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="Phone number"
+                    placeholderTextColor={Colors.neutral[400]}
+                    keyboardType="phone-pad"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Tags</Text>
+                <TagPicker tags={tags} options={PRESET_TAGS} onToggle={handleToggleTag} />
               </View>
 
               <View style={styles.iconActionRow}>
@@ -539,21 +584,27 @@ const styles = StyleSheet.create({
     minHeight: 140,
     paddingVertical: Spacing.s4,
   },
-  coordsRow: {
+  locationRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.s16,
     gap: Spacing.s8,
   },
-  coordsTextCol: {
+  locationTextCol: {
     flex: 1,
     gap: Spacing.s2,
   },
+  locationName: {
+    ...Typography.subheadline,
+    color: Colors.neutral[900],
+    fontWeight: '700',
+  },
   addressText: {
-    ...Typography.caption,
+    ...Typography.subheadline,
     color: Colors.neutral[700],
     fontWeight: '600',
+    lineHeight: 20,
   },
   coordsText: {
     ...Typography.caption,

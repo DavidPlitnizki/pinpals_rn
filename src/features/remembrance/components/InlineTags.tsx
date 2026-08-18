@@ -1,14 +1,14 @@
-import React, { useCallback, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { PRESET_TAGS } from '../../../shared/constants';
 
 const HIT_SLOP_TAG = { top: 6, bottom: 6, left: 2, right: 2 };
 const HIT_SLOP_ADD = { top: 6, bottom: 6, left: 4, right: 4 };
 
 interface Props {
   tags: string[];
-  allTags?: string[]; // global suggestions
   onAdd: (tag: string) => void;
   onRemove: (tag: string) => void;
 }
@@ -28,100 +28,53 @@ const TagChip = React.memo(function TagChip({ tag, onRemove }: TagChipProps) {
   );
 });
 
-interface SuggestionProps {
-  suggestion: string;
-  onSelect: (suggestion: string) => void;
+interface OptionProps {
+  option: string;
+  onSelect: (option: string) => void;
 }
 
-const Suggestion = React.memo(function Suggestion({ suggestion, onSelect }: SuggestionProps) {
-  const handlePress = useCallback(() => onSelect(suggestion), [onSelect, suggestion]);
+const Option = React.memo(function Option({ option, onSelect }: OptionProps) {
+  const handlePress = useCallback(() => onSelect(option), [onSelect, option]);
   return (
-    <TouchableOpacity style={styles.suggestion} onPress={handlePress}>
-      <Text style={styles.suggestionText}>#{suggestion}</Text>
+    <TouchableOpacity style={styles.option} onPress={handlePress} hitSlop={HIT_SLOP_TAG}>
+      <Text style={styles.optionText}>#{option}</Text>
     </TouchableOpacity>
   );
 });
 
-export function InlineTags({ tags, allTags = [], onAdd, onRemove }: Props) {
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState('');
-  const inputRef = useRef<TextInput>(null);
+export function InlineTags({ tags, onAdd, onRemove }: Props) {
+  const [picking, setPicking] = useState(false);
 
-  const openInput = useCallback(() => {
-    setEditing(true);
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }, []);
+  const openPicker = useCallback(() => setPicking(true), []);
 
-  const handleSubmit = useCallback(() => {
-    const tag = text.trim().toLowerCase();
-    if (tag && !tags.includes(tag)) {
+  const handleSelect = useCallback(
+    (tag: string) => {
       onAdd(tag);
-    }
-    setText('');
-    setEditing(false);
-  }, [text, tags, onAdd]);
-
-  const handleBlur = useCallback(() => {
-    if (text.trim()) {
-      handleSubmit();
-    } else {
-      setEditing(false);
-    }
-  }, [text, handleSubmit]);
-
-  const handleSelectSuggestion = useCallback(
-    (suggestion: string) => {
-      onAdd(suggestion);
-      setText('');
-      setEditing(false);
+      setPicking(false);
     },
     [onAdd],
   );
 
-  const suggestions = allTags.filter(
-    (s) => !tags.includes(s) && s.includes(text.toLowerCase()) && s.length > 0,
-  );
+  const available = PRESET_TAGS.filter((t) => !tags.includes(t));
 
   return (
     <View style={styles.wrapper}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.row}
-        scrollEnabled={!editing}
-      >
-        {/* Existing tag chips */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {tags.map((tag) => (
           <TagChip key={tag} tag={tag} onRemove={onRemove} />
         ))}
 
-        {/* Add button or input */}
-        {!editing ? (
-          <TouchableOpacity style={styles.addBtn} onPress={openInput} hitSlop={HIT_SLOP_ADD}>
+        {!picking && available.length > 0 && (
+          <TouchableOpacity style={styles.addBtn} onPress={openPicker} hitSlop={HIT_SLOP_ADD}>
             <Text style={styles.addBtnText}>+ tag</Text>
           </TouchableOpacity>
-        ) : (
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            value={text}
-            onChangeText={setText}
-            placeholder="tag..."
-            placeholderTextColor={Colors.neutral[300]}
-            returnKeyType="done"
-            onSubmitEditing={handleSubmit}
-            onBlur={handleBlur}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
         )}
       </ScrollView>
 
-      {/* Suggestions dropdown */}
-      {editing && text.length > 0 && suggestions.length > 0 && (
-        <View style={styles.suggestions}>
-          {suggestions.slice(0, 4).map((s) => (
-            <Suggestion key={s} suggestion={s} onSelect={handleSelectSuggestion} />
+      {picking && (
+        <View style={styles.options}>
+          {available.map((t) => (
+            <Option key={t} option={t} onSelect={handleSelect} />
           ))}
         </View>
       )}
@@ -171,27 +124,18 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.neutral[400],
   },
-  input: {
-    minWidth: 80,
-    height: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.brand.primary,
-    paddingHorizontal: Spacing.s4,
-    ...Typography.caption,
-    color: Colors.neutral[900],
-  },
-  suggestions: {
+  options: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.s4,
   },
-  suggestion: {
+  option: {
     backgroundColor: Colors.neutral[100],
     borderRadius: Radii.full,
     paddingHorizontal: Spacing.s8,
     paddingVertical: 2,
   },
-  suggestionText: {
+  optionText: {
     ...Typography.caption,
     color: Colors.neutral[500],
   },

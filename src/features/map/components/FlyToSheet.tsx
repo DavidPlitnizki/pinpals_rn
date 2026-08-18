@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
@@ -13,24 +15,54 @@ import {
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { PinButton } from '../../../design-system/components/PinButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { MapboxSearchResult } from '../../../services/mapboxSearch';
 
 interface Props {
   visible: boolean;
   query: string;
   loading: boolean;
   error: string | null;
+  results: MapboxSearchResult[];
   onChangeQuery: (text: string) => void;
   onSubmit: () => void;
+  onSelectResult: (result: MapboxSearchResult) => void;
   onClose: () => void;
 }
+
+const ResultRow = React.memo(function ResultRow({
+  result,
+  onSelect,
+}: {
+  result: MapboxSearchResult;
+  onSelect: (result: MapboxSearchResult) => void;
+}) {
+  const handlePress = useCallback(() => onSelect(result), [onSelect, result]);
+  return (
+    <TouchableOpacity style={styles.resultRow} onPress={handlePress} activeOpacity={0.7}>
+      <Ionicons name="location-outline" size={18} color={Colors.brand.primary} />
+      <View style={styles.resultTextCol}>
+        <Text style={styles.resultName} numberOfLines={1}>
+          {result.name}
+        </Text>
+        {result.fullAddress ? (
+          <Text style={styles.resultAddress} numberOfLines={2}>
+            {result.fullAddress}
+          </Text>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
+});
 
 export function FlyToSheet({
   visible,
   query,
   loading,
   error,
+  results,
   onChangeQuery,
   onSubmit,
+  onSelectResult,
   onClose,
 }: Props) {
   return (
@@ -43,15 +75,15 @@ export function FlyToSheet({
               <Ionicons name="airplane" size={28} color={Colors.brand.primary} />
               <Text style={styles.title}>Fly to a place</Text>
               <Text style={styles.subtitle}>
-                Enter a city, country, or coordinates (&quot;lat, lng&quot;) to explore what&apos;s
-                nearby from there.
+                Enter a city, a street with a number, or a full address, then pick the match you
+                meant.
               </Text>
 
               <TextInput
                 style={styles.input}
                 value={query}
                 onChangeText={onChangeQuery}
-                placeholder="e.g. Lisbon, Portugal or 38.7223, -9.1393"
+                placeholder="e.g. Lisbon, Portugal or Rua Augusta 24"
                 placeholderTextColor={Colors.neutral[400]}
                 autoCorrect={false}
                 autoCapitalize="words"
@@ -60,6 +92,14 @@ export function FlyToSheet({
               />
 
               {error && <Text style={styles.error}>{error}</Text>}
+
+              {results.length > 0 && (
+                <ScrollView style={styles.results} keyboardShouldPersistTaps="handled">
+                  {results.map((result) => (
+                    <ResultRow key={result.id} result={result} onSelect={onSelectResult} />
+                  ))}
+                </ScrollView>
+              )}
 
               <View style={styles.actions}>
                 <View style={styles.actionButton}>
@@ -71,7 +111,12 @@ export function FlyToSheet({
                       <ActivityIndicator color={Colors.brand.primary} />
                     </View>
                   ) : (
-                    <PinButton title="Go" onPress={onSubmit} disabled={!query.trim()} fullWidth />
+                    <PinButton
+                      title={results.length > 0 ? 'Search again' : 'Search'}
+                      onPress={onSubmit}
+                      disabled={!query.trim()}
+                      fullWidth
+                    />
                   )}
                 </View>
               </View>
@@ -126,6 +171,29 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.s12,
     ...Typography.body,
     color: Colors.neutral[900],
+  },
+  results: {
+    width: '100%',
+    maxHeight: 240,
+    marginTop: Spacing.s12,
+  },
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.s8,
+    paddingVertical: Spacing.s8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral[100],
+  },
+  resultTextCol: { flex: 1 },
+  resultName: {
+    ...Typography.subheadline,
+    color: Colors.neutral[900],
+    fontWeight: '600',
+  },
+  resultAddress: {
+    ...Typography.caption,
+    color: Colors.neutral[500],
   },
   error: {
     ...Typography.caption,

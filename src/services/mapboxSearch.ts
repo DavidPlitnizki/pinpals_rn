@@ -14,6 +14,24 @@ export interface MapboxSearchResult {
 
 export interface MapboxSearchOptions {
   bbox?: [number, number, number, number];
+  // IETF tag (e.g. 'he', 'ru'). Mapbox matches names in the requested language, which is
+  // what makes a query written in a non-Latin script resolve to the right place instead of
+  // whatever transliteration happens to score highest.
+  language?: string;
+  limit?: number;
+}
+
+// Mapbox defaults to English matching; a query written in Hebrew/Cyrillic/Arabic/Greek needs
+// its own language tag or it lands on an unrelated place with a similar-looking Latin name.
+const SCRIPT_LANGUAGES: [RegExp, string][] = [
+  [/[\u0590-\u05FF]/, 'he'],
+  [/[\u0600-\u06FF]/, 'ar'],
+  [/[\u0400-\u04FF]/, 'ru'],
+  [/[\u0370-\u03FF]/, 'el'],
+];
+
+export function detectQueryLanguage(query: string): string | undefined {
+  return SCRIPT_LANGUAGES.find(([pattern]) => pattern.test(query))?.[1];
 }
 
 const SEARCH_BOX_FORWARD_URL = 'https://api.mapbox.com/search/searchbox/v1/forward';
@@ -97,9 +115,13 @@ export async function searchMapboxPlaces(
     q: trimmed,
     types: 'poi,address,place',
     // Mapbox's Search Box forward endpoint caps this at 10 — there's no "unlimited" option.
-    limit: '10',
+    limit: String(Math.min(options?.limit ?? 10, 10)),
     access_token: token,
   });
+  const language = options?.language ?? detectQueryLanguage(trimmed);
+  if (language) {
+    params.set('language', language);
+  }
   if (proximity) {
     params.set('proximity', `${proximity.longitude},${proximity.latitude}`);
   }
@@ -133,6 +155,35 @@ export async function searchMapboxPlaces(
       latitude: feature.geometry.coordinates[1],
     },
   }));
+}
+
+// Street address for a raw coordinate — used when a place is saved from a point that carried
+// no address of its own (a long-press on the map, a route waypoint), so its card still shows
+// where it is rather than just a pair of numbers.
+export async function reverseGeocodeAddress(coords: Coordinates): Promise<string | null> {
+  const token = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
+  if (!token) return null;
+
+  const params = new URLSearchParams({
+    longitude: String(coords.longitude),
+    latitude: String(coords.latitude),
+    types: 'address',
+    access_token: token,
+  });
+
+  try {
+    const response = await fetch(`${GEOCODE_REVERSE_URL}?${params.toString()}`);
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as {
+      features?: { properties?: { full_address?: string; name?: string } }[];
+    };
+    const properties = data.features?.[0]?.properties;
+    return properties?.full_address ?? properties?.name ?? null;
+  } catch (err) {
+    console.log('[mapboxSearch] reverse address request failed', err);
+    return null;
+  }
 }
 
 // City/country for a raw coordinate — the weather screen's default location label (before the

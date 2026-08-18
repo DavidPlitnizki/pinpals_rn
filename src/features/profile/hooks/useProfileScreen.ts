@@ -11,6 +11,11 @@ import { useProfileStore } from '../../../store/useProfileStore';
 import { useSavedRoutesStore } from '../../../store/useSavedRoutesStore';
 import { useSettingsStore } from '../../../store/useSettingsStore';
 
+interface AvatarDraft {
+  avatarUri?: string;
+  avatarPreset?: string;
+}
+
 export function useProfileScreen() {
   const { profile, updateProfile } = useProfileStore();
   const { places } = usePlacesStore();
@@ -21,6 +26,19 @@ export function useProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile.name);
   const [avatarSheetVisible, setAvatarSheetVisible] = useState(false);
+  // Avatar edits are staged here instead of being written straight to the store, so Cancel
+  // really does undo everything the edit session changed — not just the name.
+  const [draftAvatar, setDraftAvatar] = useState<AvatarDraft | null>(null);
+
+  // What the screen should render while editing: the staged avatar if one was picked in this
+  // session, otherwise the saved profile.
+  const displayProfile = draftAvatar ? { ...profile, ...draftAvatar } : profile;
+
+  const handleStartEdit = useCallback(() => {
+    setName(profile.name);
+    setDraftAvatar(null);
+    setIsEditing(true);
+  }, [profile.name]);
 
   const openAvatarSheet = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -47,7 +65,7 @@ export function useProfileScreen() {
         quality: 0.8,
       });
       if (!result.canceled && result.assets[0]) {
-        updateProfile({ avatarUri: result.assets[0].uri, avatarPreset: undefined });
+        setDraftAvatar({ avatarUri: result.assets[0].uri, avatarPreset: undefined });
         setAvatarSheetVisible(false);
       }
       return;
@@ -65,18 +83,18 @@ export function useProfileScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      updateProfile({ avatarUri: result.assets[0].uri, avatarPreset: undefined });
+      setDraftAvatar({ avatarUri: result.assets[0].uri, avatarPreset: undefined });
       setAvatarSheetVisible(false);
     }
   }
 
   function handleSelectAvatarPreset(id: string) {
-    updateProfile({ avatarPreset: id, avatarUri: undefined });
+    setDraftAvatar({ avatarPreset: id, avatarUri: undefined });
     setAvatarSheetVisible(false);
   }
 
   function handleClearAvatarPreset() {
-    updateProfile({ avatarPreset: undefined, avatarUri: undefined });
+    setDraftAvatar({ avatarPreset: undefined, avatarUri: undefined });
     setAvatarSheetVisible(false);
   }
 
@@ -85,12 +103,15 @@ export function useProfileScreen() {
       Alert.alert('Name required', 'Please enter your name.');
       return;
     }
-    updateProfile({ name: name.trim() });
+    updateProfile({ name: name.trim(), ...(draftAvatar ?? {}) });
+    setDraftAvatar(null);
     setIsEditing(false);
   }
 
+  // Discards the whole edit session — name and avatar alike.
   function handleCancelEdit() {
     setName(profile.name);
+    setDraftAvatar(null);
     setIsEditing(false);
   }
 
@@ -127,7 +148,7 @@ export function useProfileScreen() {
   }
 
   return {
-    profile,
+    profile: displayProfile,
     isGuest,
     authData,
     fontScale,
@@ -138,7 +159,7 @@ export function useProfileScreen() {
     meetings,
     savedRoutes,
     isEditing,
-    setIsEditing,
+    handleStartEdit,
     name,
     setName,
     avatarSheetVisible,

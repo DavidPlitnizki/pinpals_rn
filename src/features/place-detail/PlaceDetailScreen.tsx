@@ -1,22 +1,24 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Camera, MapView, PointAnnotation } from '@rnmapbox/maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PinButton } from '../../design-system/components/PinButton';
 import { PinCard } from '../../design-system/components/PinCard';
-import { PinChip } from '../../design-system/components/PinChip';
 import { PinColorPicker } from '../../design-system/components/PinColorPicker';
 import { PinTextField } from '../../design-system/components/PinTextField';
-import { MemoryCard } from '../../design-system/components/MemoryCard';
 import { PhotoViewerModal } from '../../design-system/components/PhotoViewerModal';
-import { TagInput } from '../../design-system/components/TagInput';
+import { TagPicker } from '../../design-system/components/TagPicker';
 import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
 import { PlaceNote, MOOD_CONFIG } from '../../models/types';
-import { CATEGORY_COLORS, CATEGORY_LABELS } from '../../shared/constants';
+import { categoryColor, PRESET_TAGS } from '../../shared/constants';
 import { AddNoteModal } from './components/AddNoteModal';
+import { MemoryTimelineItem } from './components/MemoryTimelineItem';
+import { PlaceMapSnapshot } from './components/PlaceMapSnapshot';
 import { usePlaceDetail } from './hooks/usePlaceDetail';
+
+const HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
 export default function PlaceDetailScreen() {
   const {
@@ -24,21 +26,20 @@ export default function PlaceDetailScreen() {
     placeNotes,
     latestMood,
     isEditingDescription,
-    setIsEditingDescription,
     description,
     setDescription,
     showAddNote,
     noteText,
     setNoteText,
     notePhotoUri,
-    setNotePhotoUri,
+    handleRemoveNotePhoto,
     viewerPhotos,
     viewerIndex,
     viewerVisible,
     handleOpenPhotoViewer,
     handleClosePhotoViewer,
     deleteNotePhoto,
-    handleSaveDescription,
+    handleToggleEditDescription,
     handleToggleFavorite,
     handleSetPinColor,
     handleDeletePlace,
@@ -47,9 +48,13 @@ export default function PlaceDetailScreen() {
     handleDeleteNote,
     handleCloseAddNote,
     handleAddMemory,
-    handleCreateMeetingHere,
-    handleAddTag,
-    handleRemoveTag,
+    handleEditMemory,
+    handleToggleTag,
+    isEditingName,
+    name,
+    setName,
+    handleStartEditingName,
+    handleSaveName,
     router,
   } = usePlaceDetail();
 
@@ -78,7 +83,7 @@ export default function PlaceDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* Hero: photo or map */}
         {headerPhoto ? (
           <View style={styles.heroContainer}>
@@ -99,66 +104,62 @@ export default function PlaceDetailScreen() {
             </View>
           </View>
         ) : (
-          <MapView
-            style={styles.mapSnapshot}
-            scrollEnabled={false}
-            zoomEnabled={false}
-            rotateEnabled={false}
-            pitchEnabled={false}
-          >
-            <Camera
-              centerCoordinate={[place.coordinates.longitude, place.coordinates.latitude]}
-              zoomLevel={15}
-              animationDuration={0}
-            />
-            <PointAnnotation
-              id={place.id}
-              coordinate={[place.coordinates.longitude, place.coordinates.latitude]}
-            >
-              <View
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 10,
-                  backgroundColor:
-                    moodConfig?.color ?? place.pinColor ?? CATEGORY_COLORS[place.category],
-                  borderWidth: 2,
-                  borderColor: '#fff',
-                }}
-              />
-            </PointAnnotation>
-          </MapView>
+          <PlaceMapSnapshot
+            id={place.id}
+            latitude={place.coordinates.latitude}
+            longitude={place.coordinates.longitude}
+            color={moodConfig?.color ?? place.pinColor ?? categoryColor(place.category)}
+          />
         )}
 
         <View style={styles.content}>
           {/* Header info */}
           <View style={styles.placeHeader}>
             <View style={styles.titleRow}>
-              <Text style={styles.placeName}>{place.name}</Text>
+              {isEditingName ? (
+                <View style={styles.nameField}>
+                  <PinTextField
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Place name"
+                    autoFocus
+                    onSubmitEditing={handleSaveName}
+                    returnKeyType="done"
+                  />
+                </View>
+              ) : (
+                <Text style={styles.placeName}>{place.name}</Text>
+              )}
+              <TouchableOpacity
+                onPress={isEditingName ? handleSaveName : handleStartEditingName}
+                style={styles.iconButton}
+                hitSlop={HIT_SLOP}
+                accessibilityLabel={isEditingName ? 'Save name' : 'Rename place'}
+              >
+                <Ionicons
+                  name={isEditingName ? 'checkmark' : 'pencil'}
+                  size={20}
+                  color={Colors.brand.primary}
+                />
+              </TouchableOpacity>
               <TouchableOpacity onPress={handleToggleFavorite} style={styles.favoriteButton}>
                 <Text style={[styles.heartIcon, place.isFavorite && styles.heartIconActive]}>
                   {place.isFavorite ? '♥' : '♡'}
                 </Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.metaRow}>
-              <PinChip
-                label={CATEGORY_LABELS[place.category]}
-                color={CATEGORY_COLORS[place.category]}
-                selected
-              />
-              {place.visitCount > 0 && (
-                <Text style={styles.visitText}>
-                  {place.visitCount} {place.visitCount === 1 ? 'visit' : 'visits'}
-                </Text>
-              )}
-            </View>
+
+            {place.visitCount > 0 && (
+              <Text style={styles.visitText}>
+                {place.visitCount} {place.visitCount === 1 ? 'visit' : 'visits'}
+              </Text>
+            )}
           </View>
 
           {/* Tags */}
           <PinCard style={styles.section}>
             <Text style={styles.sectionTitle}>Tags</Text>
-            <TagInput tags={place.tags || []} onAdd={handleAddTag} onRemove={handleRemoveTag} />
+            <TagPicker tags={place.tags || []} options={PRESET_TAGS} onToggle={handleToggleTag} />
           </PinCard>
 
           {/* Pin color */}
@@ -172,15 +173,16 @@ export default function PlaceDetailScreen() {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Description</Text>
               <TouchableOpacity
-                onPress={() => {
-                  if (isEditingDescription) {
-                    handleSaveDescription();
-                  } else {
-                    setIsEditingDescription(true);
-                  }
-                }}
+                onPress={handleToggleEditDescription}
+                style={styles.iconButton}
+                hitSlop={HIT_SLOP}
+                accessibilityLabel={isEditingDescription ? 'Save description' : 'Edit description'}
               >
-                <Text style={styles.editButton}>{isEditingDescription ? 'Save' : 'Edit'}</Text>
+                <Ionicons
+                  name={isEditingDescription ? 'checkmark' : 'pencil'}
+                  size={20}
+                  color={Colors.brand.primary}
+                />
               </TouchableOpacity>
             </View>
             {isEditingDescription ? (
@@ -200,12 +202,6 @@ export default function PlaceDetailScreen() {
           {/* Action buttons */}
           <View style={styles.actions}>
             <PinButton title="Add Memory" onPress={handleAddMemory} fullWidth />
-            <PinButton
-              title="Suggest a Meeting Here"
-              onPress={handleCreateMeetingHere}
-              variant="secondary"
-              fullWidth
-            />
           </View>
 
           {/* Timeline of memories */}
@@ -219,34 +215,15 @@ export default function PlaceDetailScreen() {
             ) : (
               <View style={styles.timeline}>
                 {placeNotes.map((note: PlaceNote, index: number) => (
-                  <View key={note.id} style={styles.timelineItem}>
-                    {/* Timeline line */}
-                    <View style={styles.timelineLine}>
-                      <View
-                        style={[
-                          styles.timelineDot,
-                          note.mood && {
-                            backgroundColor: MOOD_CONFIG[note.mood].color,
-                          },
-                        ]}
-                      />
-                      {index < placeNotes.length - 1 && <View style={styles.timelineConnector} />}
-                    </View>
-                    {/* Card */}
-                    <View style={styles.timelineCard}>
-                      <MemoryCard
-                        note={note}
-                        onPhotoPress={handleOpenPhotoViewer}
-                        onDeletePhoto={(uri) => deleteNotePhoto(note.id, uri)}
-                      />
-                      <TouchableOpacity
-                        style={styles.deleteNote}
-                        onPress={() => handleDeleteNote(note.id)}
-                      >
-                        <Text style={styles.deleteNoteText}>Delete</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                  <MemoryTimelineItem
+                    key={note.id}
+                    note={note}
+                    isLast={index === placeNotes.length - 1}
+                    onPhotoPress={handleOpenPhotoViewer}
+                    onDeletePhoto={deleteNotePhoto}
+                    onEdit={handleEditMemory}
+                    onDelete={handleDeleteNote}
+                  />
                 ))}
               </View>
             )}
@@ -264,23 +241,29 @@ export default function PlaceDetailScreen() {
         </View>
       </ScrollView>
 
-      <AddNoteModal
-        visible={showAddNote}
-        noteText={noteText}
-        notePhotoUri={notePhotoUri}
-        onChangeText={setNoteText}
-        onPickPhoto={handlePickPhoto}
-        onRemovePhoto={() => setNotePhotoUri(undefined)}
-        onSave={handleSaveNote}
-        onClose={handleCloseAddNote}
-      />
+      {/* Mounted only while open: an always-mounted native Modal re-attaches its view on
+          every re-render, which drops the focused TextInput's first responder mid-typing. */}
+      {showAddNote && (
+        <AddNoteModal
+          visible={showAddNote}
+          noteText={noteText}
+          notePhotoUri={notePhotoUri}
+          onChangeText={setNoteText}
+          onPickPhoto={handlePickPhoto}
+          onRemovePhoto={handleRemoveNotePhoto}
+          onSave={handleSaveNote}
+          onClose={handleCloseAddNote}
+        />
+      )}
 
-      <PhotoViewerModal
-        visible={viewerVisible}
-        photoUris={viewerPhotos}
-        initialIndex={viewerIndex}
-        onClose={handleClosePhotoViewer}
-      />
+      {viewerVisible && (
+        <PhotoViewerModal
+          visible={viewerVisible}
+          photoUris={viewerPhotos}
+          initialIndex={viewerIndex}
+          onClose={handleClosePhotoViewer}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -340,27 +323,31 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.s8,
+    alignItems: 'center',
+    gap: Spacing.s8,
+    marginBottom: Spacing.s12,
   },
   placeName: {
     ...Typography.title2,
     color: Colors.neutral[900],
     flex: 1,
-    marginRight: Spacing.s8,
+  },
+  nameField: { flex: 1 },
+  iconButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radii.full,
+    backgroundColor: Colors.brand.light,
   },
   favoriteButton: { padding: Spacing.s4 },
   heartIcon: { fontSize: 24, color: Colors.neutral[300] },
   heartIconActive: { color: Colors.accent.primary },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
   visitText: {
     ...Typography.caption,
     color: Colors.text.secondary,
+    marginTop: Spacing.s8,
   },
 
   // Sections
@@ -375,11 +362,6 @@ const styles = StyleSheet.create({
     ...Typography.title3,
     color: Colors.neutral[900],
     marginBottom: Spacing.s8,
-  },
-  editButton: {
-    ...Typography.body,
-    color: Colors.brand.primary,
-    fontWeight: '600',
   },
   descriptionText: {
     ...Typography.body,
@@ -397,40 +379,6 @@ const styles = StyleSheet.create({
   notesSection: { gap: Spacing.s8 },
   timeline: {
     gap: 0,
-  },
-  timelineItem: {
-    flexDirection: 'row',
-    gap: Spacing.s12,
-  },
-  timelineLine: {
-    alignItems: 'center',
-    width: 16,
-  },
-  timelineDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: Colors.brand.primary,
-    marginTop: Spacing.s4,
-  },
-  timelineConnector: {
-    flex: 1,
-    width: 2,
-    backgroundColor: Colors.neutral[200],
-    marginVertical: Spacing.s4,
-  },
-  timelineCard: {
-    flex: 1,
-    marginBottom: Spacing.s12,
-  },
-  deleteNote: {
-    alignSelf: 'flex-end',
-    marginTop: Spacing.s4,
-  },
-  deleteNoteText: {
-    ...Typography.caption,
-    color: Colors.error,
-    fontWeight: '600',
   },
 
   dangerZone: { paddingTop: Spacing.s8, paddingBottom: Spacing.s32 },

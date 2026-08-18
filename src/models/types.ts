@@ -42,7 +42,9 @@ export interface Place {
   name: string;
   description?: string;
   coordinates: Coordinates;
-  category: PlaceCategory;
+  // Optional: nothing in the app asks the user for a category, so a place simply has none
+  // unless one was set explicitly. Surfaces fall back to mood/pinColor instead.
+  category?: PlaceCategory;
   rating: number; // 1-5 (legacy, kept for compatibility)
   createdAt: string; // ISO date
   isFavorite: boolean; // "Want to visit" in the UI

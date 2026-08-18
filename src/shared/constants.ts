@@ -23,6 +23,19 @@ export const CATEGORY_ICONS: Record<PlaceCategory, ComponentProps<typeof Ionicon
 
 export const CATEGORIES: PlaceCategory[] = ['food', 'nature', 'art', 'sports', 'coffee'];
 
+// Neutral stand-ins for a place with no category — the common case, since the app never
+// asks for one.
+export const DEFAULT_CATEGORY_COLOR = '#4A7C59';
+export const DEFAULT_CATEGORY_ICON: ComponentProps<typeof Ionicons>['name'] = 'location-outline';
+
+export function categoryColor(category?: PlaceCategory): string {
+  return category ? CATEGORY_COLORS[category] : DEFAULT_CATEGORY_COLOR;
+}
+
+export function categoryIcon(category?: PlaceCategory): ComponentProps<typeof Ionicons>['name'] {
+  return category ? CATEGORY_ICONS[category] : DEFAULT_CATEGORY_ICON;
+}
+
 export const CATEGORY_LABELS: Record<PlaceCategory, string> = {
   food: 'Food',
   nature: 'Nature',
@@ -30,6 +43,25 @@ export const CATEGORY_LABELS: Record<PlaceCategory, string> = {
   sports: 'Sports',
   coffee: 'Coffee',
 };
+
+// The fixed vocabulary of tags a place can carry. Kept closed (no free text) so tags stay
+// comparable across places — the remembrance filters group by exact tag string.
+export const PRESET_TAGS: string[] = [
+  'food',
+  'coffee',
+  'nature',
+  'art',
+  'sports',
+  'bar',
+  'club',
+  'nightlife',
+  'shopping',
+  'view',
+  'hidden gem',
+  'date',
+  'family',
+  'work',
+];
 
 // Preset swatches for the user-chosen pin color (Place.pinColor). Undefined/unselected falls
 // back to Colors.myPlace (turquoise) wherever the pin is drawn — this list intentionally

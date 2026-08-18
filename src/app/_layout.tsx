@@ -8,6 +8,7 @@ import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { trackAppOpen } from '../services/analytics';
 import { applyFontScale, useResolvedTheme } from '../shared/appearance';
 import { useSettingsStore } from '../store/useSettingsStore';
 
@@ -60,6 +61,10 @@ function AppearanceEffects() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    void trackAppOpen();
+  }, []);
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <AuthProvider>
@@ -70,15 +75,14 @@ export default function RootLayout() {
               headerStyle: { backgroundColor: '#FFFFFF' },
               headerTintColor: '#4A7C59',
               headerTitleStyle: { fontWeight: '600', color: '#1C2B22' },
+              // Otherwise the back button falls back to the previous screen's route/group
+              // name (e.g. literally "(tabs)") when that screen sets no title of its own.
+              headerBackButtonDisplayMode: 'minimal',
             }}
           >
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="place/[id]" options={{ title: 'Place Details' }} />
-            <Stack.Screen
-              name="create-meeting"
-              options={{ title: 'Create Meeting', presentation: 'modal' }}
-            />
             <Stack.Screen
               name="create-memory"
               options={{ title: 'New Memory', presentation: 'modal', headerShown: false }}
