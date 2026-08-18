@@ -1,11 +1,13 @@
 import { Camera, MapView, UserLocation } from '@rnmapbox/maps';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { ClearMapButton } from './components/ClearMapButton';
 import { ClearRouteButton } from './components/ClearRouteButton';
+import { FlyToLandingMarker } from './components/FlyToLandingMarker';
 import { FlyToSheet } from './components/FlyToSheet';
 import { MapControls } from './components/MapControls';
 import { MapMarkers } from './components/MapMarkers';
@@ -29,13 +31,19 @@ import { useSearchSheet } from './hooks/useSearchSheet';
 import { useWeather } from './hooks/useWeather';
 import { NativePoiMarker as NativePoiMarkerData, RouteWaypoint } from './types';
 import { Coordinates, Place } from '../../models/types';
+import { logRouteShared } from '../../services/analytics';
 import { MapboxSearchResult } from '../../services/mapboxSearch';
 import { buildGoogleMapsDirectionsUrl } from '../../shared/mapLinks';
 import { useSavedRoutesStore } from '../../store/useSavedRoutesStore';
 
+// Stable empty list — a fresh `[]` each render would remount every annotation in MapMarkers.
+const EMPTY_PLACES: Place[] = [];
+
 function isSameCoordinates(a: Coordinates, b: Coordinates): boolean {
   return a.latitude === b.latitude && a.longitude === b.longitude;
 }
+
+const ACTIVE_ROUTE_KEEP_AWAKE_TAG = 'pinpals-active-route';
 
 export default function MapScreen() {
   const {
@@ -75,10 +83,24 @@ export default function MapScreen() {
     handleConfirmSearchResultMarker,
     handleMarkerPress,
     handleDeleteMarker,
+    myPlacesHidden,
+    toggleMyPlacesHidden,
   } = useMapScreen();
 
   const search = useSearchSheet(places, getMapCenter, getVisibleBbox);
-  const flyTo = useFlyToSheet(handleConfirmFlyTo);
+
+  // Bumped on every confirmed fly-to so the landing animation replays even when the user
+  // flies to the same place twice in a row.
+  const [landingSignal, setLandingSignal] = useState(0);
+  const onConfirmFlyTo = useCallback(
+    (coords: Coordinates, label: string) => {
+      handleConfirmFlyTo(coords, label);
+      setLandingSignal((n) => n + 1);
+    },
+    [handleConfirmFlyTo],
+  );
+  const onLandingDone = useCallback(() => setLandingSignal(0), []);
+  const flyTo = useFlyToSheet(onConfirmFlyTo);
   const quickSearch = useQuickCategorySearch(
     handleShowSearchResultsOnMap,
     handleClearSearchResultMarkers,
@@ -98,6 +120,17 @@ export default function MapScreen() {
   // usePointAnnotationRefresh), so markers must re-register whenever any of them opens
   // or closes — not just the route picker.
   const annotationRefreshSignal = `${route.pickerVisible}|${showQuickAddSheet}|${search.visible}|${flyTo.visible}`;
+
+  // Keep the screen on while actively navigating a route — the phone auto-locking mid-walk
+  // or mid-drive forces the user to unlock it again just to glance at directions.
+  const isRouteActive = route.activeRoute?.status === 'success';
+  useEffect(() => {
+    if (!isRouteActive) return;
+    void activateKeepAwakeAsync(ACTIVE_ROUTE_KEEP_AWAKE_TAG);
+    return () => {
+      void deactivateKeepAwake(ACTIVE_ROUTE_KEEP_AWAKE_TAG);
+    };
+  }, [isRouteActive]);
 
   // Pins for every stop of the route: while picking a mode, the full (possibly extended)
   // pending stop list; once confirmed, the waypoints actually being routed to. Stops that
@@ -277,18 +310,9 @@ export default function MapScreen() {
       intermediateStops,
       profile,
     );
+    logRouteShared();
     void Share.share({ message: `${destination.label}: ${url}`, url });
   }, [route]);
-
-  // Single top-right "clear" button covers both things that can be highlighted on the map
-  // at once: an active route and pinned search results.
-  const onClearAll = useCallback(() => {
-    if (searchResultMarkers.length > 0) {
-      onClearSearchResults();
-    } else {
-      route.clearRoute();
-    }
-  }, [searchResultMarkers, onClearSearchResults, route]);
 
   return (
     <View style={styles.container}>
@@ -320,7 +344,8 @@ export default function MapScreen() {
           />
         )}
         <MapMarkers
-          places={places}
+          mapViewRef={mapViewRef}
+          places={myPlacesHidden ? EMPTY_PLACES : places}
           onMarkerPress={handleMarkerPress}
           onDeleteMarker={handleDeleteMarker}
           onDirections={onPlaceDirections}
@@ -330,6 +355,7 @@ export default function MapScreen() {
         />
         {searchResultMarkers.length > 0 && (
           <SearchResultMarker
+            mapViewRef={mapViewRef}
             markers={searchResultMarkers}
             onConfirm={handleConfirmSearchResultMarker}
             onDirections={onSearchResultDirections}
@@ -340,6 +366,7 @@ export default function MapScreen() {
         )}
         {nativePoiMarker && (
           <NativePoiMarker
+            mapViewRef={mapViewRef}
             marker={nativePoiMarker}
             onClose={handleCloseNativePoiMarker}
             onDirections={onNativePoiDirections}
@@ -365,6 +392,10 @@ export default function MapScreen() {
           />
         )}
       </MapView>
+
+      {landingSignal > 0 && (
+        <FlyToLandingMarker signal={landingSignal} onDone={onLandingDone} />
+      )}
 
       <MapToast toastAnim={toastAnim} toastMsg={toastMsg} toastGPS={toastGPS} />
 
@@ -398,6 +429,8 @@ export default function MapScreen() {
             query={search.query}
             weather={weather.weather}
             activeCategory={quickSearch.activeCategory}
+            myPlacesHidden={myPlacesHidden}
+            onToggleMyPlaces={toggleMyPlacesHidden}
             categoryLoading={quickSearch.loading}
             canSearchHere={quickSearch.canSearchHere}
             searchHereLoading={quickSearch.searchHereLoading}
@@ -411,12 +444,14 @@ export default function MapScreen() {
       )}
 
       {route.activeRoute?.status === 'success' && (
-        <ClearRouteButton onPress={route.removeLastWaypoint} onLongPress={route.clearRoute} />
+        <ClearRouteButton
+          onPress={route.removeLastWaypoint}
+          onLongPress={route.clearRoute}
+          stacked={searchResultMarkers.length > 0}
+        />
       )}
 
-      {(route.activeRoute?.status === 'success' || searchResultMarkers.length > 0) && (
-        <ClearMapButton onPress={onClearAll} />
-      )}
+      {searchResultMarkers.length > 0 && <ClearMapButton onPress={onClearSearchResults} />}
 
       <MapControls
         gpsCoords={gpsCoords}
@@ -428,6 +463,8 @@ export default function MapScreen() {
       <QuickAddPlaceSheet
         visible={showQuickAddSheet}
         coordinates={pendingPlaceCoords}
+        suggestedName={pendingPlaceMeta?.name}
+        suggestedPhone={pendingPlaceMeta?.phone}
         address={pendingPlaceMeta?.address}
         onSave={handleSaveQuickAddPlace}
         onClose={handleCloseQuickAddSheet}
@@ -452,8 +489,10 @@ export default function MapScreen() {
         query={flyTo.query}
         loading={flyTo.loading}
         error={flyTo.error}
+        results={flyTo.results}
         onChangeQuery={flyTo.setQuery}
         onSubmit={flyTo.submit}
+        onSelectResult={flyTo.selectResult}
         onClose={flyTo.close}
       />
 

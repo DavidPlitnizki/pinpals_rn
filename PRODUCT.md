@@ -287,12 +287,18 @@ Step-by-step: фото → настроение → с кем → заметка
   Connect (не просто экран-заглушка)
 
 **Метрики и статистика (для стратегии валидации — измерить share/invite rate):**
-- [ ] Подключить базовую аналитику (Firebase Analytics, уже есть Firebase в проекте —
-  не нужен новый вендор) — минимум событий: `meeting_created`, `meeting_shared`,
-  `place_created`, `app_opened`
+- [x] Подключить базовую аналитику — реализовано (2026-08-13), `src/services/analytics.ts`:
+  `meeting_created`, `place_shared`/`route_shared` (нет ещё `meeting_shared` — у встреч
+  пока нет участников/инвайтов, это Phase 2; шаринг места/маршрута — ближайший прокси),
+  `place_filter_used`, `external_search_opened`, `places_count_changed` +
+  `places_count_bucket`; `login` (метод: google.com/apple.com/anonymous) — отвечает на
+  «через что приходят»; `app_session_start` + `session_count_bucket` +
+  `days_since_first_open` — отвечает на «как часто возвращаются» (плюс встроенный в
+  Firebase Console авто-расчёт Day 1/7/30 retention из `first_open`/`app_open`, без кода)
 - [ ] Метрика **share/invite rate** — % пользователей, создавших встречу/поделившихся
-  местом хотя бы раз за первую неделю. Это единственная метрика, которая решает
-  «продолжаем или меняем нишу» (см. стратегию валидации)
+  местом хотя бы раз за первую неделю. Событие для трекинга есть (`place_shared`,
+  `route_shared`), но полноценного «invite» (встреча с участниками) в Phase 1 ещё нет —
+  метрика будет частичной, пока не появится приглашение в Phase 2
 - [ ] Простой internal-дашборд или Firebase Analytics консоль — не нужен кастомный
   admin-экран в приложении на этом этапе
 

@@ -10,20 +10,29 @@ import { usePlacesStore } from '../../../store/usePlacesStore';
 
 export function useCreateMemory() {
   const router = useRouter();
-  const { placeId } = useLocalSearchParams<{ placeId: string }>();
-  const { addNote, places } = usePlacesStore();
+  // `noteId` present = editing an existing memory; the wizard is otherwise identical, it
+  // just starts pre-filled and saves over the note instead of appending a new one.
+  const { placeId, noteId } = useLocalSearchParams<{ placeId: string; noteId?: string }>();
+  const { addNote, updateNote, notes, places } = usePlacesStore();
 
   const place = places.find((p) => p.id === placeId);
+  const [editedNote] = useState(() => (noteId ? notes.find((n) => n.id === noteId) : undefined));
+  const isEditing = !!editedNote;
 
   // Steps: 0=photos, 1=mood, 2=companions, 3=note, 4=date
   const [step, setStep] = useState(0);
   const totalSteps = 5;
 
-  const [photoUris, setPhotoUris] = useState<string[]>([]);
-  const [mood, setMood] = useState<MemoryMood | undefined>(undefined);
-  const [companions, setCompanions] = useState<string[]>([]);
-  const [text, setText] = useState('');
-  const [date, setDate] = useState(new Date());
+  const [photoUris, setPhotoUris] = useState<string[]>(
+    () => editedNote?.photoUris ?? (editedNote?.photoUri ? [editedNote.photoUri] : []),
+  );
+  const [mood, setMood] = useState<MemoryMood | undefined>(editedNote?.mood);
+  const [companions, setCompanions] = useState<string[]>(editedNote?.companions ?? []);
+  const [text, setText] = useState(editedNote?.text ?? '');
+  // A brand new memory defaults to right now — date and time both.
+  const [date, setDate] = useState(() =>
+    editedNote ? new Date(editedNote.createdAt) : new Date(),
+  );
 
   function nextStep() {
     if (step < totalSteps - 1) setStep(step + 1);
@@ -87,7 +96,22 @@ export function useCreateMemory() {
       return;
     }
 
+    // Photos already living in app storage (an edited note's existing ones) are passed
+    // through untouched; only newly picked picker temp paths get copied.
     const copiedPhotoUris = await copyPhotosToAppStorage(photoUris);
+
+    if (editedNote) {
+      updateNote(editedNote.id, {
+        text: text.trim(),
+        photoUri: copiedPhotoUris[0],
+        photoUris: copiedPhotoUris.length > 0 ? copiedPhotoUris : undefined,
+        mood,
+        companions,
+        createdAt: date.toISOString(),
+      });
+      router.back();
+      return;
+    }
 
     addNote({
       placeId,
@@ -124,6 +148,7 @@ export function useCreateMemory() {
 
   return {
     place,
+    isEditing,
     step,
     totalSteps,
     photoUris,

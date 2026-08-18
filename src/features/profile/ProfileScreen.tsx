@@ -41,7 +41,7 @@ export default function ProfileScreen() {
     places,
     savedRoutes,
     isEditing,
-    setIsEditing,
+    handleStartEdit,
     name,
     setName,
     avatarSheetVisible,
@@ -59,7 +59,6 @@ export default function ProfileScreen() {
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   const providerBadge = PROVIDER_BADGE[authData?.providerId ?? 'anonymous'];
 
-  const handleStartEdit = useCallback(() => setIsEditing(true), [setIsEditing]);
   const handleOpenPrivacy = useCallback(() => router.push('/legal?type=privacy' as any), [router]);
   const handleOpenTerms = useCallback(() => router.push('/legal?type=terms' as any), [router]);
 
@@ -219,14 +218,16 @@ export default function ProfileScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <AvatarPickerSheet
-        visible={avatarSheetVisible}
-        selectedPresetId={profile.avatarPreset}
-        onClose={closeAvatarSheet}
-        onPickPhoto={handlePickPhoto}
-        onSelectPreset={handleSelectAvatarPreset}
-        onClearPreset={handleClearAvatarPreset}
-      />
+      {avatarSheetVisible && (
+        <AvatarPickerSheet
+          visible={avatarSheetVisible}
+          selectedPresetId={profile.avatarPreset}
+          onClose={closeAvatarSheet}
+          onPickPhoto={handlePickPhoto}
+          onSelectPreset={handleSelectAvatarPreset}
+          onClearPreset={handleClearAvatarPreset}
+        />
+      )}
     </SafeAreaView>
   );
 }

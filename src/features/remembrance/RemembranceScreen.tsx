@@ -93,21 +93,16 @@ export default function RemembranceScreen() {
 
   const renderPlaceRow = useCallback(
     ({ item }: ListRenderItemInfo<Place>) => (
-      <PlaceRow
-        place={item}
-        onPress={handlePlacePress}
-        onDelete={handleDeletePlace}
-        allTags={allTags}
-      />
+      <PlaceRow place={item} onPress={handlePlacePress} onDelete={handleDeletePlace} />
     ),
-    [handlePlacePress, handleDeletePlace, allTags],
+    [handlePlacePress, handleDeletePlace],
   );
 
   const renderPlaceGridCard = useCallback(
     ({ item }: ListRenderItemInfo<Place>) => (
-      <PlaceGridCard place={item} onPress={handlePlacePress} allTags={allTags} />
+      <PlaceGridCard place={item} onPress={handlePlacePress} />
     ),
-    [handlePlacePress, allTags],
+    [handlePlacePress],
   );
 
   const listFooter =

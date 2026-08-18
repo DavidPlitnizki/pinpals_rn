@@ -4,7 +4,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { usePlaceCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { MOOD_CONFIG, Place } from '../../../models/types';
-import { CATEGORY_COLORS, CATEGORY_LABELS } from '../../../shared/constants';
+import { categoryColor, CATEGORY_LABELS } from '../../../shared/constants';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { InlineTags } from './InlineTags';
 
@@ -13,14 +13,15 @@ function noop() {}
 interface Props {
   place: Place;
   onPress: (id: string) => void;
-  allTags?: string[];
 }
 
-export function PlaceGridCard({ place, onPress, allTags = [] }: Props) {
+export function PlaceGridCard({ place, onPress }: Props) {
   const getLatestMoodForPlace = usePlacesStore((s) => s.getLatestMoodForPlace);
   const { addTagToPlace, removeTagFromPlace } = usePlacesStore();
   const mood = getLatestMoodForPlace(place.id);
-  const accentColor = mood ? MOOD_CONFIG[mood].color : CATEGORY_COLORS[place.category];
+  const accentColor = mood
+    ? MOOD_CONFIG[mood].color
+    : (place.pinColor ?? categoryColor(place.category));
   const coverUri = usePlaceCoverImage(place);
 
   const handlePress = useCallback(() => onPress(place.id), [onPress, place.id]);
@@ -48,11 +49,13 @@ export function PlaceGridCard({ place, onPress, allTags = [] }: Props) {
           {place.isFavorite && <Text style={styles.heart}>♥</Text>}
         </View>
         <View style={styles.categoryRow}>
-          <View style={[styles.chip, { backgroundColor: accentColor + '22' }]}>
-            <Text style={[styles.chipText, { color: accentColor }]}>
-              {CATEGORY_LABELS[place.category]}
-            </Text>
-          </View>
+          {place.category && (
+            <View style={[styles.chip, { backgroundColor: accentColor + '22' }]}>
+              <Text style={[styles.chipText, { color: accentColor }]}>
+                {CATEGORY_LABELS[place.category]}
+              </Text>
+            </View>
+          )}
           {mood && <Text style={styles.moodEmoji}>{MOOD_CONFIG[mood].emoji}</Text>}
         </View>
         {place.visitCount > 0 && <Text style={styles.visits}>{place.visitCount}× visited</Text>}
@@ -61,7 +64,6 @@ export function PlaceGridCard({ place, onPress, allTags = [] }: Props) {
         <TouchableOpacity activeOpacity={1} onPress={noop}>
           <InlineTags
             tags={place.tags ?? []}
-            allTags={allTags}
             onAdd={handleAddTag}
             onRemove={handleRemoveTag}
           />

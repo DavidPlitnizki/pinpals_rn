@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { MarkerView, PointAnnotation } from '@rnmapbox/maps';
+import { MapView, MarkerView, PointAnnotation } from '@rnmapbox/maps';
 import { Image } from 'expo-image';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { RefObject, useCallback, useMemo, useRef, useState } from 'react';
 import { Linking, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
@@ -9,10 +9,12 @@ import { Colors, Radii, Spacing, Typography } from '../../../design-system/token
 import { usePlaceCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { MemoryMood, Place, MOOD_CONFIG } from '../../../models/types';
 import { buildGoogleMapsSearchUrl } from '../../../shared/mapLinks';
-import { CATEGORY_COLORS, CATEGORY_ICONS } from '../../../shared/constants';
+import { categoryColor, categoryIcon } from '../../../shared/constants';
+import { logPlaceShared } from '../../../services/analytics';
 import { openPlaceSearch } from '../../../services/webSearch';
 import { usePlacesStore } from '../../../store/usePlacesStore';
-import { CATEGORY_LABELS, HIT_SLOP_8 } from '../constants';
+import { HIT_SLOP_8 } from '../constants';
+import { useCalloutAnchor } from '../hooks/useCalloutAnchor';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { getPlacePhotoPreview, PlacePhotoPreview } from '../utils/placePhoto';
 import { CalloutActionButton } from './CalloutActionButton';
@@ -38,6 +40,9 @@ interface Props {
   // Bumped whenever the user taps empty map space (or a different POI) — closes this
   // marker's open callout the same way tapping a different annotation would.
   dismissSignal?: unknown;
+  // Used to work out where the selected pin currently sits on screen, so the callout can
+  // flip below / slide sideways instead of being clipped at an edge.
+  mapViewRef?: RefObject<MapView | null>;
 }
 
 interface MarkerPinProps {
@@ -94,15 +99,10 @@ const MarkerPin = React.memo(function MarkerPin({
           ) : (
             <View style={styles.pinBadge}>
               <Ionicons
-                name={CATEGORY_ICONS[place.category]}
+                name={categoryIcon(place.category)}
                 size={14}
-                color={CATEGORY_COLORS[place.category]}
+                color={categoryColor(place.category)}
               />
-            </View>
-          )}
-          {preview?.mood && (
-            <View style={styles.moodBadge}>
-              <Text style={styles.moodBadgeEmoji}>{preview.mood.emoji}</Text>
             </View>
           )}
         </View>
@@ -133,7 +133,7 @@ function MarkerCallout({
   onDeletePress,
 }: MarkerCalloutProps) {
   const coverUri = usePlaceCoverImage(place, preview?.photoUri);
-  const categoryColor = CATEGORY_COLORS[place.category];
+  const accentColor = categoryColor(place.category);
 
   const handleCallPhone = useCallback(() => {
     if (place.phone) void Linking.openURL(`tel:${place.phone}`);
@@ -165,10 +165,10 @@ function MarkerCallout({
               style={[
                 styles.calloutPhoto,
                 styles.calloutPhotoMock,
-                { backgroundColor: categoryColor + '22' },
+                { backgroundColor: accentColor + '22' },
               ]}
             >
-              <Ionicons name={CATEGORY_ICONS[place.category]} size={28} color={categoryColor} />
+              <Ionicons name={categoryIcon(place.category)} size={28} color={accentColor} />
             </View>
           )}
           {mood && (
@@ -187,7 +187,13 @@ function MarkerCallout({
             {truncate(place.description, CALLOUT_DESCRIPTION_MAX_CHARS)}
           </Text>
         )}
-        <Text style={styles.calloutCategory}>{CATEGORY_LABELS[place.category]}</Text>
+        {/* Tags, not `place.category` — every map-saved place gets the same hardcoded
+            category, so printing it just showed a meaningless "Nature" on every callout. */}
+        {place.tags && place.tags.length > 0 && (
+          <Text style={styles.calloutTags} numberOfLines={1}>
+            {place.tags.map((tag) => `#${tag}`).join(' ')}
+          </Text>
+        )}
         {mood && (
           <Text style={styles.calloutMood}>
             {MOOD_CONFIG[mood].emoji} {MOOD_CONFIG[mood].label}
@@ -264,6 +270,7 @@ export function MapMarkers({
   refreshSignal,
   onAnnotationSelected,
   dismissSignal,
+  mapViewRef,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedPlace = places.find((p) => p.id === selectedId);
@@ -281,6 +288,7 @@ export function MapMarkers({
   }
 
   const selectedMood = selectedPlace ? getLatestMoodForPlace(selectedPlace.id) : undefined;
+  const calloutAnchor = useCalloutAnchor(mapViewRef, selectedPlace?.coordinates);
 
   // Per-place preview + pin color, computed once per places/notes change instead of on every
   // MapMarkers render (e.g. selecting a different pin no longer re-scans every place's notes).
@@ -344,6 +352,7 @@ export function MapMarkers({
     // there's a photo it's attached via `url` too (iOS's share sheet renders it inline) —
     // falls back to sharing the maps link itself as `url` when there's no photo.
     const message = `${selectedPlace.name}\n${latitude.toFixed(5)}, ${longitude.toFixed(5)}\n${mapsUrl}`;
+    logPlaceShared();
     void Share.share({ message, url: selectedPreview?.photoUri ?? mapsUrl });
   }, [selectedPlace, selectedPreview]);
 
@@ -368,7 +377,7 @@ export function MapMarkers({
       {selectedPlace && (
         <MarkerView
           coordinate={[selectedPlace.coordinates.longitude, selectedPlace.coordinates.latitude]}
-          anchor={{ x: 0.5, y: 1.3 }}
+          anchor={calloutAnchor}
         >
           <MarkerCallout
             place={selectedPlace}
@@ -443,27 +452,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  moodBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.white,
-    borderWidth: 1.5,
-    borderColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  moodBadgeEmoji: {
-    fontSize: 11,
-  },
   callout: {
     backgroundColor: Colors.white,
     borderRadius: Radii.md,
@@ -480,10 +468,15 @@ const styles = StyleSheet.create({
   // A normal in-flow row, not absolutely-positioned overlays — MarkerView measures/
   // rasterizes its content to the JS-measured layout box, so anything positioned outside
   // that box (negative offsets) gets cut off rather than floating over the map.
+  // Negative side margins pull the two buttons out past the card's own padding so they sit
+  // close to its edges, rather than floating inset with the text content.
   calloutHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: Spacing.s8,
+    alignItems: 'center',
+    marginTop: -Spacing.s8,
+    marginHorizontal: -Spacing.s8,
+    marginBottom: Spacing.s4,
   },
   // A dark border keeps the button visible against whatever's under it on the map,
   // instead of blending into busy map tiles.
@@ -551,10 +544,10 @@ const styles = StyleSheet.create({
     color: Colors.neutral[600],
     marginBottom: Spacing.s4,
   },
-  calloutCategory: {
-    ...Typography.subheadline,
-    color: Colors.neutral[500],
-    textTransform: 'capitalize',
+  calloutTags: {
+    ...Typography.caption,
+    color: Colors.accent.primary,
+    fontWeight: '600',
   },
   calloutMood: {
     ...Typography.subheadline,

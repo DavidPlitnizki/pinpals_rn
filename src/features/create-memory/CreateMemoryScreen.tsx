@@ -1,5 +1,7 @@
-import React, { useCallback } from 'react';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import React, { useCallback, useState } from 'react';
 import {
+  Platform,
   Image,
   ScrollView,
   StyleSheet,
@@ -10,17 +12,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AnalogClock } from '../../design-system/components/AnalogClock';
 import { CompanionInput } from '../../design-system/components/CompanionInput';
 import { MoodPicker } from '../../design-system/components/MoodPicker';
 import { PinButton } from '../../design-system/components/PinButton';
 import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
 import { useCreateMemory } from './hooks/useCreateMemory';
 
-const STEP_TITLES = ['Photo', 'Mood', 'Companions', 'Note', 'Date'];
+const STEP_TITLES = ['Photo', 'Mood', 'Companions', 'Note', 'Date & time'];
 
 export default function CreateMemoryScreen() {
   const {
     place,
+    isEditing,
     step,
     totalSteps,
     photoUris,
@@ -90,7 +94,11 @@ export default function CreateMemoryScreen() {
       {/* Bottom buttons */}
       <View style={styles.footer}>
         {isLastStep ? (
-          <PinButton title="Save Memory" onPress={handleSave} fullWidth />
+          <PinButton
+            title={isEditing ? 'Save Changes' : 'Save Memory'}
+            onPress={handleSave}
+            fullWidth
+          />
         ) : (
           <PinButton title="Next" onPress={nextStep} disabled={!canGoNext} fullWidth />
         )}
@@ -201,41 +209,102 @@ function NoteStep({ text, onChangeText }: { text: string; onChangeText: (t: stri
 }
 
 function DateStep({ date, onChangeDate }: { date: Date; onChangeDate: (d: Date) => void }) {
-  const isToday = date.toDateString() === new Date().toDateString();
+  // iOS shows both pickers inline; Android has no inline mode, so each one is opened as the
+  // platform's own dialog (the time dialog there is the native analog clock).
+  const [androidPicker, setAndroidPicker] = useState<'date' | 'time' | null>(null);
 
-  const handlePressToday = useCallback(() => onChangeDate(new Date()), [onChangeDate]);
-  const handlePressYesterday = useCallback(() => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    onChangeDate(yesterday);
-  }, [onChangeDate]);
+  const handleShowDate = useCallback(() => setAndroidPicker('date'), []);
+  const handleShowTime = useCallback(() => setAndroidPicker('time'), []);
+  const handleNow = useCallback(() => onChangeDate(new Date()), [onChangeDate]);
+
+  const handleChangeDate = useCallback(
+    (event: DateTimePickerEvent, selected?: Date) => {
+      setAndroidPicker(null);
+      if (event.type === 'dismissed' || !selected) return;
+      // The date wheel carries its own (untouched) time and the time wheel its own date —
+      // merge so changing one never silently resets the other.
+      const next = new Date(date);
+      next.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
+      onChangeDate(next);
+    },
+    [date, onChangeDate],
+  );
+
+  const handleChangeTime = useCallback(
+    (event: DateTimePickerEvent, selected?: Date) => {
+      setAndroidPicker(null);
+      if (event.type === 'dismissed' || !selected) return;
+      const next = new Date(date);
+      next.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
+      onChangeDate(next);
+    },
+    [date, onChangeDate],
+  );
+
+  const weekday = date.toLocaleDateString([], { weekday: 'long' });
+  const dayMonth = date.toLocaleDateString([], { day: 'numeric', month: 'long' });
+  const year = date.getFullYear();
 
   return (
     <View style={styles.stepContent}>
       <Text style={styles.stepHint}>When was this?</Text>
-      <View style={styles.dateOptions}>
-        <TouchableOpacity
-          style={[styles.dateOption, isToday && styles.dateOptionActive]}
-          onPress={handlePressToday}
-        >
-          <Text style={[styles.dateOptionText, isToday && styles.dateOptionTextActive]}>Today</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.dateOption, !isToday && styles.dateOptionActive]}
-          onPress={handlePressYesterday}
-        >
-          <Text style={[styles.dateOptionText, !isToday && styles.dateOptionTextActive]}>
-            Yesterday
-          </Text>
-        </TouchableOpacity>
+
+      <View style={styles.dateHeadline}>
+        <Text style={styles.dateWeekday}>{weekday}</Text>
+        <Text style={styles.dateBig}>{dayMonth}</Text>
+        <Text style={styles.dateYear}>{year}</Text>
       </View>
-      <Text style={styles.dateDisplay}>
-        {date.toLocaleDateString('en-US', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        })}
-      </Text>
+
+      {Platform.OS === 'ios' ? (
+        <View style={styles.pickerCard}>
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display="inline"
+            onChange={handleChangeDate}
+            accentColor={Colors.brand.primary}
+            themeVariant="light"
+            style={styles.iosDatePicker}
+          />
+        </View>
+      ) : (
+        <TouchableOpacity style={styles.pickerButton} onPress={handleShowDate}>
+          <Text style={styles.pickerButtonText}>Change date</Text>
+        </TouchableOpacity>
+      )}
+
+      <View style={styles.clockRow}>
+        <AnalogClock date={date} />
+        <View style={styles.clockSide}>
+          <Text style={styles.timeText}>
+            {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+          {Platform.OS === 'ios' ? (
+            <DateTimePicker
+              value={date}
+              mode="time"
+              display="compact"
+              onChange={handleChangeTime}
+              accentColor={Colors.brand.primary}
+              themeVariant="light"
+            />
+          ) : (
+            <TouchableOpacity style={styles.pickerButton} onPress={handleShowTime}>
+              <Text style={styles.pickerButtonText}>Change time</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={handleNow} style={styles.nowButton}>
+            <Text style={styles.nowButtonText}>Now</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {androidPicker === 'date' && (
+        <DateTimePicker value={date} mode="date" display="default" onChange={handleChangeDate} />
+      )}
+      {androidPicker === 'time' && (
+        <DateTimePicker value={date} mode="time" display="clock" onChange={handleChangeTime} />
+      )}
     </View>
   );
 }
@@ -373,34 +442,72 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
 
-  // Date step
-  dateOptions: {
-    flexDirection: 'row',
-    gap: Spacing.s12,
-    justifyContent: 'center',
+  // Date & time step
+  dateHeadline: {
+    alignItems: 'center',
+    marginBottom: Spacing.s16,
   },
-  dateOption: {
-    paddingHorizontal: Spacing.s24,
+  dateWeekday: {
+    ...Typography.subheadline,
+    color: Colors.brand.primary,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  dateBig: {
+    ...Typography.title1,
+    color: Colors.neutral[900],
+  },
+  dateYear: {
+    ...Typography.subheadline,
+    color: Colors.neutral[500],
+  },
+  pickerCard: {
+    backgroundColor: Colors.white,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+    paddingHorizontal: Spacing.s4,
+    paddingVertical: Spacing.s4,
+  },
+  iosDatePicker: {
+    width: '100%',
+  },
+  pickerButton: {
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.s16,
     paddingVertical: Spacing.s12,
-    borderRadius: Radii.full,
+    borderRadius: Radii.md,
     borderWidth: 1.5,
     borderColor: Colors.neutral[200],
   },
-  dateOptionActive: {
-    backgroundColor: Colors.brand.primary,
-    borderColor: Colors.brand.primary,
-  },
-  dateOptionText: {
-    ...Typography.body,
+  pickerButtonText: {
+    ...Typography.subheadline,
+    color: Colors.neutral[700],
     fontWeight: '600',
-    color: Colors.text.primary,
   },
-  dateOptionTextActive: {
-    color: Colors.white,
+  clockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.s20,
+    marginTop: Spacing.s20,
   },
-  dateDisplay: {
-    ...Typography.title3,
-    color: Colors.text.primary,
-    textAlign: 'center',
+  clockSide: {
+    alignItems: 'center',
+    gap: Spacing.s8,
+  },
+  timeText: {
+    ...Typography.title2,
+    color: Colors.neutral[900],
+  },
+  nowButton: {
+    paddingVertical: Spacing.s4,
+    paddingHorizontal: Spacing.s12,
+  },
+  nowButtonText: {
+    ...Typography.subheadline,
+    color: Colors.brand.primary,
+    fontWeight: '600',
   },
 });

@@ -267,6 +267,7 @@ describe('handleSaveQuickAddPlace', () => {
         rating: 4,
         favorite: false,
         wantToVisit: false,
+        tags: ['coffee'],
       });
     });
 
@@ -277,6 +278,7 @@ describe('handleSaveQuickAddPlace', () => {
         description: 'Great place',
         coordinates: { latitude: 3, longitude: 4 },
         rating: 4,
+        tags: ['coffee'],
       }),
     );
     expect(mockAddNote).toHaveBeenCalledTimes(1);
@@ -297,6 +299,7 @@ describe('handleSaveQuickAddPlace', () => {
         rating: 5,
         favorite: false,
         wantToVisit: false,
+        tags: [],
       });
     });
     expect(mockAddPlace).toHaveBeenCalledWith(expect.objectContaining({ name: 'New Pin' }));
@@ -312,6 +315,7 @@ describe('handleSaveQuickAddPlace', () => {
         rating: 5,
         favorite: false,
         wantToVisit: false,
+        tags: [],
       });
     });
     expect(mockAddPlace).not.toHaveBeenCalled();

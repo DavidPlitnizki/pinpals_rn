@@ -27,8 +27,7 @@
       "package": "com.dpstudio.pinpals",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -41,14 +40,14 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow Pinpals to use your location to centre the map."
+          "locationWhenInUsePermission": "Pinpals uses your location to center the map on your area, get directions to places, and show live turn-by-turn navigation while you're on the way."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Pinpals to access your photo library to add photos to your places.",
-          "cameraPermission": "Allow Pinpals to use your camera to take photos of your places."
+          "photosPermission": "Pinpals uses your photo library so you can choose existing photos for your profile picture and for your places and memories.",
+          "cameraPermission": "Pinpals uses your camera to take photos for your profile picture and for your places and memories."
         }
       ],
       [
@@ -75,8 +74,7 @@
       "@react-native-firebase/analytics"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "router": {},

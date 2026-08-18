@@ -36,6 +36,7 @@ function computeStats(places: Place[]): PlaceStats {
   // Favourite category
   const catCount: Partial<Record<PlaceCategory, number>> = {};
   for (const p of places) {
+    if (!p.category) continue;
     catCount[p.category] = (catCount[p.category] ?? 0) + 1;
   }
   const topCat = (Object.entries(catCount) as [PlaceCategory, number][]).sort(

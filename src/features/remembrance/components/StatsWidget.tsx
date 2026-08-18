@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { CATEGORY_COLORS } from '../../../shared/constants';
+import { categoryColor } from '../../../shared/constants';
 import { PlaceStats } from '../hooks/useRemembranceScreen';
 
 interface Props {
@@ -13,7 +13,7 @@ export function StatsWidget({ stats }: Props) {
   if (stats.total === 0) return null;
 
   const catColor = stats.favCategory
-    ? CATEGORY_COLORS[stats.favCategory.category]
+    ? categoryColor(stats.favCategory.category)
     : Colors.brand.primary;
 
   return (

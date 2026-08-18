@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Animated } from 'react-native';
 
 import { Coordinates, MemoryMood } from '../../../models/types';
-import { MapboxSearchResult } from '../../../services/mapboxSearch';
+import { MapboxSearchResult, reverseGeocodeAddress } from '../../../services/mapboxSearch';
 import { copyPhotosToAppStorage } from '../../../shared/photoStorage';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
@@ -23,6 +23,8 @@ export interface QuickAddSaveData {
   wantToVisit: boolean;
   pinColor?: string;
   mainPhotoUri?: string;
+  tags: string[];
+  phone?: string;
 }
 
 type ScreenPointFeature = GeoJSON.Feature<
@@ -57,6 +59,7 @@ export function useMapScreen() {
   // pending place came from one — native basemap POI taps and route-waypoint saves have no
   // such metadata to offer, so this is null for those flows.
   const [pendingPlaceMeta, setPendingPlaceMeta] = useState<{
+    name?: string;
     address?: string;
     phone?: string;
     website?: string;
@@ -68,6 +71,9 @@ export function useMapScreen() {
   // on-map callouts (My Places / search result) to close, the same way tapping a
   // different annotation would.
   const [dismissSignal, setDismissSignal] = useState(0);
+  // "Hide my places": lets the user clear their own saved pins off the map to see search
+  // results / the basemap underneath. Purely a view filter — nothing is deleted.
+  const [myPlacesHidden, setMyPlacesHidden] = useState(false);
 
   const toastAnim = useRef(new Animated.Value(0)).current;
   const [toastMsg, setToastMsg] = useState('');
@@ -156,6 +162,8 @@ export function useMapScreen() {
     [showToast],
   );
 
+  const toggleMyPlacesHidden = useCallback(() => setMyPlacesHidden((hidden) => !hidden), []);
+
   const getMapCenter = useCallback((): Coordinates => {
     const [longitude, latitude] = currentCenter.current;
     return { latitude, longitude };
@@ -199,6 +207,9 @@ export function useMapScreen() {
         animationDuration: 0,
       });
       setPendingPlaceCoords({ latitude, longitude });
+      // A bare map point carries no name/address of its own — must not inherit the previous
+      // pending place's metadata.
+      setPendingPlaceMeta(null);
       setShowQuickAddSheet(true);
     },
     [],
@@ -268,7 +279,9 @@ export function useMapScreen() {
 
   const handleConfirmNativePoiMarker = useCallback((marker: NativePoiMarker) => {
     setPendingPlaceCoords(marker.coordinates);
-    setPendingPlaceMeta(null);
+    // The basemap already knows what this place is called — seed the form with it rather
+    // than making the user retype a name that's printed right there on the map.
+    setPendingPlaceMeta({ name: marker.name });
     setNativePoiMarker(null);
     setShowQuickAddSheet(true);
   }, []);
@@ -297,6 +310,11 @@ export function useMapScreen() {
       // anything — so what gets saved always points at a durable file, not a picker temp
       // path. The "main photo" pick is remapped to its copy by its position in the array.
       const photoUris = await copyPhotosToAppStorage(data.photoUris);
+
+      // A point picked straight off the map (long-press, route waypoint) carries no address —
+      // look one up so the saved card shows where it is instead of just coordinates. Best
+      // effort: if the lookup fails the place is still saved, just without an address.
+      const address = pendingPlaceMeta?.address ?? (await reverseGeocodeAddress(pendingPlaceCoords)) ?? undefined;
       const mainPhotoIndex = data.mainPhotoUri ? data.photoUris.indexOf(data.mainPhotoUri) : -1;
       const mainPhotoUri = mainPhotoIndex >= 0 ? photoUris[mainPhotoIndex] : undefined;
 
@@ -304,14 +322,14 @@ export function useMapScreen() {
         name,
         description: description || undefined,
         coordinates: pendingPlaceCoords,
-        category: 'nature',
+        tags: data.tags,
         rating: data.rating,
         isFavorite: data.wantToVisit,
         favorite: data.favorite,
         pinColor: data.pinColor,
         mainPhotoUri,
-        address: pendingPlaceMeta?.address,
-        phone: pendingPlaceMeta?.phone,
+        address,
+        phone: data.phone ?? pendingPlaceMeta?.phone,
         website: pendingPlaceMeta?.website,
       });
 
@@ -354,6 +372,7 @@ export function useMapScreen() {
   const handleConfirmSearchResultMarker = useCallback((marker: PendingSearchMarker) => {
     setPendingPlaceCoords(marker.coordinates);
     setPendingPlaceMeta({
+      name: marker.name,
       address: marker.fullAddress,
       phone: marker.phone,
       website: marker.website,
@@ -434,6 +453,8 @@ export function useMapScreen() {
     handleConfirmSearchResultMarker,
     handleMarkerPress,
     handleDeleteMarker,
+    myPlacesHidden,
+    toggleMyPlacesHidden,
     setShowProfileMenu,
   };
 }

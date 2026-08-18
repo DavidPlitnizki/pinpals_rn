@@ -3,7 +3,7 @@ import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { MOOD_CONFIG } from '../../../models/types';
-import { CATEGORY_COLORS, CATEGORY_LABELS } from '../../../shared/constants';
+import { categoryColor, CATEGORY_LABELS } from '../../../shared/constants';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { DayMemory } from '../hooks/useRemembranceScreen';
 
@@ -16,7 +16,9 @@ export function DayMemoryWidget({ memory, onPress }: Props) {
   const { place, note, label } = memory;
   const getLatestMoodForPlace = usePlacesStore((s) => s.getLatestMoodForPlace);
   const mood = getLatestMoodForPlace(place.id);
-  const accentColor = mood ? MOOD_CONFIG[mood].color : CATEGORY_COLORS[place.category];
+  const accentColor = mood
+    ? MOOD_CONFIG[mood].color
+    : (place.pinColor ?? categoryColor(place.category));
 
   // Subtle shimmer / pulse animation on the accent bar
   const pulse = useRef(new Animated.Value(0.7)).current;
@@ -52,7 +54,7 @@ export function DayMemoryWidget({ memory, onPress }: Props) {
               {MOOD_CONFIG[mood].emoji} {MOOD_CONFIG[mood].label}
             </Text>
           )}
-          {!mood && (
+          {!mood && place.category && (
             <View style={[styles.categoryChip, { backgroundColor: accentColor + '22' }]}>
               <Text style={[styles.categoryChipText, { color: accentColor }]}>
                 {CATEGORY_LABELS[place.category]}

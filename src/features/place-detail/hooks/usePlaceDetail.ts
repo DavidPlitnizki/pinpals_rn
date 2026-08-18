@@ -33,6 +33,8 @@ export function usePlaceDetail() {
 
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [description, setDescription] = useState(place?.description ?? '');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [name, setName] = useState(place?.name ?? '');
   const [showAddNote, setShowAddNote] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [notePhotoUri, setNotePhotoUri] = useState<string | undefined>();
@@ -43,6 +45,26 @@ export function usePlaceDetail() {
   function handleSaveDescription() {
     updatePlace(place!.id, { description: description.trim() || undefined });
     setIsEditingDescription(false);
+  }
+
+  function handleToggleEditDescription() {
+    if (isEditingDescription) {
+      handleSaveDescription();
+    } else {
+      setDescription(place?.description ?? '');
+      setIsEditingDescription(true);
+    }
+  }
+
+  function handleStartEditingName() {
+    setName(place!.name);
+    setIsEditingName(true);
+  }
+
+  function handleSaveName() {
+    const trimmed = name.trim();
+    if (trimmed) updatePlace(place!.id, { name: trimmed });
+    setIsEditingName(false);
   }
 
   function handleToggleFavorite() {
@@ -137,6 +159,10 @@ export function usePlaceDetail() {
     ]);
   }
 
+  function handleRemoveNotePhoto() {
+    setNotePhotoUri(undefined);
+  }
+
   function handleCloseAddNote() {
     setShowAddNote(false);
     setNoteText('');
@@ -147,16 +173,20 @@ export function usePlaceDetail() {
     router.push({ pathname: '/create-memory', params: { placeId: place!.id } } as any);
   }
 
-  function handleCreateMeetingHere() {
-    router.push({ pathname: '/create-meeting', params: { placeId: place!.id } } as any);
+  function handleEditMemory(noteId: string) {
+    router.push({
+      pathname: '/create-memory',
+      params: { placeId: place!.id, noteId },
+    } as any);
   }
 
-  function handleAddTag(tag: string) {
-    if (place) addTagToPlace(place.id, tag);
-  }
-
-  function handleRemoveTag(tag: string) {
-    if (place) removeTagFromPlace(place.id, tag);
+  function handleToggleTag(tag: string) {
+    if (!place) return;
+    if ((place.tags ?? []).includes(tag)) {
+      removeTagFromPlace(place.id, tag);
+    } else {
+      addTagToPlace(place.id, tag);
+    }
   }
 
   return {
@@ -167,12 +197,18 @@ export function usePlaceDetail() {
     setIsEditingDescription,
     description,
     setDescription,
+    isEditingName,
+    name,
+    setName,
+    handleStartEditingName,
+    handleSaveName,
     showAddNote,
     setShowAddNote,
     noteText,
     setNoteText,
     notePhotoUri,
     setNotePhotoUri,
+    handleRemoveNotePhoto,
     viewerPhotos,
     viewerIndex,
     viewerVisible,
@@ -180,6 +216,7 @@ export function usePlaceDetail() {
     handleClosePhotoViewer,
     deleteNotePhoto,
     handleSaveDescription,
+    handleToggleEditDescription,
     handleToggleFavorite,
     handleSetPinColor,
     handleDeletePlace,
@@ -188,9 +225,8 @@ export function usePlaceDetail() {
     handleDeleteNote,
     handleCloseAddNote,
     handleAddMemory,
-    handleCreateMeetingHere,
-    handleAddTag,
-    handleRemoveTag,
+    handleEditMemory,
+    handleToggleTag,
     router,
   };
 }

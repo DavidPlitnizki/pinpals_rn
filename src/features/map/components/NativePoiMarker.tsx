@@ -1,12 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
-import { MarkerView, PointAnnotation } from '@rnmapbox/maps';
-import React, { useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { MapView, MarkerView, PointAnnotation } from '@rnmapbox/maps';
+import React, { RefObject, useCallback } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
+import { useCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { formatSlugLabel } from '../../../shared/format';
 import { openPlaceSearch } from '../../../services/webSearch';
+import { shareSpot } from '../../../shared/sharePlace';
+import { HIT_SLOP_8 } from '../constants';
+import { useCalloutAnchor } from '../hooks/useCalloutAnchor';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { NativePoiMarker as NativePoiMarkerData } from '../types';
 import { iconForMaki } from '../utils/mapboxIcons';
@@ -29,6 +34,9 @@ interface Props {
   // Called when this annotation is selected, so the base MapView's onPress (which also
   // fires on this tap) can skip re-querying for a native basemap POI underneath.
   onAnnotationSelected?: () => void;
+  // Used to work out where this marker currently sits on screen, so the callout can flip
+  // below / slide sideways instead of being clipped at an edge.
+  mapViewRef?: RefObject<MapView | null>;
 }
 
 export function NativePoiMarker({
@@ -38,14 +46,23 @@ export function NativePoiMarker({
   onAddPlace,
   refreshSignal,
   onAnnotationSelected,
+  mapViewRef,
 }: Props) {
   const { registerRef } = usePointAnnotationRefresh(refreshSignal);
+  const calloutAnchor = useCalloutAnchor(mapViewRef, marker.coordinates);
+  // A tapped basemap POI gets the same cover art a saved place would — no need to save it
+  // first just to see what it looks like.
+  const cover = useCoverImage(marker.coordinates, { wikipedia: true });
 
   const handleSelected = useCallback(() => onAnnotationSelected?.(), [onAnnotationSelected]);
   const handleDirectionsPress = useCallback(() => onDirections(marker), [onDirections, marker]);
   const handleAddPlacePress = useCallback(() => onAddPlace(marker), [onAddPlace, marker]);
   const handleSearchPress = useCallback(
     () => void openPlaceSearch(marker.name, marker.coordinates, 'native_poi'),
+    [marker.name, marker.coordinates],
+  );
+  const handleSharePress = useCallback(
+    () => shareSpot({ name: marker.name, coordinates: marker.coordinates }),
     [marker.name, marker.coordinates],
   );
 
@@ -76,14 +93,27 @@ export function NativePoiMarker({
 
       <MarkerView
         coordinate={[marker.coordinates.longitude, marker.coordinates.latitude]}
-        anchor={{ x: 0.5, y: 1.4 }}
+        anchor={calloutAnchor}
       >
         <View style={styles.callout}>
           <View style={styles.calloutHeaderRow}>
+            <TouchableOpacity
+              style={styles.calloutShareButton}
+              onPress={handleSharePress}
+              hitSlop={HIT_SLOP_8}
+            >
+              <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
+            </TouchableOpacity>
             <CircleCloseButton onPress={onClose} style={styles.calloutCloseButton} />
           </View>
           <View style={styles.calloutPhotoWrap}>
-            <Ionicons name={iconForMaki(marker.maki)} size={32} color={POI_COLOR} />
+            {cover.loading ? (
+              <ActivityIndicator color={POI_COLOR} />
+            ) : cover.uri ? (
+              <Image source={{ uri: cover.uri }} style={styles.calloutPhoto} contentFit="cover" />
+            ) : (
+              <Ionicons name={iconForMaki(marker.maki)} size={32} color={POI_COLOR} />
+            )}
           </View>
           <Text style={styles.calloutName} numberOfLines={1}>
             {marker.name}
@@ -184,8 +214,20 @@ const styles = StyleSheet.create({
   calloutHeaderRow: {
     alignSelf: 'stretch',
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: Spacing.s4,
+    marginHorizontal: -Spacing.s8,
+  },
+  calloutShareButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.neutral[100],
+    borderWidth: 1.5,
+    borderColor: Colors.neutral[900],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // A dark border keeps the button visible against whatever's under it on the map,
   // instead of blending into busy map tiles.
@@ -201,6 +243,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: Spacing.s4,
+    overflow: 'hidden',
+  },
+  calloutPhoto: {
+    width: '100%',
+    height: '100%',
   },
   calloutName: {
     ...Typography.headline,

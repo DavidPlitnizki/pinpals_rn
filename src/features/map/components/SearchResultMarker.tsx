@@ -1,19 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
-import { MarkerView, PointAnnotation } from '@rnmapbox/maps';
+import { MapView, MarkerView, PointAnnotation } from '@rnmapbox/maps';
 import { Image } from 'expo-image';
-import React, { useCallback, useRef, useState } from 'react';
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { RefObject, useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
+import { useCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { openPlaceSearch } from '../../../services/webSearch';
+import { shareSpot } from '../../../shared/sharePlace';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
+import { HIT_SLOP_8 } from '../constants';
+import { useCalloutAnchor } from '../hooks/useCalloutAnchor';
 import { PendingSearchMarker } from '../types';
 import { iconForMaki } from '../utils/mapboxIcons';
 import { CalloutActionButton } from './CalloutActionButton';
 
 const PIN_SIZE = 40;
 const DROP_RED = '#E4483C';
+// The cover hook needs a coordinate even while nothing is selected (hooks can't be skipped);
+// its result is never rendered in that state.
+const FALLBACK_COORDS = { latitude: 0, longitude: 0 };
 
 interface Props {
   markers: PendingSearchMarker[];
@@ -28,6 +35,9 @@ interface Props {
   // Bumped whenever the user taps empty map space (or a different POI) — closes this
   // marker's open callout the same way tapping a different annotation would.
   dismissSignal?: unknown;
+  // Used to work out where the selected marker currently sits on screen, so the callout can
+  // flip below / slide sideways instead of being clipped at an edge.
+  mapViewRef?: RefObject<MapView | null>;
 }
 
 interface MarkerPinProps {
@@ -81,10 +91,18 @@ export function SearchResultMarker({
   refreshSignal,
   onAnnotationSelected,
   dismissSignal,
+  mapViewRef,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = markers.find((m) => m.id === selectedId) ?? null;
   const { registerRef } = usePointAnnotationRefresh(refreshSignal);
+  const calloutAnchor = useCalloutAnchor(mapViewRef, selected?.coordinates);
+  // Mapbox only supplies an imageUrl for some results — everything else falls back to the
+  // same cover lookup a saved place uses, so a result shows a picture without being saved.
+  const cover = useCoverImage(selected?.coordinates ?? FALLBACK_COORDS, {
+    localPhotoUri: selected?.imageUrl,
+    wikipedia: !!selected && !selected.imageUrl,
+  });
 
   // Adjust state during render (React's documented pattern for "reset on prop change")
   // rather than in a useEffect — see MapMarkers' identical dismissSignal handling.
@@ -129,6 +147,15 @@ export function SearchResultMarker({
     void openPlaceSearch(selected.name, selected.coordinates, 'search_result');
   }, [selected]);
 
+  const handleSharePress = useCallback(() => {
+    if (!selected) return;
+    shareSpot({
+      name: selected.name,
+      coordinates: selected.coordinates,
+      address: selected.fullAddress,
+    });
+  }, [selected]);
+
   return (
     <>
       {markers.map((marker) => (
@@ -144,15 +171,26 @@ export function SearchResultMarker({
       {selected && (
         <MarkerView
           coordinate={[selected.coordinates.longitude, selected.coordinates.latitude]}
-          anchor={{ x: 0.5, y: 1.4 }}
+          anchor={calloutAnchor}
         >
           <View style={styles.callout}>
             <View style={styles.calloutHeaderRow}>
+              <TouchableOpacity
+                style={styles.calloutShareButton}
+                onPress={handleSharePress}
+                hitSlop={HIT_SLOP_8}
+              >
+                <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
+              </TouchableOpacity>
               <CircleCloseButton onPress={handleCloseCallout} style={styles.calloutCloseButton} />
             </View>
             <View style={styles.calloutImageWrap}>
-              {selected.imageUrl ? (
-                <Image source={{ uri: selected.imageUrl }} style={styles.calloutImage} />
+              {cover.loading ? (
+                <View style={styles.calloutImagePlaceholder}>
+                  <ActivityIndicator color={Colors.brand.primary} />
+                </View>
+              ) : cover.uri ? (
+                <Image source={{ uri: cover.uri }} style={styles.calloutImage} contentFit="cover" />
               ) : (
                 <View style={styles.calloutImagePlaceholder}>
                   <Ionicons
@@ -270,14 +308,26 @@ const styles = StyleSheet.create({
   // rasterizes its content to the JS-measured layout box, so anything positioned outside
   // that box (negative offsets, or content clipped by a parent's overflow) gets cut off
   // rather than floating over the map. Keeping the button in flow avoids both.
+  // Share on the left, close on the right, both hugging the card's edges.
   calloutHeaderRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingTop: Spacing.s8,
-    paddingRight: Spacing.s8,
+    paddingHorizontal: Spacing.s8,
   },
   // A dark border keeps the button visible against whatever's under it on the map,
   // instead of blending into busy map tiles.
+  calloutShareButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.neutral[100],
+    borderWidth: 1.5,
+    borderColor: Colors.neutral[900],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   calloutCloseButton: {
     borderWidth: 1.5,
     borderColor: Colors.neutral[900],

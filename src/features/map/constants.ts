@@ -3,7 +3,13 @@ import { ComponentProps } from 'react';
 
 import { Spacing } from '../../design-system/tokens';
 
-export { CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS } from '../../shared/constants';
+export {
+  CATEGORIES,
+  CATEGORY_COLORS,
+  CATEGORY_LABELS,
+  categoryColor,
+  categoryIcon,
+} from '../../shared/constants';
 
 export interface QuickSearchCategory {
   key: string;
@@ -28,6 +34,8 @@ export const QUICK_SEARCH_CATEGORIES: QuickSearchCategory[] = [
     color: '#E8834A',
   },
   { key: 'cafes', label: 'Cafes', query: 'coffee shop', icon: 'coffee', color: '#8B6347' },
+  { key: 'bars', label: 'Bars', query: 'bar', icon: 'glass-cocktail', color: '#B5651D' },
+  { key: 'clubs', label: 'Clubs', query: 'night club', icon: 'party-popper', color: '#7B2FF7' },
   { key: 'parks', label: 'Parks', query: 'park', icon: 'tree', color: '#4A7C59' },
   { key: 'parking', label: 'Parking', query: 'parking', icon: 'parking', color: '#3D9BE9' },
   { key: 'gas', label: 'Gas Stations', query: 'gas station', icon: 'gas-station', color: '#E4483C' },

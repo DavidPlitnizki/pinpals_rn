@@ -20,7 +20,7 @@ import { Colors, Radii, Spacing, Typography } from '../../../design-system/token
 import { Place } from '../../../models/types';
 import { MapboxSearchResult } from '../../../services/mapboxSearch';
 import { usePlacesStore } from '../../../store/usePlacesStore';
-import { CATEGORY_COLORS, CATEGORY_LABELS } from '../constants';
+import { categoryColor } from '../constants';
 import { MIN_EXTERNAL_QUERY_LENGTH } from '../hooks/useSearchSheet';
 import { getPlacePhotoPreview } from '../utils/placePhoto';
 
@@ -52,15 +52,13 @@ const SearchPlaceRow = React.memo(function SearchPlaceRow({
       {photoUri ? (
         <Image source={{ uri: photoUri }} style={styles.rowThumb} contentFit="cover" />
       ) : (
-        <View style={[styles.categoryDot, { backgroundColor: CATEGORY_COLORS[place.category] }]} />
+        <View style={[styles.categoryDot, { backgroundColor: categoryColor(place.category) }]} />
       )}
       <View style={styles.placeInfo}>
         <Text style={styles.placeName} numberOfLines={1}>
           {place.name}
         </Text>
         <Text style={styles.placeMeta}>
-          {CATEGORY_LABELS[place.category]}
-          {'  '}
           {'★'.repeat(place.rating)}
           {place.isFavorite ? '  ⭐' : ''}
         </Text>

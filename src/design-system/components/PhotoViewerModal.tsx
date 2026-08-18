@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing } from '../tokens';
 
 interface PhotoViewerModalProps {
@@ -30,6 +30,11 @@ export function PhotoViewerModal({
   onClose,
 }: PhotoViewerModalProps) {
   const [activeIndex, setActiveIndex] = useState(initialIndex);
+  // react-native-safe-area-context's SafeAreaView reports zero insets inside a transparent
+  // Modal on iOS, which pushed the close button up under the notch. Reading the insets from
+  // the screen's provider (this component renders outside the Modal tree) and padding
+  // manually keeps the button reachable.
+  const insets = useSafeAreaInsets();
 
   const initialScrollIndex = useMemo(
     () => Math.min(Math.max(initialIndex, 0), Math.max(photoUris.length - 1, 0)),
@@ -71,8 +76,8 @@ export function PhotoViewerModal({
       onRequestClose={onClose}
       onShow={handleShow}
     >
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <View style={styles.header}>
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, Spacing.s16) }]}>
           {photoUris.length > 1 && (
             <Text style={styles.counter}>
               {activeIndex + 1} / {photoUris.length}
@@ -94,7 +99,7 @@ export function PhotoViewerModal({
           getItemLayout={getItemLayout}
           onMomentumScrollEnd={handleMomentumScrollEnd}
         />
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -119,14 +124,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closeText: { color: Colors.white, fontSize: 16, fontWeight: '600' },
+  closeText: { color: Colors.white, fontSize: 20, fontWeight: '700', lineHeight: 22 },
   page: {
     width: screenWidth,
     alignItems: 'center',
