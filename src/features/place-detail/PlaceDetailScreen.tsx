@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
-import React, { useEffect } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PinButton } from '../../design-system/components/PinButton';
@@ -13,12 +13,19 @@ import { TagPicker } from '../../design-system/components/TagPicker';
 import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
 import { PlaceNote, MOOD_CONFIG } from '../../models/types';
 import { categoryColor, PRESET_TAGS } from '../../shared/constants';
+import { PlaceInfoRows } from '../../design-system/components/PlaceInfoRows';
+import { shareSpot } from '../../shared/sharePlace';
 import { AddNoteModal } from './components/AddNoteModal';
+import { FullScreenMapModal } from './components/FullScreenMapModal';
+import { PlaceHeroGallery } from './components/PlaceHeroGallery';
 import { MemoryTimelineItem } from './components/MemoryTimelineItem';
-import { PlaceMapSnapshot } from './components/PlaceMapSnapshot';
 import { usePlaceDetail } from './hooks/usePlaceDetail';
 
 const HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
+
+// Created once at module level — an inline element would be a new object on every render.
+const ADD_MEMORY_ICON = <Ionicons name="add-circle-outline" size={20} color={Colors.white} />;
+const DELETE_PLACE_ICON = <Ionicons name="trash-outline" size={20} color={Colors.white} />;
 
 export default function PlaceDetailScreen() {
   const {
@@ -58,12 +65,64 @@ export default function PlaceDetailScreen() {
     router,
   } = usePlaceDetail();
 
+  const [fullScreenMapVisible, setFullScreenMapVisible] = useState(false);
+  const openFullScreenMap = useCallback(() => setFullScreenMapVisible(true), []);
+  const closeFullScreenMap = useCallback(() => setFullScreenMapVisible(false), []);
+
+  // Every photo across the place's memories, oldest note first — the map page is appended
+  // last by the gallery itself.
+  const galleryPhotos = useMemo(
+    () =>
+      placeNotes
+        .slice()
+        .reverse()
+        .flatMap((note: PlaceNote) => note.photoUris ?? (note.photoUri ? [note.photoUri] : [])),
+    [placeNotes],
+  );
+
+  const placeInfo = useMemo(
+    () => ({
+      address: place?.address,
+      phone: place?.phone,
+      website: place?.website,
+      latitude: place?.coordinates.latitude,
+      longitude: place?.coordinates.longitude,
+    }),
+    [place?.address, place?.phone, place?.website, place?.coordinates],
+  );
+
+  // Shares the same payload the map callout's share button sends — name, address,
+  // coordinates and a Google Maps link — so a place shared from here and from the map look
+  // identical to whoever receives it.
+  const handleShare = useCallback(() => {
+    if (!place) return;
+    shareSpot({
+      name: place.name,
+      coordinates: place.coordinates,
+      address: place.address,
+      photoUri: galleryPhotos[0] ?? place.mainPhotoUri,
+    });
+  }, [place, galleryPhotos]);
+
   const navigation = useNavigation();
   // The Stack header defaults to "Place Details" (set in the root layout) — swap it to
-  // "Edit" while the description field is open, back to the default once it closes.
+  // "Edit" while the description field is open, back to the default once it closes. The
+  // share action lives in the header rather than the page body so it stays reachable
+  // without scrolling.
   useEffect(() => {
-    navigation.setOptions({ title: isEditingDescription ? 'Edit' : 'Place Details' });
-  }, [isEditingDescription, navigation]);
+    navigation.setOptions({
+      title: isEditingDescription ? 'Edit' : 'Place Details',
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={handleShare}
+          hitSlop={HIT_SLOP}
+          accessibilityLabel="Share this place"
+        >
+          <Ionicons name="share-outline" size={22} color={Colors.brand.primary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [isEditingDescription, navigation, handleShare]);
 
   if (!place) {
     return (
@@ -77,40 +136,21 @@ export default function PlaceDetailScreen() {
   }
 
   const moodConfig = latestMood ? MOOD_CONFIG[latestMood] : null;
-  const headerPhoto =
-    placeNotes.find((n) => n.photoUri || n.photoUris?.length)?.photoUris?.[0] ??
-    placeNotes.find((n) => n.photoUri)?.photoUri;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {/* Hero: photo or map */}
-        {headerPhoto ? (
-          <View style={styles.heroContainer}>
-            <Image source={{ uri: headerPhoto }} style={styles.heroPhoto} />
-            <View
-              style={[
-                styles.heroOverlay,
-                moodConfig && { backgroundColor: moodConfig.color + '40' },
-              ]}
-            />
-            <View style={styles.heroContent}>
-              <Text style={styles.heroName}>{place.name}</Text>
-              {moodConfig && (
-                <Text style={styles.heroMood}>
-                  {moodConfig.emoji} {moodConfig.label}
-                </Text>
-              )}
-            </View>
-          </View>
-        ) : (
-          <PlaceMapSnapshot
-            id={place.id}
-            latitude={place.coordinates.latitude}
-            longitude={place.coordinates.longitude}
-            color={moodConfig?.color ?? place.pinColor ?? categoryColor(place.category)}
-          />
-        )}
+        <PlaceHeroGallery
+          placeId={place.id}
+          latitude={place.coordinates.latitude}
+          longitude={place.coordinates.longitude}
+          pinColor={moodConfig?.color ?? place.pinColor ?? categoryColor(place.category)}
+          photoUris={galleryPhotos}
+          name={place.name}
+          moodLabel={moodConfig ? `${moodConfig.emoji} ${moodConfig.label}` : undefined}
+          onPhotoPress={handleOpenPhotoViewer}
+          onMapPress={openFullScreenMap}
+        />
 
         <View style={styles.content}>
           {/* Header info */}
@@ -155,6 +195,12 @@ export default function PlaceDetailScreen() {
               </Text>
             )}
           </View>
+
+          {/* Details — address/phone/website/coordinates, whichever the place actually has */}
+          <PinCard style={styles.section}>
+            <Text style={styles.sectionTitle}>Details</Text>
+            <PlaceInfoRows info={placeInfo} />
+          </PinCard>
 
           {/* Tags */}
           <PinCard style={styles.section}>
@@ -201,7 +247,12 @@ export default function PlaceDetailScreen() {
 
           {/* Action buttons */}
           <View style={styles.actions}>
-            <PinButton title="Add Memory" onPress={handleAddMemory} fullWidth />
+            <PinButton
+              title="Add Memory"
+              onPress={handleAddMemory}
+              fullWidth
+              leftIcon={ADD_MEMORY_ICON}
+            />
           </View>
 
           {/* Timeline of memories */}
@@ -236,6 +287,7 @@ export default function PlaceDetailScreen() {
               onPress={handleDeletePlace}
               variant="danger"
               fullWidth
+              leftIcon={DELETE_PLACE_ICON}
             />
           </View>
         </View>
@@ -253,6 +305,18 @@ export default function PlaceDetailScreen() {
           onRemovePhoto={handleRemoveNotePhoto}
           onSave={handleSaveNote}
           onClose={handleCloseAddNote}
+        />
+      )}
+
+      {fullScreenMapVisible && (
+        <FullScreenMapModal
+          visible={fullScreenMapVisible}
+          placeId={place.id}
+          latitude={place.coordinates.latitude}
+          longitude={place.coordinates.longitude}
+          pinColor={moodConfig?.color ?? place.pinColor ?? categoryColor(place.category)}
+          name={place.name}
+          onClose={closeFullScreenMap}
         />
       )}
 

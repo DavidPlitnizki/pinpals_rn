@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 
 import { useAuth } from '../../../contexts/AuthContext';
 import { promptPhotoSource } from '../../../shared/photoSourcePrompt';
+import { setCrashReportingUserContext } from '../../../services/crashReporting';
 import { useMeetingsStore } from '../../../store/useMeetingsStore';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
@@ -103,7 +104,11 @@ export function useProfileScreen() {
       Alert.alert('Name required', 'Please enter your name.');
       return;
     }
-    updateProfile({ name: name.trim(), ...(draftAvatar ?? {}) });
+    const trimmedName = name.trim();
+    updateProfile({ name: trimmedName, ...(draftAvatar ?? {}) });
+    // The app's own editable name, not Firebase's displayName (guests have none) — this is
+    // the one a support conversation about a crash report would actually recognize.
+    setCrashReportingUserContext({ profile_name: trimmedName });
     setDraftAvatar(null);
     setIsEditing(false);
   }

@@ -17,7 +17,7 @@ import { Avatar } from '../../design-system/components/Avatar';
 import { PinButton } from '../../design-system/components/PinButton';
 import { PinCard } from '../../design-system/components/PinCard';
 import { PinTextField } from '../../design-system/components/PinTextField';
-import { Colors, Spacing, Typography } from '../../design-system/tokens';
+import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
 import { AuthProviderId } from '../../services/firebaseAuth';
 import { AvatarPickerSheet } from './components/AvatarPickerSheet';
 import { useProfileScreen } from './hooks/useProfileScreen';
@@ -68,13 +68,22 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
         {!isEditing ? (
-          <TouchableOpacity onPress={handleStartEdit} hitSlop={HIT_SLOP} style={styles.editRow}>
-            <Ionicons name="create-outline" size={18} color={Colors.brand.primary} />
-            <Text style={styles.editLink}>Edit</Text>
+          <TouchableOpacity
+            onPress={handleStartEdit}
+            hitSlop={HIT_SLOP}
+            style={styles.headerIconButton}
+            accessibilityLabel="Edit profile"
+          >
+            <Ionicons name="pencil" size={20} color={Colors.brand.primary} />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity onPress={handleCancelEdit} hitSlop={HIT_SLOP}>
-            <Text style={styles.cancelLink}>Cancel</Text>
+          <TouchableOpacity
+            onPress={handleCancelEdit}
+            hitSlop={HIT_SLOP}
+            style={styles.headerIconButtonMuted}
+            accessibilityLabel="Cancel editing"
+          >
+            <Ionicons name="close" size={20} color={Colors.neutral[600]} />
           </TouchableOpacity>
         )}
       </View>
@@ -123,7 +132,12 @@ export default function ProfileScreen() {
                     placeholder="Your name"
                   />
                   <View style={styles.fieldSpacing} />
-                  <PinButton title="Save Changes" onPress={handleSave} fullWidth />
+                  <PinButton
+                    title="Save Changes"
+                    onPress={handleSave}
+                    fullWidth
+                    leftIcon={SAVE_ICON}
+                  />
                 </View>
               ) : (
                 <Text style={styles.profileName}>{profile.name}</Text>
@@ -234,6 +248,9 @@ export default function ProfileScreen() {
 
 const HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
+// Created once at module level — an inline element would be a new object on every render.
+const SAVE_ICON = <Ionicons name="checkmark" size={20} color={Colors.white} />;
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: Colors.neutral[50] },
@@ -246,9 +263,24 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.s16,
   },
   title: { ...Typography.largeTitle, color: Colors.neutral[900] },
-  cancelLink: { ...Typography.body, color: Colors.neutral[500] },
-  editRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.s4 },
-  editLink: { ...Typography.body, color: Colors.brand.primary, fontWeight: '600' },
+  // Same round icon-button pair as the place detail header, so "edit / back out" reads the
+  // same way on both screens.
+  headerIconButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radii.full,
+    backgroundColor: Colors.brand.light,
+  },
+  headerIconButtonMuted: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radii.full,
+    backgroundColor: Colors.neutral[100],
+  },
   avatarSection: { alignItems: 'center', paddingBottom: Spacing.s16 },
   avatarContainer: { position: 'relative' },
   avatarPlaceholderGuest: {

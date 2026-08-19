@@ -15,6 +15,7 @@ import { useCalloutAnchor } from '../hooks/useCalloutAnchor';
 import { PendingSearchMarker } from '../types';
 import { iconForMaki } from '../utils/mapboxIcons';
 import { CalloutActionButton } from './CalloutActionButton';
+import { CalloutContainer } from './CalloutContainer';
 
 const PIN_SIZE = 40;
 const DROP_RED = '#E4483C';
@@ -96,7 +97,10 @@ export function SearchResultMarker({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = markers.find((m) => m.id === selectedId) ?? null;
   const { registerRef } = usePointAnnotationRefresh(refreshSignal);
-  const calloutAnchor = useCalloutAnchor(mapViewRef, selected?.coordinates);
+  const { anchor: calloutAnchor, placement: calloutPlacement } = useCalloutAnchor(
+    mapViewRef,
+    selected?.coordinates,
+  );
   // Mapbox only supplies an imageUrl for some results — everything else falls back to the
   // same cover lookup a saved place uses, so a result shows a picture without being saved.
   const cover = useCoverImage(selected?.coordinates ?? FALLBACK_COORDS, {
@@ -173,80 +177,88 @@ export function SearchResultMarker({
           coordinate={[selected.coordinates.longitude, selected.coordinates.latitude]}
           anchor={calloutAnchor}
         >
-          <View style={styles.callout}>
-            <View style={styles.calloutHeaderRow}>
-              <TouchableOpacity
-                style={styles.calloutShareButton}
-                onPress={handleSharePress}
-                hitSlop={HIT_SLOP_8}
-              >
-                <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
-              </TouchableOpacity>
-              <CircleCloseButton onPress={handleCloseCallout} style={styles.calloutCloseButton} />
-            </View>
-            <View style={styles.calloutImageWrap}>
-              {cover.loading ? (
-                <View style={styles.calloutImagePlaceholder}>
-                  <ActivityIndicator color={Colors.brand.primary} />
-                </View>
-              ) : cover.uri ? (
-                <Image source={{ uri: cover.uri }} style={styles.calloutImage} contentFit="cover" />
-              ) : (
-                <View style={styles.calloutImagePlaceholder}>
-                  <Ionicons
-                    name={iconForMaki(selected.maki)}
-                    size={26}
-                    color={Colors.neutral[400]}
+          <CalloutContainer placement={calloutPlacement} pinHeight={PIN_SIZE}>
+            <View style={styles.callout}>
+              <View style={styles.calloutHeaderRow}>
+                <TouchableOpacity
+                  style={styles.calloutShareButton}
+                  onPress={handleSharePress}
+                  hitSlop={HIT_SLOP_8}
+                >
+                  <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
+                </TouchableOpacity>
+                <CircleCloseButton onPress={handleCloseCallout} style={styles.calloutCloseButton} />
+              </View>
+              <View style={styles.calloutImageWrap}>
+                {cover.loading ? (
+                  <View style={styles.calloutImagePlaceholder}>
+                    <ActivityIndicator color={Colors.brand.primary} />
+                  </View>
+                ) : cover.uri ? (
+                  <Image
+                    source={{ uri: cover.uri }}
+                    style={styles.calloutImage}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={styles.calloutImagePlaceholder}>
+                    <Ionicons
+                      name={iconForMaki(selected.maki)}
+                      size={26}
+                      color={Colors.neutral[400]}
+                    />
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.calloutBody}>
+                <Text style={styles.calloutName} numberOfLines={1}>
+                  {selected.name}
+                </Text>
+                {selected.category && (
+                  <Text style={styles.calloutCategory}>{selected.category}</Text>
+                )}
+                {selected.fullAddress && (
+                  <Text style={styles.calloutAddress} numberOfLines={2}>
+                    {selected.fullAddress}
+                  </Text>
+                )}
+                {selected.website && (
+                  <TouchableOpacity onPress={handleWebsitePress}>
+                    <Text style={styles.calloutWebsite} numberOfLines={1}>
+                      {selected.website.replace(/^https?:\/\//, '')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <View style={styles.calloutActionsRow}>
+                  <CalloutActionButton
+                    icon="globe-outline"
+                    iconSize={24}
+                    iconColor={Colors.neutral[600]}
+                    backgroundColor={Colors.neutral[100]}
+                    borderColor={Colors.neutral[400]}
+                    onPress={handleSearchPress}
+                  />
+                  <CalloutActionButton
+                    icon="navigate-outline"
+                    iconSize={24}
+                    iconColor={Colors.brand.primary}
+                    backgroundColor={Colors.brand.light}
+                    borderColor={Colors.brand.primary}
+                    onPress={handleDirectionsPress}
+                  />
+                  <CalloutActionButton
+                    icon="add-circle-outline"
+                    iconSize={24}
+                    iconColor={Colors.accent.primary}
+                    backgroundColor={Colors.accent.light}
+                    borderColor={Colors.accent.primary}
+                    onPress={handleConfirmPress}
                   />
                 </View>
-              )}
-            </View>
-
-            <View style={styles.calloutBody}>
-              <Text style={styles.calloutName} numberOfLines={1}>
-                {selected.name}
-              </Text>
-              {selected.category && <Text style={styles.calloutCategory}>{selected.category}</Text>}
-              {selected.fullAddress && (
-                <Text style={styles.calloutAddress} numberOfLines={2}>
-                  {selected.fullAddress}
-                </Text>
-              )}
-              {selected.website && (
-                <TouchableOpacity onPress={handleWebsitePress}>
-                  <Text style={styles.calloutWebsite} numberOfLines={1}>
-                    {selected.website.replace(/^https?:\/\//, '')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              <View style={styles.calloutActionsRow}>
-                <CalloutActionButton
-                  icon="globe-outline"
-                  iconSize={24}
-                  iconColor={Colors.neutral[600]}
-                  backgroundColor={Colors.neutral[100]}
-                  borderColor={Colors.neutral[400]}
-                  onPress={handleSearchPress}
-                />
-                <CalloutActionButton
-                  icon="navigate-outline"
-                  iconSize={24}
-                  iconColor={Colors.brand.primary}
-                  backgroundColor={Colors.brand.light}
-                  borderColor={Colors.brand.primary}
-                  onPress={handleDirectionsPress}
-                />
-                <CalloutActionButton
-                  icon="add-circle-outline"
-                  iconSize={24}
-                  iconColor={Colors.accent.primary}
-                  backgroundColor={Colors.accent.light}
-                  borderColor={Colors.accent.primary}
-                  onPress={handleConfirmPress}
-                />
               </View>
             </View>
-          </View>
+          </CalloutContainer>
         </MarkerView>
       )}
     </>

@@ -4,6 +4,8 @@ import { Dimensions } from 'react-native';
 
 import { Coordinates } from '../../../models/types';
 
+export type CalloutPlacement = 'above' | 'below';
+
 const { width: WINDOW_WIDTH, height: WINDOW_HEIGHT } = Dimensions.get('window');
 
 // Roughly half a callout's width — how much horizontal room it needs on the side it opens
@@ -14,10 +16,15 @@ const HORIZONTAL_MARGIN = 130;
 const FLIP_BELOW_Y = WINDOW_HEIGHT * 0.42;
 
 // anchor = the point of the callout that sits on the coordinate, in fractions of its own
-// size. y > 1 floats it above the pin, y < 0 hangs it below; x < 0.5 makes it extend to the
-// right of the pin, x > 0.5 to the left.
-export const CALLOUT_ANCHOR_ABOVE = { x: 0.5, y: 1.4 };
-const ANCHOR_Y_BELOW = -0.15;
+// size. x < 0.5 makes it extend to the right of the pin, x > 0.5 to the left.
+//
+// y is deliberately a whole 1 / 0 (the callout's own bottom / top edge sits exactly on the
+// coordinate) rather than an overshoot like 1.4: a fractional gap scales with the callout's
+// height, so a tall card drifted much further from its pin than a short one. The clearance
+// over the pin is instead a fixed pixel spacer inside CalloutContainer, which reads the same
+// on every callout.
+export const CALLOUT_ANCHOR_ABOVE = { x: 0.5, y: 1 };
+const ANCHOR_Y_BELOW = 0;
 const ANCHOR_X_OPEN_RIGHT = 0.12;
 const ANCHOR_X_OPEN_LEFT = 0.88;
 
@@ -27,7 +34,7 @@ const ANCHOR_X_OPEN_LEFT = 0.88;
 export function useCalloutAnchor(
   mapViewRef: RefObject<MapView | null> | undefined,
   coordinates: Coordinates | null | undefined,
-): { x: number; y: number } {
+): { anchor: { x: number; y: number }; placement: CalloutPlacement } {
   const [anchor, setAnchor] = useState(CALLOUT_ANCHOR_ABOVE);
   const latitude = coordinates?.latitude;
   const longitude = coordinates?.longitude;
@@ -64,5 +71,5 @@ export function useCalloutAnchor(
     };
   }, [latitude, longitude, mapViewRef]);
 
-  return anchor;
+  return { anchor, placement: anchor.y === ANCHOR_Y_BELOW ? 'below' : 'above' };
 }

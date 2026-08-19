@@ -74,7 +74,9 @@ export function useCoverImage(
 // Place-shaped wrapper kept for the saved-place surfaces (cards, rows, pin callout).
 export function usePlaceCoverImage(place: Place, localPhotoUri?: string | null): string | null {
   return useCoverImage(place.coordinates, {
-    localPhotoUri: localPhotoUri ?? place.mainPhotoUri,
+    // The user's own photo wins; then whatever photo the map had for this spot when it was
+    // saved; then the Wikipedia/map-crop fallbacks inside useCoverImage.
+    localPhotoUri: localPhotoUri ?? place.mainPhotoUri ?? place.coverImageUrl,
     // No category set (the normal case) is treated as "might be notable" rather than
     // "definitely a café" — otherwise no saved place would ever get a Wikipedia cover.
     wikipedia: !place.category || LANDMARK_CATEGORIES.includes(place.category),

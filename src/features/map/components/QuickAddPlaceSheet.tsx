@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Dimensions,
@@ -19,6 +20,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
+import { useCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { MoodPicker } from '../../../design-system/components/MoodPicker';
 import { PinColorPicker } from '../../../design-system/components/PinColorPicker';
 import { PinRatingView } from '../../../design-system/components/PinRatingView';
@@ -27,6 +29,7 @@ import { Colors, Radii, Spacing, Typography } from '../../../design-system/token
 import { Coordinates, MemoryMood, MOOD_CONFIG } from '../../../models/types';
 import { PRESET_TAGS } from '../../../shared/constants';
 import { promptPhotoSource } from '../../../shared/photoSourcePrompt';
+import { HIT_SLOP_8 } from '../constants';
 import { QuickAddSaveData } from '../hooks/useMapScreen';
 
 const WINDOW_HEIGHT = Dimensions.get('window').height;
@@ -37,12 +40,18 @@ const DEFAULT_RATING = 5;
 // The "main" photo (shown on the map pin) is marked with a gold border/badge — distinct
 // from every other status color used in this sheet (brand green, error red, warning amber).
 const GOLD = '#D4AF37';
+// The cover hook needs a coordinate even while the sheet is closed (hooks can't be skipped);
+// its result isn't rendered in that state.
+const FALLBACK_COORDS = { latitude: 0, longitude: 0 };
 
 interface Props {
   visible: boolean;
   coordinates: Coordinates | null;
   // Phone as the map knows it (search results carry one) — seeds the field, still editable.
   suggestedPhone?: string;
+  // Photo the map already has for this spot (search results carry one); when absent the
+  // preview falls back to a crop of the map itself.
+  suggestedImageUrl?: string;
   // Name and address as the map itself knows them (basemap POI / search result), used to
   // seed the form — the user can still overwrite the name before saving.
   suggestedName?: string;
@@ -92,6 +101,7 @@ export function QuickAddPlaceSheet({
   visible,
   coordinates,
   suggestedPhone,
+  suggestedImageUrl,
   suggestedName,
   address,
   onSave,
@@ -122,6 +132,13 @@ export function QuickAddPlaceSheet({
   const [mainPhotoUri, setMainPhotoUri] = useState<string | undefined>(undefined);
   const [tags, setTags] = useState<string[]>([]);
   const [phone, setPhone] = useState('');
+
+  // Real photo if the map has one for this spot, otherwise a Wikipedia lead image, otherwise
+  // a crop of the map centred on the pin — never an empty box.
+  const cover = useCoverImage(coordinates ?? FALLBACK_COORDS, {
+    localPhotoUri: suggestedImageUrl,
+    wikipedia: !suggestedImageUrl,
+  });
 
   const wasVisibleRef = useRef(visible);
   // Reset to a clean form synchronously during render on the closed->open transition
@@ -332,8 +349,13 @@ export function QuickAddPlaceSheet({
             </View>
 
             <View style={styles.header}>
-              <TouchableOpacity onPress={handleSavePress} hitSlop={8}>
-                <Text style={styles.saveLink}>Save</Text>
+              <TouchableOpacity
+                onPress={handleSavePress}
+                hitSlop={HIT_SLOP_8}
+                style={styles.saveButton}
+                accessibilityLabel="Save place"
+              >
+                <Ionicons name="checkmark" size={20} color={Colors.white} />
               </TouchableOpacity>
               <Text style={styles.title}>New Pin</Text>
               <CircleCloseButton onPress={handleClose} />
@@ -366,6 +388,63 @@ export function QuickAddPlaceSheet({
                   <TouchableOpacity onPress={handleDirectionsPress} hitSlop={8}>
                     <Text style={styles.directionsLink}>Get directions</Text>
                   </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Cover + the user's own photos/mood, right under the location line: what this
+                  place looks like is the first thing worth seeing, before any typing. */}
+              {coordinates && (
+                <View style={styles.previewBlock}>
+                  <View style={styles.coverWrap}>
+                    {cover.loading ? (
+                      <ActivityIndicator color={Colors.brand.primary} />
+                    ) : cover.uri ? (
+                      <Image source={{ uri: cover.uri }} style={styles.coverImage} />
+                    ) : (
+                      <Ionicons name="map-outline" size={28} color={Colors.neutral[400]} />
+                    )}
+                  </View>
+
+                  <View style={styles.iconActionRow}>
+                    <TouchableOpacity style={styles.iconActionButton} onPress={handlePickPhotos}>
+                      <Ionicons name="camera-outline" size={26} color={Colors.brand.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.iconActionButton}
+                      onPress={handleToggleMoodPicker}
+                    >
+                      <Text style={styles.iconActionButtonEmoji}>
+                        {mood ? MOOD_CONFIG[mood].emoji : '🙂'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {moodPickerOpen && (
+                    <View style={styles.moodPickerWrap}>
+                      <MoodPicker selected={mood} onSelect={handleSelectMood} />
+                    </View>
+                  )}
+
+                  {photoUris.length > 0 && (
+                    <>
+                      <View style={styles.photoGrid}>
+                        {photoUris.map((uri) => (
+                          <PhotoThumb
+                            key={uri}
+                            uri={uri}
+                            isMain={mainPhotoUri === uri}
+                            onRemove={handleRemovePhoto}
+                            onSetMain={handleSetMainPhoto}
+                          />
+                        ))}
+                      </View>
+                      {photoUris.length > 1 && (
+                        <Text style={styles.photoHint}>
+                          Hold a photo to set it as the map pin photo
+                        </Text>
+                      )}
+                    </>
+                  )}
                 </View>
               )}
 
@@ -418,44 +497,6 @@ export function QuickAddPlaceSheet({
                 <Text style={styles.fieldLabel}>Tags</Text>
                 <TagPicker tags={tags} options={PRESET_TAGS} onToggle={handleToggleTag} />
               </View>
-
-              <View style={styles.iconActionRow}>
-                <TouchableOpacity style={styles.iconActionButton} onPress={handlePickPhotos}>
-                  <Ionicons name="camera-outline" size={22} color={Colors.brand.primary} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.iconActionButton} onPress={handleToggleMoodPicker}>
-                  <Text style={styles.iconActionButtonEmoji}>
-                    {mood ? MOOD_CONFIG[mood].emoji : '🙂'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {moodPickerOpen && (
-                <View style={styles.moodPickerWrap}>
-                  <MoodPicker selected={mood} onSelect={handleSelectMood} />
-                </View>
-              )}
-
-              {photoUris.length > 0 && (
-                <>
-                  <View style={styles.photoGrid}>
-                    {photoUris.map((uri) => (
-                      <PhotoThumb
-                        key={uri}
-                        uri={uri}
-                        isMain={mainPhotoUri === uri}
-                        onRemove={handleRemovePhoto}
-                        onSetMain={handleSetMainPhoto}
-                      />
-                    ))}
-                  </View>
-                  {photoUris.length > 1 && (
-                    <Text style={styles.photoHint}>
-                      Hold a photo to set it as the map pin photo
-                    </Text>
-                  )}
-                </>
-              )}
 
               <View style={styles.actionRow}>
                 <TouchableOpacity
@@ -551,7 +592,16 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.neutral[100],
   },
   title: { ...Typography.title3, color: Colors.neutral[900] },
-  saveLink: { ...Typography.body, color: Colors.brand.primary, fontWeight: '600' },
+  // Mirrors CircleCloseButton's shape on the opposite side of the header, filled in brand
+  // green so the confirming action still reads as the primary one.
+  saveButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.brand.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   content: { flex: 1 },
   contentContainer: { padding: Spacing.s20 },
   fieldGroup: { marginTop: Spacing.s16 },
@@ -647,21 +697,37 @@ const styles = StyleSheet.create({
   // Icon-only variant (photo/mood toggles) — a fixed-size square instead of the full-width
   // pill used by the labeled favorite/want-to-visit buttons below, since there's no text to
   // stretch for.
+  previewBlock: {
+    marginBottom: Spacing.s20,
+  },
+  coverWrap: {
+    width: '100%',
+    height: 160,
+    borderRadius: Radii.md,
+    backgroundColor: Colors.neutral[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+  },
   iconActionRow: {
     flexDirection: 'row',
     gap: Spacing.s12,
-    marginTop: Spacing.s16,
+    marginTop: Spacing.s12,
   },
   iconActionButton: {
-    width: 44,
-    height: 44,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: Radii.md,
     borderWidth: 1.5,
     borderColor: Colors.neutral[200],
   },
-  iconActionButtonEmoji: { fontSize: 20 },
+  iconActionButtonEmoji: { fontSize: 26 },
   moodPickerWrap: {
     marginTop: Spacing.s12,
     marginHorizontal: -Spacing.s20,

@@ -52,6 +52,10 @@ export interface Place {
   pinColor?: string; // user-chosen map pin color; falls back to Colors.myPlace when unset
   mainPhotoUri?: string; // user-picked "main" photo (long-press in the gallery) shown on the map pin
   address?: string; // captured from the search result at add-time, when available
+  // Remote photo the map had for this spot at add-time (Mapbox search result). Used as the
+  // card/callout cover when the user hasn't added a photo of their own; falls back further
+  // to a Wikipedia image or a map crop if this is absent or fails to load.
+  coverImageUrl?: string;
   phone?: string;
   website?: string;
   tags: string[];

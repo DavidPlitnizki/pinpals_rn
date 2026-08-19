@@ -9,6 +9,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { trackAppOpen } from '../services/analytics';
+import { installGlobalCrashHandlers, setCrashReportingUserContext } from '../services/crashReporting';
+import { useProfileStore } from '../store/useProfileStore';
 import { applyFontScale, useResolvedTheme } from '../shared/appearance';
 import { useSettingsStore } from '../store/useSettingsStore';
 
@@ -62,7 +64,11 @@ function AppearanceEffects() {
 
 export default function RootLayout() {
   useEffect(() => {
+    installGlobalCrashHandlers();
     void trackAppOpen();
+    // Seeds crash reports with the app's own profile name right away — otherwise it's only
+    // set once the user opens Profile and saves, leaving early-session crashes anonymous.
+    setCrashReportingUserContext({ profile_name: useProfileStore.getState().profile.name });
   }, []);
 
   return (

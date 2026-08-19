@@ -10,12 +10,15 @@ import { Colors, Radii, Spacing, Typography } from '../../../design-system/token
 import { formatSlugLabel } from '../../../shared/format';
 import { openPlaceSearch } from '../../../services/webSearch';
 import { shareSpot } from '../../../shared/sharePlace';
+import { PlaceInfoRows } from '../../../design-system/components/PlaceInfoRows';
 import { HIT_SLOP_8 } from '../constants';
 import { useCalloutAnchor } from '../hooks/useCalloutAnchor';
+import { NativePoiDetails, useNativePoiDetails } from '../hooks/useNativePoiDetails';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { NativePoiMarker as NativePoiMarkerData } from '../types';
 import { iconForMaki } from '../utils/mapboxIcons';
 import { CalloutActionButton } from './CalloutActionButton';
+import { CalloutContainer } from './CalloutContainer';
 
 const PIN_SIZE = 40;
 // Distinct from CATEGORY_COLORS (food/coffee/nature/art/sports), SearchResultMarker's
@@ -27,7 +30,7 @@ interface Props {
   marker: NativePoiMarkerData;
   onClose: () => void;
   onDirections: (marker: NativePoiMarkerData) => void;
-  onAddPlace: (marker: NativePoiMarkerData) => void;
+  onAddPlace: (marker: NativePoiMarkerData, details?: NativePoiDetails) => void;
   // Bump this (e.g. with route.pickerVisible) to force the marker to re-register its
   // native image — see usePointAnnotationRefresh for why this is needed.
   refreshSignal?: unknown;
@@ -49,14 +52,22 @@ export function NativePoiMarker({
   mapViewRef,
 }: Props) {
   const { registerRef } = usePointAnnotationRefresh(refreshSignal);
-  const calloutAnchor = useCalloutAnchor(mapViewRef, marker.coordinates);
+  const { anchor: calloutAnchor, placement: calloutPlacement } = useCalloutAnchor(
+    mapViewRef,
+    marker.coordinates,
+  );
   // A tapped basemap POI gets the same cover art a saved place would — no need to save it
   // first just to see what it looks like.
   const cover = useCoverImage(marker.coordinates, { wikipedia: true });
+  // The basemap gives us only a name + category; this fills in address/phone/website.
+  const details = useNativePoiDetails(marker.id, marker.name, marker.coordinates);
 
   const handleSelected = useCallback(() => onAnnotationSelected?.(), [onAnnotationSelected]);
   const handleDirectionsPress = useCallback(() => onDirections(marker), [onDirections, marker]);
-  const handleAddPlacePress = useCallback(() => onAddPlace(marker), [onAddPlace, marker]);
+  const handleAddPlacePress = useCallback(
+    () => onAddPlace(marker, details),
+    [onAddPlace, marker, details],
+  );
   const handleSearchPress = useCallback(
     () => void openPlaceSearch(marker.name, marker.coordinates, 'native_poi'),
     [marker.name, marker.coordinates],
@@ -95,60 +106,75 @@ export function NativePoiMarker({
         coordinate={[marker.coordinates.longitude, marker.coordinates.latitude]}
         anchor={calloutAnchor}
       >
-        <View style={styles.callout}>
-          <View style={styles.calloutHeaderRow}>
-            <TouchableOpacity
-              style={styles.calloutShareButton}
-              onPress={handleSharePress}
-              hitSlop={HIT_SLOP_8}
-            >
-              <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
-            </TouchableOpacity>
-            <CircleCloseButton onPress={onClose} style={styles.calloutCloseButton} />
-          </View>
-          <View style={styles.calloutPhotoWrap}>
-            {cover.loading ? (
-              <ActivityIndicator color={POI_COLOR} />
-            ) : cover.uri ? (
-              <Image source={{ uri: cover.uri }} style={styles.calloutPhoto} contentFit="cover" />
-            ) : (
-              <Ionicons name={iconForMaki(marker.maki)} size={32} color={POI_COLOR} />
+        <CalloutContainer placement={calloutPlacement} pinHeight={PIN_SIZE}>
+          <View style={styles.callout}>
+            <View style={styles.calloutHeaderRow}>
+              <TouchableOpacity
+                style={styles.calloutShareButton}
+                onPress={handleSharePress}
+                hitSlop={HIT_SLOP_8}
+              >
+                <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
+              </TouchableOpacity>
+              <CircleCloseButton onPress={onClose} style={styles.calloutCloseButton} />
+            </View>
+            <View style={styles.calloutPhotoWrap}>
+              {cover.loading ? (
+                <ActivityIndicator color={POI_COLOR} />
+              ) : cover.uri ? (
+                <Image source={{ uri: cover.uri }} style={styles.calloutPhoto} contentFit="cover" />
+              ) : (
+                <Ionicons name={iconForMaki(marker.maki)} size={32} color={POI_COLOR} />
+              )}
+            </View>
+            <Text style={styles.calloutName} numberOfLines={1}>
+              {marker.name}
+            </Text>
+            {marker.category && (
+              <Text style={styles.calloutCategory}>{formatSlugLabel(marker.category)}</Text>
             )}
-          </View>
-          <Text style={styles.calloutName} numberOfLines={1}>
-            {marker.name}
-          </Text>
-          {marker.category && (
-            <Text style={styles.calloutCategory}>{formatSlugLabel(marker.category)}</Text>
-          )}
 
-          <View style={styles.calloutActionsRow}>
-            <CalloutActionButton
-              icon="globe-outline"
-              iconSize={24}
-              iconColor={Colors.neutral[600]}
-              backgroundColor={Colors.neutral[100]}
-              borderColor={Colors.neutral[400]}
-              onPress={handleSearchPress}
-            />
-            <CalloutActionButton
-              icon="navigate-outline"
-              iconSize={24}
-              iconColor={Colors.brand.primary}
-              backgroundColor={Colors.brand.light}
-              borderColor={Colors.brand.primary}
-              onPress={handleDirectionsPress}
-            />
-            <CalloutActionButton
-              icon="add-circle-outline"
-              iconSize={24}
-              iconColor={Colors.accent.primary}
-              backgroundColor={Colors.accent.light}
-              borderColor={Colors.accent.primary}
-              onPress={handleAddPlacePress}
-            />
+            <View style={styles.calloutInfoSection}>
+              <PlaceInfoRows
+                info={{
+                  address: details.address,
+                  phone: details.phone,
+                  website: details.website,
+                  latitude: marker.coordinates.latitude,
+                  longitude: marker.coordinates.longitude,
+                }}
+                compact
+              />
+            </View>
+
+            <View style={styles.calloutActionsRow}>
+              <CalloutActionButton
+                icon="globe-outline"
+                iconSize={24}
+                iconColor={Colors.neutral[600]}
+                backgroundColor={Colors.neutral[100]}
+                borderColor={Colors.neutral[400]}
+                onPress={handleSearchPress}
+              />
+              <CalloutActionButton
+                icon="navigate-outline"
+                iconSize={24}
+                iconColor={Colors.brand.primary}
+                backgroundColor={Colors.brand.light}
+                borderColor={Colors.brand.primary}
+                onPress={handleDirectionsPress}
+              />
+              <CalloutActionButton
+                icon="add-circle-outline"
+                iconSize={24}
+                iconColor={Colors.accent.primary}
+                backgroundColor={Colors.accent.light}
+                borderColor={Colors.accent.primary}
+                onPress={handleAddPlacePress}
+              />
+            </View>
           </View>
-        </View>
+        </CalloutContainer>
       </MarkerView>
     </>
   );
@@ -261,6 +287,10 @@ const styles = StyleSheet.create({
     marginTop: Spacing.s2,
     textAlign: 'center',
     textTransform: 'capitalize',
+  },
+  calloutInfoSection: {
+    alignSelf: 'stretch',
+    marginTop: Spacing.s8,
   },
   calloutActionsRow: {
     flexDirection: 'row',

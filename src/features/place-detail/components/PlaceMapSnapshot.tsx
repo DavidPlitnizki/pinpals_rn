@@ -7,6 +7,10 @@ interface Props {
   latitude: number;
   longitude: number;
   color: string;
+  // Lets the hero gallery match its page height; defaults to the standalone header height.
+  height?: number;
+  // Full-screen presentation wants a map the user can actually pan and zoom.
+  interactive?: boolean;
 }
 
 // Memoized on purpose: every keystroke in the name/description fields re-renders the whole
@@ -18,17 +22,23 @@ export const PlaceMapSnapshot = React.memo(function PlaceMapSnapshot({
   latitude,
   longitude,
   color,
+  height,
+  interactive = false,
 }: Props) {
   const center = useMemo(() => [longitude, latitude], [longitude, latitude]);
   const dotStyle = useMemo(() => [styles.dot, { backgroundColor: color }], [color]);
+  const mapStyle = useMemo(
+    () => (height === undefined ? styles.map : [styles.map, { height }]),
+    [height],
+  );
 
   return (
     <MapView
-      style={styles.map}
-      scrollEnabled={false}
-      zoomEnabled={false}
-      rotateEnabled={false}
-      pitchEnabled={false}
+      style={mapStyle}
+      scrollEnabled={interactive}
+      zoomEnabled={interactive}
+      rotateEnabled={interactive}
+      pitchEnabled={interactive}
     >
       <Camera centerCoordinate={center} zoomLevel={15} animationDuration={0} />
       <PointAnnotation id={id} coordinate={center}>
@@ -39,7 +49,7 @@ export const PlaceMapSnapshot = React.memo(function PlaceMapSnapshot({
 });
 
 const styles = StyleSheet.create({
-  map: { height: 200, width: '100%' },
+  map: { height: 200, width: '100%', flex: 1 },
   dot: {
     width: 20,
     height: 20,

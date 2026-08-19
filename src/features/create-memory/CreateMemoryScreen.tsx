@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import React, { useCallback, useState } from 'react';
 import {
@@ -20,6 +21,10 @@ import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
 import { useCreateMemory } from './hooks/useCreateMemory';
 
 const STEP_TITLES = ['Photo', 'Mood', 'Companions', 'Note', 'Date & time'];
+
+// Created once at module level — an inline element would be a new object on every render.
+const SAVE_ICON = <Ionicons name="checkmark" size={20} color={Colors.white} />;
+const NEXT_ICON = <Ionicons name="arrow-forward" size={20} color={Colors.white} />;
 
 export default function CreateMemoryScreen() {
   const {
@@ -98,9 +103,16 @@ export default function CreateMemoryScreen() {
             title={isEditing ? 'Save Changes' : 'Save Memory'}
             onPress={handleSave}
             fullWidth
+            leftIcon={SAVE_ICON}
           />
         ) : (
-          <PinButton title="Next" onPress={nextStep} disabled={!canGoNext} fullWidth />
+          <PinButton
+            title="Next"
+            onPress={nextStep}
+            disabled={!canGoNext}
+            fullWidth
+            rightIcon={NEXT_ICON}
+          />
         )}
       </View>
     </SafeAreaView>

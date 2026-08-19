@@ -1,4 +1,5 @@
 import { Coordinates } from '../models/types';
+import { reportNetworkError } from './crashReporting';
 
 const WIKIPEDIA_API_URL = 'https://en.wikipedia.org/w/api.php';
 
@@ -39,7 +40,7 @@ export async function fetchWikipediaThumbnail(coords: Coordinates): Promise<stri
     const first = Object.values(pages)[0];
     return first?.thumbnail?.source ?? null;
   } catch (err) {
-    console.log('[wikipedia] thumbnail request failed', err);
+    reportNetworkError('wikipedia', err, 'thumbnail request failed');
     return null;
   }
 }

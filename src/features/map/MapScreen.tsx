@@ -465,6 +465,7 @@ export default function MapScreen() {
         coordinates={pendingPlaceCoords}
         suggestedName={pendingPlaceMeta?.name}
         suggestedPhone={pendingPlaceMeta?.phone}
+        suggestedImageUrl={pendingPlaceMeta?.imageUrl}
         address={pendingPlaceMeta?.address}
         onSave={handleSaveQuickAddPlace}
         onClose={handleCloseQuickAddSheet}
