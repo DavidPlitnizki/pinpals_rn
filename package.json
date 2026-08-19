@@ -41,6 +41,7 @@
     "@react-native-firebase/analytics": "24.1.1",
     "@react-native-firebase/app": "^24.0.0",
     "@react-native-firebase/auth": "^24.0.0",
+    "@react-native-firebase/crashlytics": "^24.1.1",
     "@react-native-google-signin/google-signin": "^16.1.4",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/elements": "^2.9.10",
@@ -106,5 +107,8 @@
         "react-native-worklets"
       ]
     }
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }

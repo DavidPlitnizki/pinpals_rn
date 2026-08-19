@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
 import { Coordinates } from '../../../models/types';
+import { reportNetworkError } from '../../../services/crashReporting';
 import { DirectionsResult, getDirections } from '../../../services/directions';
 import { findNearestStepIndex, haversineMeters } from '../../../shared/geo';
 import { useRouteStore } from '../../../store/useRouteStore';
@@ -170,6 +171,7 @@ export function useRouteDirections(
       } catch (err) {
         if (requestIdRef.current !== requestId) return; // superseded by a newer request
         if (err instanceof Error && err.name === 'AbortError') return;
+        reportNetworkError('directions', err, 'route request failed');
         setRoute({
           profile,
           origin,
@@ -233,6 +235,7 @@ export function useRouteDirections(
       } catch (err) {
         if (requestIdRef.current !== requestId) return; // superseded by a newer request
         if (err instanceof Error && err.name === 'AbortError') return;
+        reportNetworkError('directions', err, 'route request failed');
         setRoute({
           profile,
           origin,
@@ -298,6 +301,7 @@ export function useRouteDirections(
     } catch (err) {
       if (requestIdRef.current !== requestId) return; // superseded by a newer request
       if (err instanceof Error && err.name === 'AbortError') return;
+      reportNetworkError('directions', err, 'route extend request failed');
       setRoute({
         ...current,
         waypoints,
@@ -333,8 +337,10 @@ export function useRouteDirections(
         durationSeconds: result.durationSeconds,
         steps: result.steps,
       });
-    } catch {
-      // A stale-position refresh failing is silent — keep showing the last good route.
+    } catch (err) {
+      // A stale-position refresh failing is silent to the user — keep showing the last good
+      // route — but still worth seeing in Crashlytics if it happens a lot.
+      reportNetworkError('directions', err, 'live position refresh failed');
     }
   }
 
@@ -388,9 +394,11 @@ export function useRouteDirections(
         status: 'success',
         error: null,
       });
-    } catch {
+    } catch (err) {
       // Leave the route as-is on failure — reached-detection isn't the source of truth for
-      // whether the trip continues, and dropping to an error state here would be jarring.
+      // whether the trip continues, and dropping to an error state here would be jarring —
+      // but still worth seeing in Crashlytics if it happens a lot.
+      reportNetworkError('directions', err, 'waypoint-reached refresh failed');
     }
     return true;
   }

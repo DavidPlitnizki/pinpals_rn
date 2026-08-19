@@ -63,6 +63,7 @@ export function useMapScreen() {
     address?: string;
     phone?: string;
     website?: string;
+    imageUrl?: string;
   } | null>(null);
 
   const [searchResultMarkers, setSearchResultMarkers] = useState<PendingSearchMarker[]>([]);
@@ -277,14 +278,18 @@ export function useMapScreen() {
     setNativePoiMarker(null);
   }, []);
 
-  const handleConfirmNativePoiMarker = useCallback((marker: NativePoiMarker) => {
-    setPendingPlaceCoords(marker.coordinates);
-    // The basemap already knows what this place is called — seed the form with it rather
-    // than making the user retype a name that's printed right there on the map.
-    setPendingPlaceMeta({ name: marker.name });
-    setNativePoiMarker(null);
-    setShowQuickAddSheet(true);
-  }, []);
+  const handleConfirmNativePoiMarker = useCallback(
+    (marker: NativePoiMarker, details?: { address?: string; phone?: string; website?: string }) => {
+      setPendingPlaceCoords(marker.coordinates);
+      // The basemap already knows what this place is called — seed the form with it rather
+      // than making the user retype a name that's printed right there on the map. The callout
+      // has usually resolved address/phone/website by now too, so those carry over as well.
+      setPendingPlaceMeta({ name: marker.name, ...details });
+      setNativePoiMarker(null);
+      setShowQuickAddSheet(true);
+    },
+    [],
+  );
 
   const handleCloseQuickAddSheet = useCallback(() => {
     setShowQuickAddSheet(false);
@@ -314,7 +319,8 @@ export function useMapScreen() {
       // A point picked straight off the map (long-press, route waypoint) carries no address —
       // look one up so the saved card shows where it is instead of just coordinates. Best
       // effort: if the lookup fails the place is still saved, just without an address.
-      const address = pendingPlaceMeta?.address ?? (await reverseGeocodeAddress(pendingPlaceCoords)) ?? undefined;
+      const address =
+        pendingPlaceMeta?.address ?? (await reverseGeocodeAddress(pendingPlaceCoords)) ?? undefined;
       const mainPhotoIndex = data.mainPhotoUri ? data.photoUris.indexOf(data.mainPhotoUri) : -1;
       const mainPhotoUri = mainPhotoIndex >= 0 ? photoUris[mainPhotoIndex] : undefined;
 
@@ -329,6 +335,7 @@ export function useMapScreen() {
         pinColor: data.pinColor,
         mainPhotoUri,
         address,
+        coverImageUrl: pendingPlaceMeta?.imageUrl,
         phone: data.phone ?? pendingPlaceMeta?.phone,
         website: pendingPlaceMeta?.website,
       });
@@ -376,6 +383,7 @@ export function useMapScreen() {
       address: marker.fullAddress,
       phone: marker.phone,
       website: marker.website,
+      imageUrl: marker.imageUrl,
     });
     setSearchResultMarkers((prev) => prev.filter((m) => m.id !== marker.id));
     setShowQuickAddSheet(true);

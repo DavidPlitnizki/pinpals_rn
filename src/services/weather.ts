@@ -1,4 +1,5 @@
 import { Coordinates } from '../models/types';
+import { reportNetworkError } from './crashReporting';
 
 export interface CurrentWeather {
   temperatureC: number;
@@ -104,7 +105,7 @@ export async function fetchCurrentWeather(coords: Coordinates): Promise<CurrentW
       precipitationMm,
     };
   } catch (err) {
-    console.log('[weather] current request failed', err);
+    reportNetworkError('weather', err, 'current request failed');
     return null;
   }
 }
@@ -156,7 +157,7 @@ export async function fetchDailyWeather(coords: Coordinates): Promise<DailyWeath
       sunset: sunset[i],
     }));
   } catch (err) {
-    console.log('[weather] daily request failed', err);
+    reportNetworkError('weather', err, 'daily request failed');
     return [];
   }
 }
@@ -203,7 +204,7 @@ export async function fetchHourlyWeather(coords: Coordinates): Promise<HourlyWea
       windSpeedKmh: wind_speed_10m[i],
     }));
   } catch (err) {
-    console.log('[weather] hourly request failed', err);
+    reportNetworkError('weather', err, 'hourly request failed');
     return [];
   }
 }
@@ -251,7 +252,7 @@ export async function geocodeLocation(query: string): Promise<GeocodedPlace[]> {
       coordinates: { latitude: r.latitude, longitude: r.longitude },
     }));
   } catch (err) {
-    console.log('[weather] geocode request failed', err);
+    reportNetworkError('weather', err, 'geocode request failed');
     return [];
   }
 }

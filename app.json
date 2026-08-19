@@ -71,7 +71,8 @@
         }
       ],
       "expo-apple-authentication",
-      "@react-native-firebase/analytics"
+      "@react-native-firebase/analytics",
+      "@react-native-firebase/crashlytics"
     ],
     "experiments": {
       "typedRoutes": true

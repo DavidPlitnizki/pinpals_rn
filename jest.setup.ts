@@ -23,6 +23,13 @@ jest.mock('@react-native-firebase/analytics', () => ({
   setUserId: jest.fn(),
   setUserProperty: jest.fn(),
 }));
+jest.mock('@react-native-firebase/crashlytics', () => ({
+  getCrashlytics: jest.fn(),
+  log: jest.fn(),
+  recordError: jest.fn(),
+  setAttributes: jest.fn(),
+  setUserId: jest.fn(),
+}));
 
 jest.mock('react-native/Libraries/Alert/Alert', () => ({
   alert: jest.fn(),

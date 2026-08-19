@@ -1,5 +1,7 @@
 import { Directory, File, Paths } from 'expo-file-system';
 
+import { reportError } from '../services/crashReporting';
+
 // expo-image-picker only hands back a `uri` pointing at wherever the OS/picker put the
 // asset (a temp cache path, or an `ph://` library reference) — nothing guarantees that
 // location survives. Copying into our own app-sandboxed folder (organized by the date the
@@ -44,8 +46,10 @@ export function deletePhotoFile(uri: string | undefined | null): void {
   try {
     const file = new File(uri);
     if (file.exists) file.delete();
-  } catch {
-    // Best-effort cleanup — a missing/locked file shouldn't block the surrounding delete flow.
+  } catch (err) {
+    // Best-effort cleanup — a missing/locked file shouldn't block the surrounding delete
+    // flow, but repeated failures mean photos are piling up on disk, so they're reported.
+    reportError('photoStorage', err, 'photo delete failed');
   }
 }
 

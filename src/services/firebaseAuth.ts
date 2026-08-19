@@ -16,6 +16,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 
 import { logLogin } from './analytics';
+import { reportError } from './crashReporting';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,16 @@ const ERROR_MAP: Record<string, string> = {
   'auth/user-disabled': 'This account has been disabled.',
   'auth/requires-recent-login': 'Please sign out and sign in again, then retry.',
 };
+
+// A user backing out of the provider sheet isn't a fault — reporting it would bury the real
+// auth failures under noise.
+const USER_CANCELLED_CODES = ['ERR_REQUEST_CANCELED', 'auth/cancelled-popup-request'];
+
+function isUserCancellation(error: any): boolean {
+  const code = error?.code as string | undefined;
+  if (code && USER_CANCELLED_CODES.includes(code)) return true;
+  return typeof error?.message === 'string' && error.message.includes('cancelled');
+}
 
 export function mapFirebaseError(error: any): string {
   const code = error?.code as string | undefined;
@@ -126,6 +137,9 @@ export async function signInWithGoogle(): Promise<AuthData> {
     logLogin('google.com');
     return authData;
   } catch (error) {
+    // The original error (code + native stack) is lost once it's replaced by the friendly
+    // message below, so it goes to Crashlytics first.
+    if (!isUserCancellation(error)) reportError('auth', error, 'google sign-in failed');
     throw new Error(mapFirebaseError(error));
   }
 }
@@ -177,6 +191,7 @@ export async function signInWithApple(): Promise<AuthData> {
     if (error?.code === 'ERR_REQUEST_CANCELED') {
       throw new Error('Apple Sign-In was cancelled.');
     }
+    reportError('auth', error, 'apple sign-in failed');
     throw new Error(mapFirebaseError(error));
   }
 }
@@ -192,6 +207,7 @@ export async function deleteAccount(): Promise<void> {
   try {
     await deleteUser(user);
   } catch (error) {
+    reportError('auth', error, 'account deletion failed');
     throw new Error(mapFirebaseError(error));
   }
 }

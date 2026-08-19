@@ -10,6 +10,7 @@ import {
   deleteAccount as serviceDeleteAccount,
 } from '../services/authService';
 import { setAnalyticsUserId, setAnalyticsUserProperty } from '../services/analytics';
+import { setCrashReportingUserContext, setCrashReportingUserId } from '../services/crashReporting';
 import { useProfileStore } from '../store/useProfileStore';
 
 interface AuthContextValue {
@@ -53,6 +54,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // and retention reports hold up across reinstalls/devices for the same account.
         setAnalyticsUserId(firebaseUser.uid);
         setAnalyticsUserProperty('auth_provider', providerId);
+        // Crashlytics (unlike Analytics) is meant to carry identifying context — a crash
+        // report tied to a name/uid can actually be matched to a person for support, whereas
+        // Google's Analytics terms disallow that kind of PII in event/user properties.
+        setCrashReportingUserId(firebaseUser.uid);
+        setCrashReportingUserContext({
+          auth_provider: providerId,
+          display_name: firebaseUser.displayName ?? '',
+        });
         // Adopt the provider's photo as the profile avatar only if the user hasn't already
         // set one locally (photo or preset) — never clobber their choice.
         if (firebaseUser.photoURL) {
@@ -66,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsAuth(false);
         setIsGuest(false);
         setAnalyticsUserId(null);
+        setCrashReportingUserId(null);
       }
       setIsLoading(false);
     });

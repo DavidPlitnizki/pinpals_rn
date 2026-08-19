@@ -18,6 +18,7 @@ import { useCalloutAnchor } from '../hooks/useCalloutAnchor';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { getPlacePhotoPreview, PlacePhotoPreview } from '../utils/placePhoto';
 import { CalloutActionButton } from './CalloutActionButton';
+import { CalloutContainer } from './CalloutContainer';
 
 const PIN_SIZE = 46;
 const CALLOUT_DESCRIPTION_MAX_CHARS = 24;
@@ -151,7 +152,11 @@ function MarkerCallout({
   return (
     <View style={styles.callout}>
       <View style={styles.calloutHeaderRow}>
-        <TouchableOpacity style={styles.calloutShareButton} onPress={onSharePress} hitSlop={HIT_SLOP_8}>
+        <TouchableOpacity
+          style={styles.calloutShareButton}
+          onPress={onSharePress}
+          hitSlop={HIT_SLOP_8}
+        >
           <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
         </TouchableOpacity>
         <CircleCloseButton onPress={onClose} style={styles.calloutCloseButton} size={32} />
@@ -288,7 +293,10 @@ export function MapMarkers({
   }
 
   const selectedMood = selectedPlace ? getLatestMoodForPlace(selectedPlace.id) : undefined;
-  const calloutAnchor = useCalloutAnchor(mapViewRef, selectedPlace?.coordinates);
+  const { anchor: calloutAnchor, placement: calloutPlacement } = useCalloutAnchor(
+    mapViewRef,
+    selectedPlace?.coordinates,
+  );
 
   // Per-place preview + pin color, computed once per places/notes change instead of on every
   // MapMarkers render (e.g. selecting a different pin no longer re-scans every place's notes).
@@ -379,16 +387,18 @@ export function MapMarkers({
           coordinate={[selectedPlace.coordinates.longitude, selectedPlace.coordinates.latitude]}
           anchor={calloutAnchor}
         >
-          <MarkerCallout
-            place={selectedPlace}
-            preview={selectedPreview ?? null}
-            mood={selectedMood}
-            onClose={handleCloseCallout}
-            onSharePress={handleSharePress}
-            onCalloutPress={handleCalloutPress}
-            onDirectionsPress={handleDirectionsPress}
-            onDeletePress={handleDeletePress}
-          />
+          <CalloutContainer placement={calloutPlacement} pinHeight={PIN_SIZE}>
+            <MarkerCallout
+              place={selectedPlace}
+              preview={selectedPreview ?? null}
+              mood={selectedMood}
+              onClose={handleCloseCallout}
+              onSharePress={handleSharePress}
+              onCalloutPress={handleCalloutPress}
+              onDirectionsPress={handleDirectionsPress}
+              onDeletePress={handleDeletePress}
+            />
+          </CalloutContainer>
         </MarkerView>
       )}
     </React.Fragment>

@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +7,9 @@ import { PinButton } from '../../../design-system/components/PinButton';
 import { PinTextField } from '../../../design-system/components/PinTextField';
 import { PhotoViewerModal } from '../../../design-system/components/PhotoViewerModal';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+
+// Created once at module level — an inline element would be a new object on every render.
+const SAVE_ICON = <Ionicons name="checkmark" size={20} color={Colors.white} />;
 
 interface Props {
   visible: boolean;
@@ -76,7 +80,13 @@ export function AddNoteModal({
             )}
           </View>
 
-          <PinButton title="Save Note" onPress={onSave} fullWidth size="lg" />
+          <PinButton
+            title="Save Note"
+            onPress={onSave}
+            fullWidth
+            size="lg"
+            leftIcon={SAVE_ICON}
+          />
         </ScrollView>
       </SafeAreaView>
 

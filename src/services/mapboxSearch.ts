@@ -1,4 +1,5 @@
 import { Coordinates } from '../models/types';
+import { reportNetworkError } from './crashReporting';
 
 export interface MapboxSearchResult {
   id: string;
@@ -132,10 +133,19 @@ export async function searchMapboxPlaces(
   const url = `${SEARCH_BOX_FORWARD_URL}?${params.toString()}`;
   console.log('[mapboxSearch] request →', url.replace(token, '***'));
 
-  const response = await fetch(url);
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (err) {
+    reportNetworkError('mapboxSearch', err, 'forward search request failed');
+    throw err;
+  }
   if (!response.ok) {
-    console.log('[mapboxSearch] response ← error', response.status, await response.text());
-    throw new Error(`Mapbox search failed: ${response.status}`);
+    const body = await response.text();
+    console.log('[mapboxSearch] response ← error', response.status, body);
+    const httpError = new Error(`Mapbox search failed: ${response.status}`);
+    reportNetworkError('mapboxSearch', httpError, `forward search returned ${response.status}: ${body}`);
+    throw httpError;
   }
 
   const data = (await response.json()) as { features?: MapboxFeature[] };
@@ -181,7 +191,7 @@ export async function reverseGeocodeAddress(coords: Coordinates): Promise<string
     const properties = data.features?.[0]?.properties;
     return properties?.full_address ?? properties?.name ?? null;
   } catch (err) {
-    console.log('[mapboxSearch] reverse address request failed', err);
+    reportNetworkError('mapboxSearch', err, 'reverse address request failed');
     return null;
   }
 }
@@ -223,7 +233,7 @@ export async function reverseGeocodePlace(coords: Coordinates): Promise<string |
     if (!city && !country) return null;
     return [city, country].filter(Boolean).join(', ');
   } catch (err) {
-    console.log('[mapboxSearch] reverse request failed', err);
+    reportNetworkError('mapboxSearch', err, 'reverse geocode request failed');
     return null;
   }
 }
