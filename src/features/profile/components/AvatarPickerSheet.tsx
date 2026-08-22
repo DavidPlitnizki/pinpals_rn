@@ -1,13 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo } from 'react';
-import {
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Modal, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
@@ -28,11 +21,7 @@ const PresetSwatch = React.memo(function PresetSwatch({
   const handlePress = useCallback(() => onSelect(preset.id), [onSelect, preset.id]);
   return (
     <TouchableOpacity
-      style={[
-        styles.swatch,
-        { backgroundColor: preset.color },
-        selected && styles.swatchSelected,
-      ]}
+      style={[styles.swatch, { backgroundColor: preset.color }, selected && styles.swatchSelected]}
       onPress={handlePress}
       activeOpacity={0.75}
     >
@@ -93,11 +82,7 @@ export function AvatarPickerSheet({
 
         <View style={styles.content}>
           <View style={styles.photoRow}>
-            <TouchableOpacity
-              style={styles.cameraCircle}
-              onPress={onPickPhoto}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.cameraCircle} onPress={onPickPhoto} activeOpacity={0.8}>
               <Ionicons name="camera" size={30} color={Colors.white} />
             </TouchableOpacity>
             <Text style={styles.photoLabel}>Take Photo or Choose from Library</Text>

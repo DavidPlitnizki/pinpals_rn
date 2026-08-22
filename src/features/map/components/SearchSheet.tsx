@@ -58,9 +58,7 @@ const SearchPlaceRow = React.memo(function SearchPlaceRow({
         <Text style={styles.placeName} numberOfLines={1}>
           {place.name}
         </Text>
-        <Text style={styles.placeMeta}>
-          {'★'.repeat(place.rating)}
-        </Text>
+        <Text style={styles.placeMeta}>{'★'.repeat(place.rating)}</Text>
         <Text style={styles.placeSavedAt}>Saved {formatSavedAt(place.createdAt)}</Text>
       </View>
       <Text style={styles.chevron}>›</Text>

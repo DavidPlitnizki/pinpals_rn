@@ -144,7 +144,11 @@ export async function searchMapboxPlaces(
     const body = await response.text();
     console.log('[mapboxSearch] response ← error', response.status, body);
     const httpError = new Error(`Mapbox search failed: ${response.status}`);
-    reportNetworkError('mapboxSearch', httpError, `forward search returned ${response.status}: ${body}`);
+    reportNetworkError(
+      'mapboxSearch',
+      httpError,
+      `forward search returned ${response.status}: ${body}`,
+    );
     throw httpError;
   }
 
@@ -218,7 +222,11 @@ export async function reverseGeocodePlace(coords: Coordinates): Promise<string |
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      console.log('[mapboxSearch] reverse response ← error', response.status, await response.text());
+      console.log(
+        '[mapboxSearch] reverse response ← error',
+        response.status,
+        await response.text(),
+      );
       return null;
     }
 

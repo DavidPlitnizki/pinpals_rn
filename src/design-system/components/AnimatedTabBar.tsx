@@ -20,11 +20,9 @@ interface AnimatedTabBarProps {
   state: { index: number; routes: { key: string; name: string }[] };
   descriptors: Record<string, { options: { title?: string } }>;
   navigation: {
-    emit: (event: {
-      type: string;
-      target: string;
-      canPreventDefault: true;
-    }) => { defaultPrevented: boolean };
+    emit: (event: { type: string; target: string; canPreventDefault: true }) => {
+      defaultPrevented: boolean;
+    };
     navigate: (name: string) => void;
   };
 }

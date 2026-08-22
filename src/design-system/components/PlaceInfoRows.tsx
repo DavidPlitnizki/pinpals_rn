@@ -30,10 +30,7 @@ function Row({
   compact?: boolean;
   lines: number;
 }) {
-  const textStyle = [
-    compact ? styles.textCompact : styles.text,
-    onPress ? styles.link : null,
-  ];
+  const textStyle = [compact ? styles.textCompact : styles.text, onPress ? styles.link : null];
   const content = (
     <>
       <Ionicons

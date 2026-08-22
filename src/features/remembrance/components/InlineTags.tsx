@@ -59,7 +59,11 @@ export function InlineTags({ tags, onAdd, onRemove }: Props) {
 
   return (
     <View style={styles.wrapper}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.row}
+      >
         {tags.map((tag) => (
           <TagChip key={tag} tag={tag} onRemove={onRemove} />
         ))}

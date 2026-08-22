@@ -63,11 +63,7 @@ export function PlaceGridCard({ place, onPress }: Props) {
 
         {/* Inline tags — stop propagation so chip taps don't open detail */}
         <TouchableOpacity activeOpacity={1} onPress={noop}>
-          <InlineTags
-            tags={place.tags ?? []}
-            onAdd={handleAddTag}
-            onRemove={handleRemoveTag}
-          />
+          <InlineTags tags={place.tags ?? []} onAdd={handleAddTag} onRemove={handleRemoveTag} />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>

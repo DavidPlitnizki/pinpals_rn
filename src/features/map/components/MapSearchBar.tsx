@@ -1,6 +1,13 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useCallback } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -117,7 +124,11 @@ export function MapSearchBar({
     <SafeAreaView style={styles.safe} edges={['top']} pointerEvents="box-none">
       <View style={styles.topRow}>
         {weather && (
-          <TouchableOpacity style={styles.weatherBadge} onPress={onOpenWeather} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={styles.weatherBadge}
+            onPress={onOpenWeather}
+            activeOpacity={0.85}
+          >
             <Ionicons
               name={iconForWeatherCode(weather.weatherCode)}
               size={18}

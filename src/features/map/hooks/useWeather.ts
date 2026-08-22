@@ -59,10 +59,7 @@ export function useWeather(
   const onCameraSettled = useCallback(() => {
     if (!hasFetchedRef.current) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(
-      () => void checkBoundsAndRefresh(),
-      CAMERA_SETTLE_DEBOUNCE_MS,
-    );
+    debounceRef.current = setTimeout(() => void checkBoundsAndRefresh(), CAMERA_SETTLE_DEBOUNCE_MS);
   }, [checkBoundsAndRefresh]);
 
   useEffect(() => {
