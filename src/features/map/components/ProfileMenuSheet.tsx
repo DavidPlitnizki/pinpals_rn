@@ -55,7 +55,7 @@ export function ProfileMenuSheet({ visible, onClose, profile, places }: Props) {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statNum}>{places.filter((p) => p.isFavorite).length}</Text>
+              <Text style={styles.statNum}>{places.filter((p) => p.favorite).length}</Text>
               <Text style={styles.statLbl}>Favorites</Text>
             </View>
           </View>

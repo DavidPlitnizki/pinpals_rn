@@ -57,10 +57,3 @@ export interface ActiveRoute {
 
 // A user-saved route template: just the stops and travel mode, not a snapshot of geometry
 // or an origin — reloading it always recomputes directions from wherever the user is now.
-export interface SavedRoute {
-  id: string;
-  name: string;
-  waypoints: RouteWaypoint[];
-  profile: RouteProfile;
-  createdAt: string;
-}

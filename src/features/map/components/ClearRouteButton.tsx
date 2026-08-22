@@ -3,8 +3,13 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Colors, Spacing } from '../../../design-system/tokens';
-import { MAP_SEARCH_BAR_HEIGHT } from '../constants';
+import { Colors } from '../../../design-system/tokens';
+import {
+  MAP_TOP_BUTTON_OFFSET,
+  MAP_TOP_BUTTON_RIGHT,
+  MAP_TOP_BUTTON_SIZE,
+  MAP_TOP_BUTTON_STACKED_OFFSET,
+} from '../constants';
 import { RoundMapButton } from './RoundMapButton';
 
 interface Props {
@@ -12,19 +17,20 @@ interface Props {
   onPress: () => void;
   onLongPress: () => void;
   // ClearMapButton (search-results X) only renders when there are search results — when it's
-  // also on screen, this button stacks directly below it in the same top-right column;
-  // otherwise this is the top-most button in that column, so it takes ClearMapButton's slot.
+  // also on screen, this button sits directly below it in the same right-edge column;
+  // otherwise it takes ClearMapButton's own top slot, level with the route info card.
   stacked: boolean;
 }
 
-const BUTTON_SIZE = 44;
-const TOP_OFFSET = MAP_SEARCH_BAR_HEIGHT + Spacing.s12;
-const STACKED_OFFSET = TOP_OFFSET + BUTTON_SIZE + Spacing.s8;
+const BUTTON_SIZE = MAP_TOP_BUTTON_SIZE;
 
 export function ClearRouteButton({ onPress, onLongPress, stacked }: Props) {
   return (
     <SafeAreaView
-      style={[styles.wrap, { paddingTop: stacked ? STACKED_OFFSET : TOP_OFFSET }]}
+      style={[
+        styles.wrap,
+        { paddingTop: stacked ? MAP_TOP_BUTTON_STACKED_OFFSET : MAP_TOP_BUTTON_OFFSET },
+      ]}
       pointerEvents="box-none"
     >
       <RoundMapButton
@@ -45,7 +51,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    paddingRight: Spacing.s16,
+    paddingRight: MAP_TOP_BUTTON_RIGHT,
   },
   // A "no entry" style diagonal bar over the road icon — inset from the circle's edges.
   slash: {

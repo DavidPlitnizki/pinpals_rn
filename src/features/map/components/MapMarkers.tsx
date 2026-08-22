@@ -2,9 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { MapView, MarkerView, PointAnnotation } from '@rnmapbox/maps';
 import { Image } from 'expo-image';
 import React, { RefObject, useCallback, useMemo, useRef, useState } from 'react';
-import { Linking, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Linking, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
+import { PlaceFlagBadges } from '../../../design-system/components/PlaceFlags';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { usePlaceCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { MemoryMood, Place, MOOD_CONFIG } from '../../../models/types';
@@ -16,11 +17,15 @@ import { usePlacesStore } from '../../../store/usePlacesStore';
 import { HIT_SLOP_8 } from '../constants';
 import { useCalloutAnchor } from '../hooks/useCalloutAnchor';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
+import { iconForMaki } from '../utils/mapboxIcons';
 import { getPlacePhotoPreview, PlacePhotoPreview } from '../utils/placePhoto';
 import { CalloutActionButton } from './CalloutActionButton';
 import { CalloutContainer } from './CalloutContainer';
 
 const PIN_SIZE = 46;
+// MarkerView sizes itself to its content, so a long address or venue name stretched the card
+// across the whole screen. Cap it at 80% of the window and let the text wrap instead.
+const CALLOUT_MAX_WIDTH = Math.round(Dimensions.get('window').width * 0.8);
 const CALLOUT_DESCRIPTION_MAX_CHARS = 24;
 
 function truncate(text: string, maxChars: number): string {
@@ -83,6 +88,9 @@ const MarkerPin = React.memo(function MarkerPin({
     >
       <View style={styles.markerColumn}>
         <View style={styles.markerLabel}>
+          {/* Flags lead the label so a favourite / want-to-visit pin is identifiable on the
+              map itself, without having to open its callout. */}
+          <PlaceFlagBadges favorite={place.favorite} wantToVisit={place.isFavorite} size={11} />
           <Text style={styles.markerLabelText} numberOfLines={1}>
             {place.name}
           </Text>
@@ -99,8 +107,10 @@ const MarkerPin = React.memo(function MarkerPin({
             </View>
           ) : (
             <View style={styles.pinBadge}>
+              {/* A place saved from a basemap POI keeps that POI's own symbol, so a saved
+                  pharmacy still reads as a pharmacy once it's yours. */}
               <Ionicons
-                name={categoryIcon(place.category)}
+                name={place.maki ? iconForMaki(place.maki) : categoryIcon(place.category)}
                 size={14}
                 color={categoryColor(place.category)}
               />
@@ -183,9 +193,10 @@ function MarkerCallout({
           )}
         </View>
         <View style={styles.calloutNameRow}>
-          <Text style={styles.calloutName}>{place.name}</Text>
-          {place.favorite && <Text style={styles.calloutBadgeIcon}>❤️</Text>}
-          {place.isFavorite && <Text style={styles.calloutBadgeIcon}>⭐</Text>}
+          <Text style={styles.calloutName} numberOfLines={2}>
+            {place.name}
+          </Text>
+          <PlaceFlagBadges favorite={place.favorite} wantToVisit={place.isFavorite} size={16} />
         </View>
         {!!place.description && (
           <Text style={styles.calloutDescription} numberOfLines={1}>
@@ -410,7 +421,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   markerLabel: {
-    maxWidth: 120,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.s4,
+    maxWidth: 140,
     backgroundColor: 'rgba(255,255,255,0.92)',
     borderRadius: 6,
     paddingHorizontal: Spacing.s8,
@@ -467,6 +481,7 @@ const styles = StyleSheet.create({
     borderRadius: Radii.md,
     padding: Spacing.s16,
     minWidth: 200,
+    maxWidth: CALLOUT_MAX_WIDTH,
     borderWidth: 1,
     borderColor: Colors.neutral[200],
     shadowColor: '#000',
@@ -539,12 +554,15 @@ const styles = StyleSheet.create({
   calloutNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    // The name takes the leftover width and wraps; the flag badges keep their intrinsic size.
+    flexWrap: 'nowrap',
     gap: Spacing.s4,
     marginBottom: Spacing.s4,
   },
   calloutName: {
     ...Typography.title3,
     color: Colors.neutral[900],
+    flexShrink: 1,
   },
   calloutBadgeIcon: {
     fontSize: 14,

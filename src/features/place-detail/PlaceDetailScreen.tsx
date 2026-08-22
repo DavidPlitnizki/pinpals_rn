@@ -13,6 +13,7 @@ import { TagPicker } from '../../design-system/components/TagPicker';
 import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
 import { PlaceNote, MOOD_CONFIG } from '../../models/types';
 import { categoryColor, PRESET_TAGS } from '../../shared/constants';
+import { PlaceFlagToggle } from '../../design-system/components/PlaceFlags';
 import { PlaceInfoRows } from '../../design-system/components/PlaceInfoRows';
 import { shareSpot } from '../../shared/sharePlace';
 import { AddNoteModal } from './components/AddNoteModal';
@@ -48,6 +49,7 @@ export default function PlaceDetailScreen() {
     deleteNotePhoto,
     handleToggleEditDescription,
     handleToggleFavorite,
+    handleToggleWantToVisit,
     handleSetPinColor,
     handleDeletePlace,
     handlePickPhoto,
@@ -56,6 +58,8 @@ export default function PlaceDetailScreen() {
     handleCloseAddNote,
     handleAddMemory,
     handleEditMemory,
+    handleOpenOnMap,
+    handleRecordVisit,
     handleToggleTag,
     isEditingName,
     name,
@@ -152,6 +156,25 @@ export default function PlaceDetailScreen() {
           onMapPress={openFullScreenMap}
         />
 
+        {/* Straight under the map: jump to this pin on the main map, or log a visit without
+            having to write a memory for it. */}
+        <View style={styles.mapActions}>
+          <TouchableOpacity style={styles.mapAction} onPress={handleOpenOnMap} activeOpacity={0.8}>
+            <Ionicons name="map-outline" size={18} color={Colors.brand.primary} />
+            <Text style={styles.mapActionText}>Open on map</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.mapAction}
+            onPress={handleRecordVisit}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="footsteps-outline" size={18} color={Colors.brand.primary} />
+            <Text style={styles.mapActionText}>
+              {place.visitCount > 0 ? `I was here · ${place.visitCount}×` : 'I was here'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.content}>
           {/* Header info */}
           <View style={styles.placeHeader}>
@@ -182,11 +205,16 @@ export default function PlaceDetailScreen() {
                   color={Colors.brand.primary}
                 />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleToggleFavorite} style={styles.favoriteButton}>
-                <Text style={[styles.heartIcon, place.isFavorite && styles.heartIconActive]}>
-                  {place.isFavorite ? '♥' : '♡'}
-                </Text>
-              </TouchableOpacity>
+              <PlaceFlagToggle
+                flag="favorite"
+                active={!!place.favorite}
+                onPress={handleToggleFavorite}
+              />
+              <PlaceFlagToggle
+                flag="wantToVisit"
+                active={place.isFavorite}
+                onPress={handleToggleWantToVisit}
+              />
             </View>
 
             {place.visitCount > 0 && (
@@ -397,6 +425,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   nameField: { flex: 1 },
+  mapActions: {
+    flexDirection: 'row',
+    gap: Spacing.s12,
+    paddingHorizontal: Spacing.s16,
+    paddingTop: Spacing.s12,
+  },
+  mapAction: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.s8,
+    paddingVertical: Spacing.s12,
+    borderRadius: Radii.md,
+    borderWidth: 1.5,
+    borderColor: Colors.brand.light,
+    backgroundColor: Colors.white,
+  },
+  mapActionText: {
+    ...Typography.subheadline,
+    color: Colors.brand.dark,
+    fontWeight: '600',
+  },
   iconButton: {
     width: 32,
     height: 32,

@@ -3,8 +3,8 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Colors, Spacing } from '../../../design-system/tokens';
-import { MAP_SEARCH_BAR_HEIGHT } from '../constants';
+import { Colors } from '../../../design-system/tokens';
+import { MAP_TOP_BUTTON_OFFSET, MAP_TOP_BUTTON_RIGHT } from '../constants';
 import { RoundMapButton } from './RoundMapButton';
 
 interface Props {
@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    paddingTop: MAP_SEARCH_BAR_HEIGHT + Spacing.s12,
-    paddingRight: Spacing.s16,
+    paddingTop: MAP_TOP_BUTTON_OFFSET,
+    paddingRight: MAP_TOP_BUTTON_RIGHT,
   },
 });

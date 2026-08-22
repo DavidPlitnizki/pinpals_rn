@@ -6,6 +6,7 @@ import { usePlaceCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { MOOD_CONFIG, Place } from '../../../models/types';
 import { categoryColor, CATEGORY_LABELS } from '../../../shared/constants';
 import { usePlacesStore } from '../../../store/usePlacesStore';
+import { PlaceFlagBadges } from '../../../design-system/components/PlaceFlags';
 import { InlineTags } from './InlineTags';
 
 function noop() {}
@@ -46,7 +47,7 @@ export function PlaceGridCard({ place, onPress }: Props) {
           <Text style={styles.name} numberOfLines={2}>
             {place.name}
           </Text>
-          {place.isFavorite && <Text style={styles.heart}>♥</Text>}
+          <PlaceFlagBadges favorite={place.favorite} wantToVisit={place.isFavorite} size={18} />
         </View>
         <View style={styles.categoryRow}>
           {place.category && (

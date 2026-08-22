@@ -32,14 +32,37 @@ const PROVIDER_BADGE: Record<
   anonymous: { icon: 'eye-off' },
 };
 
+// Same hues the Remembrance flag toggles use, so a heart means the same thing on both
+// screens.
+const WANT_COLOR = Colors.accent.primary;
+const FAVORITE_COLOR = Colors.error;
+
+function SavedStat({
+  icon,
+  color,
+  value,
+  label,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  color: string;
+  value: number;
+  label: string;
+}) {
+  return (
+    <View style={styles.statItem} accessibilityLabel={`${label}: ${value}`}>
+      <Ionicons name={icon} size={20} color={color} />
+      <Text style={styles.statNumber}>{value}</Text>
+    </View>
+  );
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
   const {
     profile,
     isGuest,
     authData,
-    places,
-    savedRoutes,
+    savedCounts,
     isEditing,
     handleStartEdit,
     name,
@@ -150,21 +173,30 @@ export default function ProfileScreen() {
                 <Ionicons name="bookmark" size={16} color={Colors.neutral[700]} />
                 <Text style={styles.statsTitle}>Saved</Text>
               </View>
+              {/* Icons instead of captions — each stat is identified by the same symbol and
+                  colour it carries everywhere else in the app, so the row stays readable at a
+                  glance without four wrapping two-word labels. */}
               <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{places.length}</Text>
-                  <Text style={styles.statLabel}>Places</Text>
-                </View>
+                <SavedStat
+                  icon="location"
+                  color={Colors.brand.primary}
+                  value={savedCounts.places}
+                  label="Total places"
+                />
                 <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{savedRoutes.length}</Text>
-                  <Text style={styles.statLabel}>Routes</Text>
-                </View>
+                <SavedStat
+                  icon="bookmark"
+                  color={WANT_COLOR}
+                  value={savedCounts.wantToVisit}
+                  label="Want to visit"
+                />
                 <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{places.filter((p) => p.isFavorite).length}</Text>
-                  <Text style={styles.statLabel}>Want to Visit</Text>
-                </View>
+                <SavedStat
+                  icon="heart"
+                  color={FAVORITE_COLOR}
+                  value={savedCounts.favorites}
+                  label="Favorites"
+                />
               </View>
             </PinCard>
 
@@ -342,17 +374,10 @@ const styles = StyleSheet.create({
     color: Colors.neutral[700],
   },
   statsRow: { flexDirection: 'row', alignItems: 'center' },
-  statItem: { flex: 1, alignItems: 'center' },
+  statItem: { flex: 1, alignItems: 'center', gap: Spacing.s4 },
   statNumber: {
-    ...Typography.title1,
-    color: Colors.brand.primary,
-    marginBottom: Spacing.s4,
-  },
-  statLabel: {
-    ...Typography.caption,
-    color: Colors.neutral[500],
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    ...Typography.title2,
+    color: Colors.neutral[900],
   },
   statDivider: { width: 1, height: 40, backgroundColor: Colors.neutral[100] },
   infoCard: { marginBottom: 0 },

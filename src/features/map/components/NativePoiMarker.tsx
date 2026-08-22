@@ -1,7 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { MapView, MarkerView, PointAnnotation } from '@rnmapbox/maps';
 import React, { RefObject, useCallback } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Image } from 'expo-image';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
@@ -21,6 +28,9 @@ import { CalloutActionButton } from './CalloutActionButton';
 import { CalloutContainer } from './CalloutContainer';
 
 const PIN_SIZE = 40;
+// Same 80%-of-screen cap as the saved-place callout: MarkerView grows to fit its content, so
+// a long name or address would otherwise stretch the card across the whole display.
+const CALLOUT_MAX_WIDTH = Math.round(Dimensions.get('window').width * 0.8);
 // Distinct from CATEGORY_COLORS (food/coffee/nature/art/sports), SearchResultMarker's
 // DROP_RED and ROUTE_LINE_COLOR — reads as "basemap data", not user/app data. Reuses the
 // `warning` design token rather than a new hardcoded hex.
@@ -127,7 +137,7 @@ export function NativePoiMarker({
                 <Ionicons name={iconForMaki(marker.maki)} size={32} color={POI_COLOR} />
               )}
             </View>
-            <Text style={styles.calloutName} numberOfLines={1}>
+            <Text style={styles.calloutName} numberOfLines={2}>
               {marker.name}
             </Text>
             {marker.category && (
@@ -222,7 +232,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: Radii.md,
     minWidth: 200,
-    maxWidth: 240,
+    maxWidth: CALLOUT_MAX_WIDTH,
     paddingHorizontal: Spacing.s12,
     paddingBottom: Spacing.s12,
     alignItems: 'center',

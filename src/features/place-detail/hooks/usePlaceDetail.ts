@@ -21,6 +21,7 @@ export function usePlaceDetail() {
     deleteNotePhoto,
     addTagToPlace,
     removeTagFromPlace,
+    recordVisit,
     getLatestMoodForPlace,
   } = usePlacesStore();
 
@@ -67,8 +68,15 @@ export function usePlaceDetail() {
     setIsEditingName(false);
   }
 
-  function handleToggleFavorite() {
+  // `toggleFavorite` in the store flips `isFavorite`, which the UI calls "want to visit" —
+  // the heart lives on the separate `favorite` field. Naming is a leftover from the v3→v4
+  // migration; these two wrappers keep the screen honest about which is which.
+  function handleToggleWantToVisit() {
     toggleFavorite(place!.id);
+  }
+
+  function handleToggleFavorite() {
+    updatePlace(place!.id, { favorite: !place!.favorite });
   }
 
   function handleSetPinColor(color: string | undefined) {
@@ -180,6 +188,23 @@ export function usePlaceDetail() {
     } as any);
   }
 
+  // Hands the coordinates to the map tab, which flies the camera to them on arrival.
+  function handleOpenOnMap() {
+    router.push({
+      pathname: '/(tabs)/map',
+      params: {
+        focusLat: String(place!.coordinates.latitude),
+        focusLng: String(place!.coordinates.longitude),
+      },
+    } as any);
+  }
+
+  // "I was here" — bumps visitCount and lastVisited, which drive the most-visited stat and
+  // the period filters. Nothing else in the app records a visit without adding a memory.
+  function handleRecordVisit() {
+    recordVisit(place!.id);
+  }
+
   function handleToggleTag(tag: string) {
     if (!place) return;
     if ((place.tags ?? []).includes(tag)) {
@@ -218,6 +243,7 @@ export function usePlaceDetail() {
     handleSaveDescription,
     handleToggleEditDescription,
     handleToggleFavorite,
+    handleToggleWantToVisit,
     handleSetPinColor,
     handleDeletePlace,
     handlePickPhoto,
@@ -226,6 +252,8 @@ export function usePlaceDetail() {
     handleCloseAddNote,
     handleAddMemory,
     handleEditMemory,
+    handleOpenOnMap,
+    handleRecordVisit,
     handleToggleTag,
     router,
   };

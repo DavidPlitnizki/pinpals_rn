@@ -15,14 +15,21 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Medium: 'medium' },
 }));
 
-jest.mock('../../../../store/usePlacesStore', () => ({
-  usePlacesStore: () => ({
+jest.mock('../../../../store/usePlacesStore', () => {
+  // Built lazily on each call: jest.mock is hoisted above the mockXxx declarations, so
+  // capturing them at factory time would capture undefined.
+  const getState = () => ({
     places: [],
     addPlace: mockAddPlace,
     deletePlace: mockDeletePlace,
     addNote: mockAddNote,
-  }),
-}));
+  });
+  // The hook reads the store both as a hook and imperatively (getState) — the location
+  // fallback needs the saved places without subscribing to them.
+  const usePlacesStore = () => getState();
+  usePlacesStore.getState = getState;
+  return { usePlacesStore };
+});
 
 // Real photo copying touches the native expo-file-system module, which isn't available in
 // the Jest environment — pass uris through unchanged so save-flow assertions can focus on

@@ -46,7 +46,30 @@ export const CATEGORY_LABELS: Record<PlaceCategory, string> = {
 
 // The fixed vocabulary of tags a place can carry. Kept closed (no free text) so tags stay
 // comparable across places — the remembrance filters group by exact tag string.
-export const PRESET_TAGS: string[] = [
+// The categories the map's quick-filter row offers, in the same order. Kept as plain tag
+// strings (not imported from the map feature) so shared code has no dependency on it, and so
+// tagging a place and browsing the map speak one vocabulary. The row's "Hide my places"
+// control is deliberately absent — it toggles a view, it isn't a category.
+export const MAP_CATEGORY_TAGS: string[] = [
+  'restaurants',
+  'cafes',
+  'bars',
+  'clubs',
+  'parks',
+  'parking',
+  'gas stations',
+  'malls',
+  'hospitals',
+  'hotels',
+  'atms',
+  'pharmacies',
+  'museums',
+  'landmarks',
+];
+
+// Tags with no equivalent on the map — how a place felt or who it's for, rather than what
+// kind of venue it is.
+export const PERSONAL_TAGS: string[] = [
   'food',
   'coffee',
   'nature',
@@ -61,7 +84,10 @@ export const PRESET_TAGS: string[] = [
   'date',
   'family',
   'work',
+  'want visit',
 ];
+
+export const PRESET_TAGS: string[] = [...MAP_CATEGORY_TAGS, ...PERSONAL_TAGS];
 
 // Preset swatches for the user-chosen pin color (Place.pinColor). Undefined/unselected falls
 // back to Colors.myPlace (turquoise) wherever the pin is drawn — this list intentionally

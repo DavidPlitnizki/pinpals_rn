@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 
 import { useAuth } from '../../../contexts/AuthContext';
@@ -9,7 +9,6 @@ import { setCrashReportingUserContext } from '../../../services/crashReporting';
 import { useMeetingsStore } from '../../../store/useMeetingsStore';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
-import { useSavedRoutesStore } from '../../../store/useSavedRoutesStore';
 import { useSettingsStore } from '../../../store/useSettingsStore';
 
 interface AvatarDraft {
@@ -21,7 +20,6 @@ export function useProfileScreen() {
   const { profile, updateProfile } = useProfileStore();
   const { places } = usePlacesStore();
   const { meetings } = useMeetingsStore();
-  const { savedRoutes } = useSavedRoutesStore();
   const { logout, deleteAccount, isGuest, authData } = useAuth();
   const { fontScale, setFontScale, theme, setTheme } = useSettingsStore();
   const [isEditing, setIsEditing] = useState(false);
@@ -34,6 +32,17 @@ export function useProfileScreen() {
   // What the screen should render while editing: the staged avatar if one was picked in this
   // session, otherwise the saved profile.
   const displayProfile = draftAvatar ? { ...profile, ...draftAvatar } : profile;
+
+  // `isFavorite` is the "want to visit" flag; `favorite` is the separate heart. Two distinct
+  // fields with confusingly similar names — see the v3→v4 store migration.
+  const savedCounts = useMemo(
+    () => ({
+      places: places.length,
+      wantToVisit: places.filter((p) => p.isFavorite).length,
+      favorites: places.filter((p) => p.favorite).length,
+    }),
+    [places],
+  );
 
   const handleStartEdit = useCallback(() => {
     setName(profile.name);
@@ -127,7 +136,7 @@ export function useProfileScreen() {
   function handleDeleteAccount() {
     Alert.alert(
       'Delete Account',
-      'Are you sure you want to delete your account? This permanently deletes your account and all your places, memories, meetings, and saved routes. This action cannot be undone.',
+      'Are you sure you want to delete your account? This permanently deletes your account and all your places, memories, and meetings. This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -140,7 +149,6 @@ export function useProfileScreen() {
               // content too, so nothing from the deleted account lingers on the device.
               usePlacesStore.setState({ places: [], notes: [] });
               useMeetingsStore.setState({ meetings: [] });
-              useSavedRoutesStore.setState({ savedRoutes: [] });
               useProfileStore.setState({ profile: { id: '1', name: 'User' } });
             } catch (e: any) {
               Alert.alert('Couldn’t delete account', e?.message ?? 'Please try again.');
@@ -162,7 +170,7 @@ export function useProfileScreen() {
     setTheme,
     places,
     meetings,
-    savedRoutes,
+    savedCounts,
     isEditing,
     handleStartEdit,
     name,
