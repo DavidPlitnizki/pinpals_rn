@@ -80,13 +80,7 @@ export function AddNoteModal({
             )}
           </View>
 
-          <PinButton
-            title="Save Note"
-            onPress={onSave}
-            fullWidth
-            size="lg"
-            leftIcon={SAVE_ICON}
-          />
+          <PinButton title="Save Note" onPress={onSave} fullWidth size="lg" leftIcon={SAVE_ICON} />
         </ScrollView>
       </SafeAreaView>
 

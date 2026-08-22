@@ -54,7 +54,11 @@ export function PlaceRow({ place, onPress, onDelete }: Props) {
                 <Text style={styles.name} numberOfLines={1}>
                   {place.name}
                 </Text>
-                <PlaceFlagBadges favorite={place.favorite} wantToVisit={place.isFavorite} size={18} />
+                <PlaceFlagBadges
+                  favorite={place.favorite}
+                  wantToVisit={place.isFavorite}
+                  size={18}
+                />
               </View>
               <View style={styles.meta}>
                 <PinRatingView rating={place.rating} size={12} />
@@ -71,11 +75,7 @@ export function PlaceRow({ place, onPress, onDelete }: Props) {
 
           {/* Inline tags — stop propagation so tapping chips doesn't open detail */}
           <TouchableOpacity activeOpacity={1} onPress={noop}>
-            <InlineTags
-              tags={place.tags ?? []}
-              onAdd={handleAddTag}
-              onRemove={handleRemoveTag}
-            />
+            <InlineTags tags={place.tags ?? []} onAdd={handleAddTag} onRemove={handleRemoveTag} />
           </TouchableOpacity>
         </PinCard>
       </TouchableOpacity>

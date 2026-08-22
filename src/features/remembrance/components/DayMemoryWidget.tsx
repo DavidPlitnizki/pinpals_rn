@@ -35,11 +35,7 @@ export function DayMemoryWidget({ memory, onPress }: Props) {
   // own map-pin photo and the cover captured when it was saved both count, so the card shows
   // a real image whenever one exists instead of falling back to the emoji placeholder.
   const photoUri =
-    note?.photoUris?.[0] ??
-    note?.photoUri ??
-    place.mainPhotoUri ??
-    place.coverImageUrl ??
-    null;
+    note?.photoUris?.[0] ?? note?.photoUri ?? place.mainPhotoUri ?? place.coverImageUrl ?? null;
 
   const handlePress = useCallback(() => onPress(place.id), [onPress, place.id]);
 

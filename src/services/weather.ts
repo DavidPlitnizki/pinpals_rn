@@ -143,8 +143,7 @@ export async function fetchDailyWeather(coords: Coordinates): Promise<DailyWeath
     };
     console.log('[weather] daily response ←', JSON.stringify(data));
 
-    const { time, weather_code, temperature_2m_max, temperature_2m_min, sunset } =
-      data.daily ?? {};
+    const { time, weather_code, temperature_2m_max, temperature_2m_min, sunset } = data.daily ?? {};
     if (!time || !weather_code || !temperature_2m_max || !temperature_2m_min || !sunset) {
       return [];
     }

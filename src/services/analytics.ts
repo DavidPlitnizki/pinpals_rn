@@ -1,5 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAnalytics, logEvent, setUserId, setUserProperty } from '@react-native-firebase/analytics';
+import {
+  getAnalytics,
+  logEvent,
+  setUserId,
+  setUserProperty,
+} from '@react-native-firebase/analytics';
 
 // Bucketed rather than the raw number — Firebase user properties are for segmentation
 // (e.g. "compare retention of 0-place vs 20+-place users" in the dashboard), and a
@@ -29,7 +34,10 @@ export function setPlacesCount(count: number): void {
 export type FilterType = 'tag' | 'mood' | 'period' | 'want_to_visit' | 'sort';
 
 export function logFilterUsed(filterType: FilterType, value?: string): void {
-  void logEvent(getAnalytics(), 'place_filter_used', { filter_type: filterType, value: value ?? '' });
+  void logEvent(getAnalytics(), 'place_filter_used', {
+    filter_type: filterType,
+    value: value ?? '',
+  });
 }
 
 export type SearchSource = 'map_pin' | 'search_result' | 'native_poi';

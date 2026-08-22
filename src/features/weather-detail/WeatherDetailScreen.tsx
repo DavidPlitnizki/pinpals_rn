@@ -119,7 +119,11 @@ const DayRow = React.memo(function DayRow({
         <View
           style={[
             styles.dayBarFill,
-            { left: `${leftPct}%`, width: `${widthPct}%`, backgroundColor: colorForWeatherCode(point.weatherCode) },
+            {
+              left: `${leftPct}%`,
+              width: `${widthPct}%`,
+              backgroundColor: colorForWeatherCode(point.weatherCode),
+            },
           ]}
         />
         {showMarker && <View style={[styles.dayBarMarker, { left: `${markerPct}%` }]} />}

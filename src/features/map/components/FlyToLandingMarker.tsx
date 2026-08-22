@@ -58,7 +58,7 @@ export function FlyToLandingMarker({ signal, onDone }: Props) {
     const landing = Math.min(progress.value, 1);
     const leaving = Math.max(progress.value - 1, 0);
     return {
-      opacity: (landing * 0.35) * (1 - leaving),
+      opacity: landing * 0.35 * (1 - leaving),
       transform: [{ scale: 0.4 + landing * 0.6 }],
     };
   });

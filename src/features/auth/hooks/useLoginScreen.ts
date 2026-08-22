@@ -49,14 +49,8 @@ export function useLoginScreen() {
     }
   }
 
-  const goToTerms = useCallback(
-    () => router.push('/legal?type=terms' as any),
-    [router],
-  );
-  const goToPrivacy = useCallback(
-    () => router.push('/legal?type=privacy' as any),
-    [router],
-  );
+  const goToTerms = useCallback(() => router.push('/legal?type=terms' as any), [router]);
+  const goToPrivacy = useCallback(() => router.push('/legal?type=privacy' as any), [router]);
 
   return {
     isLoading,
