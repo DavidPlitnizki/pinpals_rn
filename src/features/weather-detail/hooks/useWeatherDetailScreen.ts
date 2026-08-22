@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { Coordinates } from '../../../models/types';
 import { reverseGeocodePlace } from '../../../services/mapboxSearch';
+import { isNullIsland } from '../../../shared/geo';
 import {
   CurrentWeather,
   DailyWeatherPoint,
@@ -16,6 +17,11 @@ import {
 } from '../../../services/weather';
 
 export const MIN_SEARCH_QUERY_LENGTH = 2;
+
+const LOADING_LABEL = 'Locating…';
+// Shown when the coordinates genuinely can't be named — an unnamed patch of sea or desert,
+// or no location at all. Never the normal case.
+const UNKNOWN_LABEL = 'Unknown location';
 
 export function useWeatherDetailScreen() {
   const router = useRouter();
@@ -32,7 +38,8 @@ export function useWeatherDetailScreen() {
   );
 
   const [coords, setCoords] = useState(initialCoords);
-  const [locationLabel, setLocationLabel] = useState('Map location');
+  // Placeholder only while the reverse-geocode is in flight; it resolves to "City, Country".
+  const [locationLabel, setLocationLabel] = useState(LOADING_LABEL);
   // Guards the initial reverse-geocode below from clobbering a label the user already set by
   // picking a search result while that lookup was still in flight.
   const hasCustomLabelRef = useRef(false);
@@ -93,16 +100,20 @@ export function useWeatherDetailScreen() {
     };
   }, [debouncedQuery]);
 
-  // One-time reverse geocode of wherever the map camera was pointed, so the screen opens
-  // naming an actual city/country instead of the generic "Map location" placeholder.
+  // Reverse geocode wherever the map camera was pointed, so the screen names an actual
+  // city/country. Skipped for (0, 0) — that isn't a place the user is looking at, it's the
+  // "we have no location" default, and geocoding it returns nothing.
   useEffect(() => {
     let cancelled = false;
 
     async function loadLocationLabel() {
-      const label = await reverseGeocodePlace(initialCoords);
-      if (!cancelled && label && !hasCustomLabelRef.current) {
-        setLocationLabel(label);
+      if (isNullIsland(initialCoords)) {
+        if (!cancelled && !hasCustomLabelRef.current) setLocationLabel(UNKNOWN_LABEL);
+        return;
       }
+      const label = await reverseGeocodePlace(initialCoords);
+      if (cancelled || hasCustomLabelRef.current) return;
+      setLocationLabel(label ?? UNKNOWN_LABEL);
     }
 
     void loadLocationLabel();

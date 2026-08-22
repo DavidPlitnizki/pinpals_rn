@@ -1,20 +1,16 @@
-export type Tab = 'all' | 'favorites';
 export type ViewMode = 'list' | 'grid' | 'map';
-export type FilterPeriod = 'all' | 'week' | 'month' | '3months' | 'year';
-export type SortOption = 'newest' | 'oldest' | 'name' | 'mostVisited';
+export type FilterPeriod = 'all' | 'week' | 'month' | 'year';
+// Sorting is a single arrow toggle in the list header — newest or oldest by date added.
+export type SortOption = 'newest' | 'oldest';
 
 export interface PlaceFilters {
   tags: string[];
-  moods: string[];
   period: FilterPeriod;
-  wantToVisit: boolean;
   sortBy: SortOption;
 }
 
 export const EMPTY_FILTERS: PlaceFilters = {
   tags: [],
-  moods: [],
   period: 'all',
-  wantToVisit: false,
   sortBy: 'newest',
 };

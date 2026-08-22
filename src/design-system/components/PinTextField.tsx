@@ -124,12 +124,19 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: Radii.sm,
     backgroundColor: Colors.white,
-  },
-  focusedShadow: {
+    // The focus glow is declared here, permanently, and only its opacity is toggled below.
+    // Adding iOS shadow props to this wrapper for the first time on focus makes UIKit rebuild
+    // the view's layer and re-attach its subviews — which resigns the TextInput's first
+    // responder status the instant it gains it, so the keyboard opens and shuts again. Keeping
+    // the props present in both states means focus changes nothing but a number.
     shadowColor: Colors.brand.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.15,
     shadowRadius: 4,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  focusedShadow: {
+    shadowOpacity: 0.15,
     elevation: 2,
   },
   input: {

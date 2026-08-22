@@ -38,7 +38,13 @@ export const QUICK_SEARCH_CATEGORIES: QuickSearchCategory[] = [
   { key: 'clubs', label: 'Clubs', query: 'night club', icon: 'party-popper', color: '#7B2FF7' },
   { key: 'parks', label: 'Parks', query: 'park', icon: 'tree', color: '#4A7C59' },
   { key: 'parking', label: 'Parking', query: 'parking', icon: 'parking', color: '#3D9BE9' },
-  { key: 'gas', label: 'Gas Stations', query: 'gas station', icon: 'gas-station', color: '#E4483C' },
+  {
+    key: 'gas',
+    label: 'Gas Stations',
+    query: 'gas station',
+    icon: 'gas-station',
+    color: '#E4483C',
+  },
   { key: 'malls', label: 'Malls', query: 'shopping mall', icon: 'shopping', color: '#9C6ADE' },
   {
     key: 'hospitals',
@@ -84,9 +90,26 @@ export const MAP_SEARCH_BAR_HEIGHT = 116;
 
 export const DEFAULT_CENTER: [number, number] = [0, 0];
 export const DEFAULT_ZOOM = 13;
+// Used when there's no location and nothing saved to fall back to: a street-level camera over
+// (0, 0) renders as a featureless blue rectangle that reads as "the map is broken", whereas a
+// world view reads as "we don't know where you are yet".
+export const WORLD_ZOOM = 1.5;
 export const ZOOM_DELTA = 1;
 export const MIN_ZOOM = 1;
 export const MAX_ZOOM = 20;
 
 export const ROUTE_LINE_COLOR = '#3E7CE8';
 export const ROUTE_LINE_WIDTH = 4;
+
+// The top-right floating buttons (ClearMapButton, ClearRouteButton) and the route info card
+// all hang off the same top edge, so they share these numbers — the top button stays level
+// with the card beside it instead of drifting when one side is tweaked. A second button
+// stacks below the first, down the right edge.
+export const MAP_TOP_BUTTON_SIZE = 44;
+export const MAP_TOP_BUTTON_OFFSET = MAP_SEARCH_BAR_HEIGHT + Spacing.s12;
+export const MAP_TOP_BUTTON_RIGHT = Spacing.s16;
+export const MAP_TOP_BUTTON_STACKED_OFFSET =
+  MAP_TOP_BUTTON_OFFSET + MAP_TOP_BUTTON_SIZE + Spacing.s8;
+// Horizontal gutter the card keeps clear so a long destination label can't slide under the
+// button column.
+export const MAP_TOP_BUTTON_GUTTER = MAP_TOP_BUTTON_RIGHT + MAP_TOP_BUTTON_SIZE + Spacing.s8;

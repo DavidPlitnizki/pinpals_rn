@@ -10,7 +10,8 @@ import { MapboxSearchResult, reverseGeocodeAddress } from '../../../services/map
 import { copyPhotosToAppStorage } from '../../../shared/photoStorage';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
-import { DEFAULT_CENTER, DEFAULT_ZOOM } from '../constants';
+import { isNullIsland } from '../../../shared/geo';
+import { DEFAULT_CENTER, DEFAULT_ZOOM, WORLD_ZOOM } from '../constants';
 import { NativePoiMarker, PendingSearchMarker } from '../types';
 
 export interface QuickAddSaveData {
@@ -64,6 +65,7 @@ export function useMapScreen() {
     phone?: string;
     website?: string;
     imageUrl?: string;
+    maki?: string;
   } | null>(null);
 
   const [searchResultMarkers, setSearchResultMarkers] = useState<PendingSearchMarker[]>([]);
@@ -117,11 +119,36 @@ export function useMapScreen() {
     [showToast],
   );
 
+  // Without a position the camera would sit at DEFAULT_CENTER — (0, 0), open ocean — which
+  // looks like a failed map rather than a missing permission. Fall back to the most recently
+  // saved place if there is one, otherwise pull back to a world view.
+  const fallbackToKnownLocation = useCallback(() => {
+    const saved = usePlacesStore.getState().places;
+    const newest = saved[saved.length - 1];
+    if (newest) {
+      currentCenter.current = [newest.coordinates.longitude, newest.coordinates.latitude];
+      currentZoom.current = DEFAULT_ZOOM;
+      cameraRef.current?.setCamera({
+        centerCoordinate: currentCenter.current,
+        zoomLevel: DEFAULT_ZOOM,
+        animationDuration: 0,
+      });
+      return;
+    }
+    currentZoom.current = WORLD_ZOOM;
+    cameraRef.current?.setCamera({
+      centerCoordinate: DEFAULT_CENTER,
+      zoomLevel: WORLD_ZOOM,
+      animationDuration: 0,
+    });
+  }, []);
+
   const requestLocation = useCallback(async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         showToast('Location permission denied', false);
+        fallbackToKnownLocation();
         return;
       }
 
@@ -138,8 +165,9 @@ export function useMapScreen() {
       applyLocation(loc.coords.latitude, loc.coords.longitude);
     } catch {
       showToast('Could not get location', false);
+      fallbackToKnownLocation();
     }
-  }, [applyLocation, showToast]);
+  }, [applyLocation, showToast, fallbackToKnownLocation]);
 
   // One-time permission request + location fetch on mount; requestLocation's identity is
   // stable (see its useCallback deps), so this effect only ever runs once.
@@ -169,6 +197,10 @@ export function useMapScreen() {
     const [longitude, latitude] = currentCenter.current;
     return { latitude, longitude };
   }, []);
+
+  // True while the camera has never been given a real position — callers that would
+  // otherwise query weather/geocoding for the Gulf of Guinea skip the request instead.
+  const hasRealLocation = !isNullIsland(getMapCenter());
 
   // Mapbox's own service limits make a user-adjustable search radius pointless — search is
   // scoped to whatever bbox is actually on screen instead, read fresh off the native map each
@@ -284,7 +316,7 @@ export function useMapScreen() {
       // The basemap already knows what this place is called — seed the form with it rather
       // than making the user retype a name that's printed right there on the map. The callout
       // has usually resolved address/phone/website by now too, so those carry over as well.
-      setPendingPlaceMeta({ name: marker.name, ...details });
+      setPendingPlaceMeta({ name: marker.name, maki: marker.maki, ...details });
       setNativePoiMarker(null);
       setShowQuickAddSheet(true);
     },
@@ -336,6 +368,7 @@ export function useMapScreen() {
         mainPhotoUri,
         address,
         coverImageUrl: pendingPlaceMeta?.imageUrl,
+        maki: pendingPlaceMeta?.maki,
         phone: data.phone ?? pendingPlaceMeta?.phone,
         website: pendingPlaceMeta?.website,
       });
@@ -384,6 +417,7 @@ export function useMapScreen() {
       phone: marker.phone,
       website: marker.website,
       imageUrl: marker.imageUrl,
+      maki: marker.maki,
     });
     setSearchResultMarkers((prev) => prev.filter((m) => m.id !== marker.id));
     setShowQuickAddSheet(true);
@@ -463,6 +497,7 @@ export function useMapScreen() {
     handleDeleteMarker,
     myPlacesHidden,
     toggleMyPlacesHidden,
+    hasRealLocation,
     setShowProfileMenu,
   };
 }

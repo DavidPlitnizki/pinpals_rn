@@ -203,10 +203,12 @@ export async function reverseGeocodePlace(coords: Coordinates): Promise<string |
   const token = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
   if (!token) return null;
 
+  // place first, then region/country as fallbacks — a coordinate in open country has no
+  // "place" feature, and naming the region still beats showing nothing.
   const params = new URLSearchParams({
     longitude: String(coords.longitude),
     latitude: String(coords.latitude),
-    types: 'place',
+    types: 'place,region,country',
     access_token: token,
   });
 

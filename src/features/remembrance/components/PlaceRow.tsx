@@ -1,9 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
 import { PinCard } from '../../../design-system/components/PinCard';
 import { PinRatingView } from '../../../design-system/components/PinRatingView';
+import { PlaceFlagBadges } from '../../../design-system/components/PlaceFlags';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { Place } from '../../../models/types';
 import { usePlacesStore } from '../../../store/usePlacesStore';
@@ -52,14 +54,19 @@ export function PlaceRow({ place, onPress, onDelete }: Props) {
                 <Text style={styles.name} numberOfLines={1}>
                   {place.name}
                 </Text>
-                {place.isFavorite && <Text style={styles.heart}>♥</Text>}
+                <PlaceFlagBadges favorite={place.favorite} wantToVisit={place.isFavorite} size={18} />
               </View>
               <View style={styles.meta}>
                 <PinRatingView rating={place.rating} size={12} />
               </View>
               <Text style={styles.date}>{new Date(place.createdAt).toLocaleDateString()}</Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <Ionicons
+              name="chevron-forward"
+              size={22}
+              color={Colors.neutral[300]}
+              style={styles.chevron}
+            />
           </View>
 
           {/* Inline tags — stop propagation so tapping chips doesn't open detail */}
@@ -95,7 +102,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.s4,
   },
   date: { ...Typography.caption, color: Colors.neutral[400] },
-  chevron: { fontSize: 22, color: Colors.neutral[300], marginLeft: Spacing.s8 },
+  chevron: { marginLeft: Spacing.s8, alignSelf: 'center' },
   deleteAction: {
     backgroundColor: Colors.error,
     justifyContent: 'center',

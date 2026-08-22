@@ -1,7 +1,19 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect } from 'react';
-import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring } from 'react-native-reanimated';
+import {
+  ImageBackground,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
@@ -74,7 +86,14 @@ function DecorPinMci({ icon, color, style, delay }: DecorPinMciProps) {
   );
 }
 
+// "Skip for now"'s position is set purely by its distance from the legal block below it
+// (justifyContent: flex-end anchors that block to the bottom, so nothing above it moves
+// Skip itself) — a flat Spacing constant wouldn't scale with device height the way a
+// screen-relative offset does. marginTop just closes the gap up to the buttons above.
+const SKIP_LIFT_RATIO = 0.045;
+
 export default function LoginScreen() {
+  const { height: windowHeight } = useWindowDimensions();
   const {
     isLoading,
     error,
@@ -141,7 +160,7 @@ export default function LoginScreen() {
           <TouchableOpacity
             onPress={handleSkip}
             activeOpacity={0.7}
-            style={styles.skipButtonWrap}
+            style={[styles.skipButtonWrap, { marginBottom: windowHeight * SKIP_LIFT_RATIO }]}
           >
             <View style={styles.skipButton}>
               <Text style={styles.skipText}>Skip for now</Text>
@@ -149,9 +168,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.legalBlock}>
-            <Text style={styles.legalDisclaimer}>
-              By continuing, you agree to our
-            </Text>
+            <Text style={styles.legalDisclaimer}>By continuing, you agree to our</Text>
             <View style={styles.legalRow}>
               <TouchableOpacity onPress={goToTerms}>
                 <Text style={styles.legalLink}>Terms of Service</Text>
@@ -181,7 +198,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingHorizontal: Spacing.s24,
     paddingBottom: Spacing.s32,
-    gap: Spacing.s24,
+    // Matches SocialButtons' own internal gap (Google↔Apple), so the whole stack —
+    // Google, Apple, Skip, legal — reads as one evenly spaced column instead of the
+    // buttons themselves sitting closer together than everything below them.
+    gap: Spacing.s12,
   },
   decorPin: {
     position: 'absolute',

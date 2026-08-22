@@ -191,67 +191,6 @@ export function useRouteDirections(
   // Loads a saved route template directly onto the map — recomputes directions from
   // wherever the user is right now, skipping the mode picker entirely (the profile was
   // already chosen when the route was saved).
-  const loadSavedRoute = useCallback(
-    async (waypoints: RouteWaypoint[], profile: RouteProfile) => {
-      if (!gpsCoords || waypoints.length === 0) return;
-      const origin = { mode: 'gps' as const, coordinates: gpsCoords, label: 'Your location' };
-
-      setSelectedProfile(profile);
-      const requestId = ++requestIdRef.current;
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      setRoute({
-        profile,
-        origin,
-        waypoints,
-        geometry: null,
-        distanceMeters: null,
-        durationSeconds: null,
-        steps: [],
-        status: 'loading',
-        error: null,
-      });
-
-      try {
-        const result = await getDirections(
-          [origin.coordinates, ...waypoints.map((w) => w.coordinates)],
-          profile,
-          controller.signal,
-        );
-        if (requestIdRef.current !== requestId) return; // superseded by a newer request
-        setRoute({
-          profile,
-          origin,
-          waypoints,
-          geometry: result.geometry,
-          distanceMeters: result.distanceMeters,
-          durationSeconds: result.durationSeconds,
-          steps: result.steps,
-          status: 'success',
-          error: null,
-        });
-      } catch (err) {
-        if (requestIdRef.current !== requestId) return; // superseded by a newer request
-        if (err instanceof Error && err.name === 'AbortError') return;
-        reportNetworkError('directions', err, 'route request failed');
-        setRoute({
-          profile,
-          origin,
-          waypoints,
-          geometry: null,
-          distanceMeters: null,
-          durationSeconds: null,
-          steps: [],
-          status: 'error',
-          error: 'Could not get directions. Try again.',
-        });
-      }
-    },
-    [gpsCoords, setRoute],
-  );
-
   const clearRoute = useCallback(() => {
     requestIdRef.current++; // invalidate any in-flight request so it can't resurrect the route
     abortRef.current?.abort();
@@ -493,6 +432,5 @@ export function useRouteDirections(
     confirmRoute,
     clearRoute,
     removeLastWaypoint,
-    loadSavedRoute,
   };
 }

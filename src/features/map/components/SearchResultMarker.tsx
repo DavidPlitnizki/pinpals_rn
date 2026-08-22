@@ -2,7 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { MapView, MarkerView, PointAnnotation } from '@rnmapbox/maps';
 import { Image } from 'expo-image';
 import React, { RefObject, useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Dimensions,
+  Linking,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { useCoverImage } from '../../../hooks/usePlaceCoverImage';
@@ -18,6 +26,9 @@ import { CalloutActionButton } from './CalloutActionButton';
 import { CalloutContainer } from './CalloutContainer';
 
 const PIN_SIZE = 40;
+// Same 80%-of-screen cap as the saved-place callout: MarkerView grows to fit its content, so
+// a long name or address would otherwise stretch the card across the whole display.
+const CALLOUT_MAX_WIDTH = Math.round(Dimensions.get('window').width * 0.8);
 const DROP_RED = '#E4483C';
 // The cover hook needs a coordinate even while nothing is selected (hooks can't be skipped);
 // its result is never rendered in that state.
@@ -307,7 +318,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: Radii.md,
     minWidth: 200,
-    maxWidth: 240,
+    maxWidth: CALLOUT_MAX_WIDTH,
     borderWidth: 1,
     borderColor: Colors.neutral[200],
     shadowColor: '#000',

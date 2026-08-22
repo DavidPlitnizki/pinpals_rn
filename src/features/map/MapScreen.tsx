@@ -1,6 +1,6 @@
 import { Camera, MapView, UserLocation } from '@rnmapbox/maps';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -34,7 +34,6 @@ import { Coordinates, Place } from '../../models/types';
 import { logRouteShared } from '../../services/analytics';
 import { MapboxSearchResult } from '../../services/mapboxSearch';
 import { buildGoogleMapsDirectionsUrl } from '../../shared/mapLinks';
-import { useSavedRoutesStore } from '../../store/useSavedRoutesStore';
 
 // Stable empty list — a fresh `[]` each render would remount every annotation in MapMarkers.
 const EMPTY_PLACES: Place[] = [];
@@ -113,7 +112,12 @@ export default function MapScreen() {
   const route = useRouteDirections(gpsCoords, locationGranted, onWaypointReached);
   const weather = useWeather(gpsCoords, getMapCenter, getVisibleBbox);
   const resultWasTappedRef = useRef(false);
-  const addSavedRoute = useSavedRoutesStore((s) => s.addSavedRoute);
+
+  // "Open on map" from a place's detail screen hands the coordinates over as route params;
+  // the ref makes sure one navigation flies the camera exactly once, not again on every
+  // re-render or when the tab regains focus.
+  const focusParams = useLocalSearchParams<{ focusLat?: string; focusLng?: string }>();
+  const lastFocusRef = useRef<string | null>(null);
   const router = useRouter();
 
   // Every Modal presented over the MapView can drop PointAnnotation bitmaps (see
@@ -193,6 +197,25 @@ export default function MapScreen() {
     },
     [currentCenter, currentZoom, onQuickSearchCameraSettled, onWeatherCameraSettled],
   );
+
+  useEffect(() => {
+    const { focusLat, focusLng } = focusParams;
+    if (!focusLat || !focusLng) return;
+    const key = `${focusLat},${focusLng}`;
+    if (lastFocusRef.current === key) return;
+    lastFocusRef.current = key;
+
+    const latitude = Number(focusLat);
+    const longitude = Number(focusLng);
+    if (Number.isNaN(latitude) || Number.isNaN(longitude)) return;
+
+    currentCenter.current = [longitude, latitude];
+    cameraRef.current?.setCamera({
+      centerCoordinate: [longitude, latitude],
+      zoomLevel: 16,
+      animationDuration: 800,
+    });
+  }, [focusParams, cameraRef, currentCenter]);
 
   // Coming back from the weather detail screen (which may have searched a different
   // city) should re-sync the map badge with wherever the camera actually is now.
@@ -281,16 +304,6 @@ export default function MapScreen() {
     // once the route is drawn, the little popup it was launched from is just clutter.
     handleCloseNativePoiMarker();
   }, [route, handleCloseNativePoiMarker]);
-
-  const onSaveRoute = useCallback(() => {
-    if (route.activeRoute?.status !== 'success') return;
-    const lastLabel = route.activeRoute.waypoints[route.activeRoute.waypoints.length - 1]?.label;
-    addSavedRoute(
-      lastLabel || 'Saved route',
-      route.activeRoute.waypoints,
-      route.activeRoute.profile,
-    );
-  }, [route, addSavedRoute]);
 
   const onSavePoint = useCallback(
     (waypoint: RouteWaypoint) => {
@@ -387,15 +400,12 @@ export default function MapScreen() {
             refreshSignal={annotationRefreshSignal}
             onAnnotationSelected={markAnnotationTapped}
             dismissSignal={dismissSignal}
-            onSaveRoute={onSaveRoute}
             onSavePoint={onSavePoint}
           />
         )}
       </MapView>
 
-      {landingSignal > 0 && (
-        <FlyToLandingMarker signal={landingSignal} onDone={onLandingDone} />
-      )}
+      {landingSignal > 0 && <FlyToLandingMarker signal={landingSignal} onDone={onLandingDone} />}
 
       <MapToast toastAnim={toastAnim} toastMsg={toastMsg} toastGPS={toastGPS} />
 
@@ -410,6 +420,10 @@ export default function MapScreen() {
           <RouteInfoCard
             destinationLabel={
               route.activeRoute.waypoints[route.activeRoute.waypoints.length - 1]?.label ?? ''
+            }
+            destinationCoordinates={
+              route.activeRoute.waypoints[route.activeRoute.waypoints.length - 1]?.coordinates ??
+              null
             }
             profile={route.activeRoute.profile}
             distanceMeters={route.activeRoute.distanceMeters}

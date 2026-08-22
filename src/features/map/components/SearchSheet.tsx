@@ -60,7 +60,6 @@ const SearchPlaceRow = React.memo(function SearchPlaceRow({
         </Text>
         <Text style={styles.placeMeta}>
           {'★'.repeat(place.rating)}
-          {place.isFavorite ? '  ⭐' : ''}
         </Text>
         <Text style={styles.placeSavedAt}>Saved {formatSavedAt(place.createdAt)}</Text>
       </View>

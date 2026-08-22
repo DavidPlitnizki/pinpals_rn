@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { shareSpot } from '../../../shared/sharePlace';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { RouteWaypoint } from '../types';
 import { CalloutActionButton } from './CalloutActionButton';
@@ -26,7 +27,6 @@ interface Props {
   // Bumped whenever the user taps empty map space (or a different marker) — closes this
   // marker's open callout the same way tapping a different annotation would.
   dismissSignal?: unknown;
-  onSaveRoute: () => void;
   onSavePoint: (waypoint: RouteWaypoint) => void;
 }
 
@@ -86,7 +86,6 @@ export function RouteDestinationMarker({
   refreshSignal,
   onAnnotationSelected,
   dismissSignal,
-  onSaveRoute,
   onSavePoint,
 }: Props) {
   const { registerRef } = usePointAnnotationRefresh(refreshSignal);
@@ -114,10 +113,12 @@ export function RouteDestinationMarker({
 
   const handleCloseCallout = useCallback(() => setSelectedId(null), []);
 
-  const handleSaveRoutePress = useCallback(() => {
-    setSelectedId(null);
-    onSaveRoute();
-  }, [onSaveRoute]);
+  // Shares the stop as a Google Maps link — opening it drops the recipient straight on the
+  // point, which a bare "lat, lng" line doesn't do.
+  const handleSharePress = useCallback(() => {
+    if (!selected) return;
+    shareSpot({ name: selected.label, coordinates: selected.coordinates });
+  }, [selected]);
 
   const handleSavePointPress = useCallback(() => {
     if (!selected) return;
@@ -155,20 +156,20 @@ export function RouteDestinationMarker({
             </Text>
             <View style={styles.calloutActionsRow}>
               <CalloutActionButton
-                icon="bookmark-outline"
-                label="Save route"
-                iconColor={Colors.brand.primary}
-                backgroundColor={Colors.brand.light}
-                borderColor={Colors.brand.primary}
-                onPress={handleSaveRoutePress}
-              />
-              <CalloutActionButton
                 icon="location-outline"
-                label="Save point"
+                iconSize={24}
                 iconColor={Colors.accent.primary}
                 backgroundColor={Colors.accent.light}
                 borderColor={Colors.accent.primary}
                 onPress={handleSavePointPress}
+              />
+              <CalloutActionButton
+                icon="share-outline"
+                iconSize={24}
+                iconColor={Colors.neutral[600]}
+                backgroundColor={Colors.neutral[100]}
+                borderColor={Colors.neutral[400]}
+                onPress={handleSharePress}
               />
             </View>
           </View>

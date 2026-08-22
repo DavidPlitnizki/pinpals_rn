@@ -2,17 +2,24 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 
-import { Place, PlaceCategory, PlaceNote } from '../../../models/types';
+import { Place, PlaceNote } from '../../../models/types';
 import { logFilterUsed } from '../../../services/analytics';
-import { CATEGORY_LABELS } from '../../../shared/constants';
 import { useMeetingsStore } from '../../../store/useMeetingsStore';
 import { usePlacesStore } from '../../../store/usePlacesStore';
-import { EMPTY_FILTERS, FilterPeriod, PlaceFilters, SortOption, Tab, ViewMode } from '../types';
+import { EMPTY_FILTERS, FilterPeriod, PlaceFilters, SortOption, ViewMode } from '../types';
+
+// Which slice of saved places the list is showing — one radio group, exactly one selected.
+export type PlaceScope = 'all' | 'favorites' | 'wantToVisit';
 
 export interface PlaceStats {
   total: number;
-  favCategory: { category: PlaceCategory; label: string; count: number } | null;
-  activeMonth: string | null; // e.g. "March"
+  // Replaces the old "favourite category": nothing in the app asks for a category any more,
+  // so that stat was permanently blank. Which place you actually keep going back to is both
+  // real data and more interesting.
+  mostVisited: { id: string; name: string; visitCount: number } | null;
+  // The month the most places were added, plus how many — the old version showed only the
+  // month name under the word "active", which didn't say what happened in it.
+  topMonth: { label: string; count: number } | null;
 }
 
 const MONTH_NAMES = [
@@ -31,31 +38,29 @@ const MONTH_NAMES = [
 ];
 
 function computeStats(places: Place[]): PlaceStats {
-  if (places.length === 0) return { total: 0, favCategory: null, activeMonth: null };
+  if (places.length === 0) return { total: 0, mostVisited: null, topMonth: null };
 
-  // Favourite category
-  const catCount: Partial<Record<PlaceCategory, number>> = {};
-  for (const p of places) {
-    if (!p.category) continue;
-    catCount[p.category] = (catCount[p.category] ?? 0) + 1;
-  }
-  const topCat = (Object.entries(catCount) as [PlaceCategory, number][]).sort(
-    (a, b) => b[1] - a[1],
-  )[0];
-  const favCategory = topCat
-    ? { category: topCat[0], label: CATEGORY_LABELS[topCat[0]], count: topCat[1] }
-    : null;
+  // Most visited place — only counts as a stat once something has actually been visited.
+  const busiest = places.reduce((best, p) =>
+    (p.visitCount ?? 0) > (best.visitCount ?? 0) ? p : best,
+  );
+  const mostVisited =
+    (busiest.visitCount ?? 0) > 0
+      ? { id: busiest.id, name: busiest.name, visitCount: busiest.visitCount ?? 0 }
+      : null;
 
-  // Most active month (by createdAt)
+  // Month the most places were added (by createdAt)
   const monthCount: Record<number, number> = {};
   for (const p of places) {
     const m = new Date(p.createdAt).getMonth();
     monthCount[m] = (monthCount[m] ?? 0) + 1;
   }
-  const topMonth = Object.entries(monthCount).sort((a, b) => b[1] - a[1])[0];
-  const activeMonth = topMonth ? MONTH_NAMES[Number(topMonth[0])] : null;
+  const busiestMonth = Object.entries(monthCount).sort((a, b) => b[1] - a[1])[0];
+  const topMonth = busiestMonth
+    ? { label: MONTH_NAMES[Number(busiestMonth[0])], count: busiestMonth[1] }
+    : null;
 
-  return { total: places.length, favCategory, activeMonth };
+  return { total: places.length, mostVisited, topMonth };
 }
 
 export interface DayMemory {
@@ -70,28 +75,17 @@ function periodCutoff(period: FilterPeriod): Date | null {
   const now = new Date();
   if (period === 'week') return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   if (period === 'month') return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  if (period === '3months') return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
   if (period === 'year') return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
   return null;
 }
 
+// Always by date added; the arrow in the list header only flips the direction.
 function sortPlaces(places: Place[], sortBy: SortOption): Place[] {
   const sorted = [...places];
-  switch (sortBy) {
-    case 'oldest':
-      return sorted.sort(
-        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      );
-    case 'name':
-      return sorted.sort((a, b) => a.name.localeCompare(b.name));
-    case 'mostVisited':
-      return sorted.sort((a, b) => (b.visitCount || 0) - (a.visitCount || 0));
-    case 'newest':
-    default:
-      return sorted.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
-  }
+  return sorted.sort((a, b) => {
+    const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    return sortBy === 'oldest' ? diff : -diff;
+  });
 }
 
 function yearsAgoLabel(years: number): string {
@@ -174,7 +168,7 @@ export function useRemembranceScreen() {
   const router = useRouter();
   const { places, notes, deletePlace } = usePlacesStore();
   const { meetings } = useMeetingsStore();
-  const [activeTab, setActiveTab] = useState<Tab>('all');
+  const [placeScope, setPlaceScope] = useState<PlaceScope>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [filters, setFilters] = useState<PlaceFilters>(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -185,26 +179,18 @@ export function useRemembranceScreen() {
     return Array.from(set).sort();
   }, [places]);
 
-  const allMoods = useMemo(() => {
-    const set = new Set<string>();
-    notes.forEach((n) => {
-      if (n.mood) set.add(n.mood);
-    });
-    return Array.from(set);
-  }, [notes]);
-
   const activeFilterCount =
     filters.tags.length +
-    filters.moods.length +
     (filters.period !== 'all' ? 1 : 0) +
-    (filters.wantToVisit ? 1 : 0) +
     (filters.sortBy !== EMPTY_FILTERS.sortBy ? 1 : 0);
 
   const displayedPlaces = useMemo(() => {
     const cutoff = periodCutoff(filters.period);
     const filtered = places.filter((p) => {
-      if (activeTab === 'favorites' && !p.isFavorite) return false;
-      if (filters.wantToVisit && !p.isFavorite) return false;
+      // Two different flags with confusingly similar names: `favorite` is the heart,
+      // `isFavorite` is "want to visit" (see the v3→v4 store migration).
+      if (placeScope === 'favorites' && !p.favorite) return false;
+      if (placeScope === 'wantToVisit' && !p.isFavorite) return false;
       if (filters.tags.length > 0) {
         const hasTag = filters.tags.some((t) => (p.tags ?? []).includes(t));
         if (!hasTag) return false;
@@ -213,15 +199,10 @@ export function useRemembranceScreen() {
         const dateToCheck = p.lastVisited ?? p.createdAt;
         if (new Date(dateToCheck) < cutoff) return false;
       }
-      if (filters.moods.length > 0) {
-        const placeNotes = notes.filter((n) => n.placeId === p.id && n.mood);
-        const hasMood = placeNotes.some((n) => n.mood && filters.moods.includes(n.mood));
-        if (!hasMood) return false;
-      }
       return true;
     });
     return sortPlaces(filtered, filters.sortBy);
-  }, [places, notes, activeTab, filters]);
+  }, [places, placeScope, filters]);
 
   const dayMemory = useMemo(() => pickDayMemory(places, notes), [places, notes]);
   const placeStats = useMemo(() => computeStats(places), [places]);
@@ -249,22 +230,20 @@ export function useRemembranceScreen() {
     }));
   }
 
-  function toggleMood(mood: string) {
-    logFilterUsed('mood', mood);
-    setFilters((f) => ({
-      ...f,
-      moods: f.moods.includes(mood) ? f.moods.filter((m) => m !== mood) : [...f.moods, mood],
-    }));
-  }
-
   function setPeriod(period: FilterPeriod) {
     logFilterUsed('period', period);
     setFilters((f) => ({ ...f, period }));
   }
 
-  function toggleWantToVisit() {
-    logFilterUsed('want_to_visit');
-    setFilters((f) => ({ ...f, wantToVisit: !f.wantToVisit }));
+  // One radio group, one piece of state — exactly one scope is selected at a time.
+  function selectPlaceScope(scope: PlaceScope) {
+    if (scope === 'wantToVisit') logFilterUsed('want_to_visit');
+    setPlaceScope(scope);
+  }
+
+  // The list header shows one arrow rather than a sort menu — this flips its direction.
+  function toggleSortDirection() {
+    setFilters((f) => ({ ...f, sortBy: f.sortBy === 'newest' ? 'oldest' : 'newest' }));
   }
 
   function setSortBy(sortBy: SortOption) {
@@ -282,20 +261,18 @@ export function useRemembranceScreen() {
     upcomingMeetings,
     dayMemory,
     placeStats,
-    activeTab,
-    setActiveTab,
     viewMode,
     setViewMode,
     filters,
     filtersOpen,
     setFiltersOpen,
     allTags,
-    allMoods,
     activeFilterCount,
     toggleTag,
-    toggleMood,
     setPeriod,
-    toggleWantToVisit,
+    placeScope,
+    selectPlaceScope,
+    toggleSortDirection,
     setSortBy,
     clearFilters,
     handlePlacePress,

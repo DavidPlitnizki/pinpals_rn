@@ -31,8 +31,15 @@ export function DayMemoryWidget({ memory, onPress }: Props) {
     ).start();
   }, [pulse]);
 
+  // Any picture the place has, not just one attached to this particular note — the place's
+  // own map-pin photo and the cover captured when it was saved both count, so the card shows
+  // a real image whenever one exists instead of falling back to the emoji placeholder.
   const photoUri =
-    note?.photoUri ?? (note?.photoUris && note.photoUris.length > 0 ? note.photoUris[0] : null);
+    note?.photoUris?.[0] ??
+    note?.photoUri ??
+    place.mainPhotoUri ??
+    place.coverImageUrl ??
+    null;
 
   const handlePress = useCallback(() => onPress(place.id), [onPress, place.id]);
 

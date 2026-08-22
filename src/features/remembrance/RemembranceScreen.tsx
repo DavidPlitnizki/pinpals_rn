@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   FlatList,
   ListRenderItemInfo,
@@ -14,13 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
 import { Meeting, Place } from '../../models/types';
 import { DayMemoryWidget } from './components/DayMemoryWidget';
+import { PlaceFlagToggle } from '../../design-system/components/PlaceFlags';
 import { FiltersSheet } from './components/FiltersSheet';
 import { StatsWidget } from './components/StatsWidget';
 import { MeetingCard } from './components/MeetingCard';
 import { PlaceGridCard } from './components/PlaceGridCard';
 import { PlaceRow } from './components/PlaceRow';
 import { PlacesMiniMap } from './components/PlacesMiniMap';
-import { useRemembranceScreen } from './hooks/useRemembranceScreen';
+import { PlaceScope, useRemembranceScreen } from './hooks/useRemembranceScreen';
 import { ViewMode } from './types';
 
 const VIEW_MODES: { mode: ViewMode; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
@@ -57,13 +58,28 @@ const ViewModeButton = React.memo(function ViewModeButton({
   );
 });
 
+// One message per scope of the All / Favorites / Want-to-visit radio group.
+const EMPTY_ICONS: Record<PlaceScope, string> = {
+  all: '📍',
+  favorites: '♥',
+  wantToVisit: '🔖',
+};
+const EMPTY_TITLES: Record<PlaceScope, string> = {
+  all: 'No places yet',
+  favorites: 'No favorites yet',
+  wantToVisit: 'Nothing on your list yet',
+};
+const EMPTY_SUBTITLES: Record<PlaceScope, string> = {
+  all: 'Long press on the map to add your first place',
+  favorites: 'Mark places as favorites to see them here',
+  wantToVisit: 'Flag places you want to visit to see them here',
+};
+
 export default function RemembranceScreen() {
   const {
     places,
     displayedPlaces,
     upcomingMeetings,
-    activeTab,
-    setActiveTab,
     viewMode,
     setViewMode,
     dayMemory,
@@ -72,13 +88,12 @@ export default function RemembranceScreen() {
     filtersOpen,
     setFiltersOpen,
     allTags,
-    allMoods,
     activeFilterCount,
     toggleTag,
-    toggleMood,
     setPeriod,
-    toggleWantToVisit,
-    setSortBy,
+    placeScope,
+    selectPlaceScope,
+    toggleSortDirection,
     clearFilters,
     handlePlacePress,
     handleDeletePlace,
@@ -86,11 +101,25 @@ export default function RemembranceScreen() {
 
   const isMapMode = viewMode === 'map';
 
+  const flagCounts = useMemo(
+    () => ({
+      favorites: places.filter((p) => p.favorite).length,
+      wantToVisit: places.filter((p) => p.isFavorite).length,
+    }),
+    [places],
+  );
+
   const handleOpenFilters = useCallback(() => setFiltersOpen(true), [setFiltersOpen]);
   const handleCloseFilters = useCallback(() => setFiltersOpen(false), [setFiltersOpen]);
-  const handleSelectAllTab = useCallback(() => setActiveTab('all'), [setActiveTab]);
-  const handleSelectFavoritesTab = useCallback(() => setActiveTab('favorites'), [setActiveTab]);
-
+  const handleSelectAll = useCallback(() => selectPlaceScope('all'), [selectPlaceScope]);
+  const handleSelectFavorites = useCallback(
+    () => selectPlaceScope('favorites'),
+    [selectPlaceScope],
+  );
+  const handleSelectWantToVisit = useCallback(
+    () => selectPlaceScope('wantToVisit'),
+    [selectPlaceScope],
+  );
   const renderPlaceRow = useCallback(
     ({ item }: ListRenderItemInfo<Place>) => (
       <PlaceRow place={item} onPress={handlePlacePress} onDelete={handleDeletePlace} />
@@ -122,24 +151,6 @@ export default function RemembranceScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Remembrance</Text>
           <View style={styles.headerRight}>
-            {/* Filter button */}
-            <TouchableOpacity
-              style={styles.filterBtn}
-              onPress={handleOpenFilters}
-              hitSlop={HIT_SLOP_8_4}
-            >
-              <Ionicons
-                name="options"
-                size={18}
-                color={activeFilterCount > 0 ? Colors.brand.primary : Colors.neutral[400]}
-              />
-              {activeFilterCount > 0 && (
-                <View style={styles.filterBadge}>
-                  <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
             {/* View mode toggle */}
             <View style={styles.viewToggle}>
               {VIEW_MODES.map(({ mode, icon }) => (
@@ -171,7 +182,7 @@ export default function RemembranceScreen() {
         )}
 
         {/* Stats Widget */}
-        {!isMapMode && <StatsWidget stats={placeStats} />}
+        {!isMapMode && <StatsWidget stats={placeStats} onPlacePress={handlePlacePress} />}
 
         {/* Day Memory Widget */}
         {dayMemory && !isMapMode && (
@@ -182,24 +193,66 @@ export default function RemembranceScreen() {
         {!isMapMode && (
           <View style={styles.tabs}>
             <TouchableOpacity
-              style={[styles.tab, activeTab === 'all' && styles.activeTab]}
-              onPress={handleSelectAllTab}
+              style={[styles.tab, placeScope === 'all' && styles.activeTab]}
+              onPress={handleSelectAll}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: placeScope === 'all' }}
             >
-              <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+              <Text style={[styles.tabText, placeScope === 'all' && styles.activeTabText]}>
                 All ({places.length})
               </Text>
             </TouchableOpacity>
+            {/* Want-to-visit is a filter rather than a tab, but it belongs next to Favorites:
+                both are "show me only the places I flagged". Each carries its own count so the
+                row says how much there is of each without opening anything. */}
+            <PlaceFlagToggle
+              flag="favorite"
+              active={placeScope === 'favorites'}
+              onPress={handleSelectFavorites}
+              count={flagCounts.favorites}
+            />
+            <PlaceFlagToggle
+              flag="wantToVisit"
+              active={placeScope === 'wantToVisit'}
+              onPress={handleSelectWantToVisit}
+              count={flagCounts.wantToVisit}
+            />
+
+            {/* Date-added direction only — one arrow instead of a sort menu. */}
             <TouchableOpacity
-              style={[styles.tab, activeTab === 'favorites' && styles.activeTab]}
-              onPress={handleSelectFavoritesTab}
+              style={styles.sortBtn}
+              onPress={toggleSortDirection}
+              hitSlop={HIT_SLOP_8_4}
+              accessibilityLabel={
+                filters.sortBy === 'newest' ? 'Newest added first' : 'Oldest added first'
+              }
             >
-              <Text style={[styles.tabText, activeTab === 'favorites' && styles.activeTabText]}>
-                Favorites ({places.filter((p) => p.isFavorite).length})
-              </Text>
+              <Ionicons
+                name={filters.sortBy === 'newest' ? 'arrow-down' : 'arrow-up'}
+                size={18}
+                color={Colors.neutral[600]}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.filterBtn}
+              onPress={handleOpenFilters}
+              hitSlop={HIT_SLOP_8_4}
+              accessibilityLabel="Filters"
+            >
+              <Ionicons
+                name="options"
+                size={18}
+                color={activeFilterCount > 0 ? Colors.brand.primary : Colors.neutral[400]}
+              />
+              {activeFilterCount > 0 && (
+                <View style={styles.filterBadge}>
+                  <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         )}
-
         {/* List view */}
         {viewMode === 'list' && (
           <FlatList
@@ -209,7 +262,7 @@ export default function RemembranceScreen() {
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              <EmptyState activeTab={activeTab} hasFilters={activeFilterCount > 0} />
+              <EmptyState scope={placeScope} hasFilters={activeFilterCount > 0} />
             }
             ListFooterComponent={listFooter}
           />
@@ -226,7 +279,7 @@ export default function RemembranceScreen() {
             contentContainerStyle={styles.gridContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              <EmptyState activeTab={activeTab} hasFilters={activeFilterCount > 0} />
+              <EmptyState scope={placeScope} hasFilters={activeFilterCount > 0} />
             }
           />
         )}
@@ -240,12 +293,8 @@ export default function RemembranceScreen() {
           onClose={handleCloseFilters}
           filters={filters}
           allTags={allTags}
-          allMoods={allMoods}
           onToggleTag={toggleTag}
-          onToggleMood={toggleMood}
           onSetPeriod={setPeriod}
-          onToggleWantToVisit={toggleWantToVisit}
-          onSetSortBy={setSortBy}
           onClear={clearFilters}
         />
       </SafeAreaView>
@@ -257,7 +306,7 @@ function keyExtractor(item: Place) {
   return item.id;
 }
 
-function EmptyState({ activeTab, hasFilters }: { activeTab: string; hasFilters: boolean }) {
+function EmptyState({ scope, hasFilters }: { scope: PlaceScope; hasFilters: boolean }) {
   if (hasFilters) {
     return (
       <View style={styles.emptyState}>
@@ -269,15 +318,9 @@ function EmptyState({ activeTab, hasFilters }: { activeTab: string; hasFilters: 
   }
   return (
     <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>{activeTab === 'favorites' ? '♥' : '📍'}</Text>
-      <Text style={styles.emptyTitle}>
-        {activeTab === 'favorites' ? 'No favorites yet' : 'No places yet'}
-      </Text>
-      <Text style={styles.emptySubtitle}>
-        {activeTab === 'favorites'
-          ? 'Mark places as favorites to see them here'
-          : 'Long press on the map to add your first place'}
-      </Text>
+      <Text style={styles.emptyIcon}>{EMPTY_ICONS[scope]}</Text>
+      <Text style={styles.emptyTitle}>{EMPTY_TITLES[scope]}</Text>
+      <Text style={styles.emptySubtitle}>{EMPTY_SUBTITLES[scope]}</Text>
     </View>
   );
 }
@@ -298,6 +341,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.s8,
+  },
+  sortBtn: {
+    marginLeft: 'auto',
+    padding: Spacing.s8,
+    borderRadius: Radii.sm,
+    backgroundColor: Colors.neutral[100],
   },
   filterBtn: {
     padding: Spacing.s8,
@@ -359,6 +408,7 @@ const styles = StyleSheet.create({
   },
   tabs: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: Spacing.s20,
     marginBottom: Spacing.s8,
     gap: Spacing.s8,

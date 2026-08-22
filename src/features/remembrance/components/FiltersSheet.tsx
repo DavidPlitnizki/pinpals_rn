@@ -1,21 +1,29 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
+  Animated,
+  Dimensions,
   Modal,
   ScrollView,
   StyleProp,
   StyleSheet,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
   ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { MEMORY_MOODS, MOOD_CONFIG } from '../../../models/types';
-import { FilterPeriod, PlaceFilters, SortOption } from '../types';
+import { PRESET_TAGS } from '../../../shared/constants';
+import { FilterPeriod, PlaceFilters } from '../types';
 
+const WINDOW_HEIGHT = Dimensions.get('window').height;
+// Period plus tags is not much content, so this is a bottom sheet that grows to fit rather
+// than a full-height page sheet with empty space under it.
+const MAX_SHEET_HEIGHT = WINDOW_HEIGHT * 0.7;
+const ANIMATION_DURATION = 260;
 const HIT_SLOP_8 = { top: 8, bottom: 8, left: 8, right: 8 };
 
 interface FilterChipProps<T> {
@@ -44,28 +52,16 @@ interface Props {
   onClose: () => void;
   filters: PlaceFilters;
   allTags: string[];
-  allMoods: string[];
   onToggleTag: (tag: string) => void;
-  onToggleMood: (mood: string) => void;
   onSetPeriod: (period: FilterPeriod) => void;
-  onToggleWantToVisit: () => void;
-  onSetSortBy: (sortBy: SortOption) => void;
   onClear: () => void;
 }
 
 const PERIOD_OPTIONS: { value: FilterPeriod; label: string }[] = [
-  { value: 'all', label: 'All Time' },
-  { value: 'week', label: 'Week' },
-  { value: 'month', label: 'Month' },
-  { value: '3months', label: '3 Months' },
-  { value: 'year', label: 'Year' },
-];
-
-const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: 'newest', label: 'Newest' },
-  { value: 'oldest', label: 'Oldest' },
-  { value: 'name', label: 'Name' },
-  { value: 'mostVisited', label: 'Most Visited' },
+  { value: 'week', label: 'Last week' },
+  { value: 'month', label: 'Last month' },
+  { value: 'year', label: 'Last year' },
+  { value: 'all', label: 'All' },
 ];
 
 export function FiltersSheet({
@@ -73,118 +69,115 @@ export function FiltersSheet({
   onClose,
   filters,
   allTags,
-  allMoods,
   onToggleTag,
-  onToggleMood,
   onSetPeriod,
-  onToggleWantToVisit,
-  onSetSortBy,
   onClear,
 }: Props) {
-  const activeFilterCount =
-    filters.tags.length +
-    filters.moods.length +
-    (filters.period !== 'all' ? 1 : 0) +
-    (filters.wantToVisit ? 1 : 0) +
-    (filters.sortBy !== 'newest' ? 1 : 0);
+  const insets = useSafeAreaInsets();
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(MAX_SHEET_HEIGHT)).current;
 
-  // Show all known moods, not just ones used — so user can explore
-  const moodsToShow = MEMORY_MOODS.filter((m) => allMoods.includes(m));
+  // Sorting moved out to a single arrow in the list header, so this sheet is just period
+  // plus tags now.
+  const activeFilterCount = filters.tags.length + (filters.period !== 'all' ? 1 : 0);
+
+  // The whole preset vocabulary, not only tags already in use — a tag you haven't applied to
+  // anything yet could otherwise never be filtered by. Custom tags found on places are
+  // appended so nothing that exists is unfilterable.
+  const tagsToShow = useMemo(() => {
+    const extras = allTags.filter((tag) => !PRESET_TAGS.includes(tag));
+    return [...PRESET_TAGS, ...extras];
+  }, [allTags]);
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(backdropOpacity, {
+          toValue: 1,
+          duration: ANIMATION_DURATION,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: ANIMATION_DURATION,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      backdropOpacity.setValue(0);
+      translateY.setValue(MAX_SHEET_HEIGHT);
+    }
+  }, [visible, backdropOpacity, translateY]);
+
+  // Animates out first, then tells the parent — otherwise the sheet vanishes instantly.
+  const handleClose = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: ANIMATION_DURATION,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: MAX_SHEET_HEIGHT,
+        duration: ANIMATION_DURATION,
+        useNativeDriver: true,
+      }),
+    ]).start(() => onClose());
+  }, [backdropOpacity, translateY, onClose]);
+
+  const sheetStyle = useMemo(
+    () => [styles.sheet, { maxHeight: MAX_SHEET_HEIGHT, transform: [{ translateY }] }],
+    [translateY],
+  );
+  const footerStyle = useMemo(
+    () => [styles.footer, { paddingBottom: insets.bottom + Spacing.s16 }],
+    [insets.bottom],
+  );
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        {/* Header */}
-        <View style={styles.header}>
-          {activeFilterCount > 0 ? (
-            <TouchableOpacity onPress={onClear} hitSlop={HIT_SLOP_8}>
-              <Text style={styles.clear}>Clear all</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.placeholder} />
-          )}
-          <Text style={styles.title}>Filters</Text>
-          <CircleCloseButton onPress={onClose} />
-        </View>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
+      <View style={styles.overlay}>
+        <TouchableWithoutFeedback onPress={handleClose}>
+          <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} />
+        </TouchableWithoutFeedback>
 
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Sort */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Sort By</Text>
-            <View style={styles.chips}>
-              {SORT_OPTIONS.map((opt) => (
-                <FilterChip
-                  key={opt.value}
-                  value={opt.value}
-                  label={opt.label}
-                  active={filters.sortBy === opt.value}
-                  onSelect={onSetSortBy}
-                />
-              ))}
-            </View>
+        <Animated.View style={sheetStyle}>
+          <View style={styles.handleRow}>
+            <View style={styles.handle} />
           </View>
 
-          {/* Want to visit */}
-          <View style={styles.section}>
-            <TouchableOpacity
-              style={[styles.chip, filters.wantToVisit && styles.chipActive]}
-              onPress={onToggleWantToVisit}
-            >
-              <Text style={[styles.chipText, filters.wantToVisit && styles.chipTextActive]}>
-                ♥ Want to Visit
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.header}>
+            {activeFilterCount > 0 ? (
+              <TouchableOpacity onPress={onClear} hitSlop={HIT_SLOP_8}>
+                <Text style={styles.clear}>Clear all</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.placeholder} />
+            )}
+            <Text style={styles.title}>Filters</Text>
+            <CircleCloseButton onPress={handleClose} />
           </View>
 
-          {/* Period */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Period</Text>
-            <View style={styles.chips}>
-              {PERIOD_OPTIONS.map((opt) => (
-                <FilterChip
-                  key={opt.value}
-                  value={opt.value}
-                  label={opt.label}
-                  active={filters.period === opt.value}
-                  onSelect={onSetPeriod}
-                />
-              ))}
-            </View>
-          </View>
-
-          {/* Mood */}
-          {moodsToShow.length > 0 && (
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Mood</Text>
+              <Text style={styles.sectionTitle}>Period</Text>
               <View style={styles.chips}>
-                {moodsToShow.map((mood) => {
-                  const cfg = MOOD_CONFIG[mood];
-                  return (
-                    <FilterChip
-                      key={mood}
-                      value={mood}
-                      label={`${cfg.emoji} ${cfg.label}`}
-                      active={filters.moods.includes(mood)}
-                      onSelect={onToggleMood}
-                      activeStyle={{ backgroundColor: cfg.color, borderColor: cfg.color }}
-                    />
-                  );
-                })}
+                {PERIOD_OPTIONS.map((opt) => (
+                  <FilterChip
+                    key={opt.value}
+                    value={opt.value}
+                    label={opt.label}
+                    active={filters.period === opt.value}
+                    onSelect={onSetPeriod}
+                  />
+                ))}
               </View>
             </View>
-          )}
 
-          {/* Tags */}
-          {allTags.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Tags</Text>
               <View style={styles.chips}>
-                {allTags.map((tag) => (
+                {tagsToShow.map((tag) => (
                   <FilterChip
                     key={tag}
                     value={tag}
@@ -195,28 +188,48 @@ export function FiltersSheet({
                 ))}
               </View>
             </View>
-          )}
-        </ScrollView>
+          </ScrollView>
 
-        {/* Apply button */}
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.applyBtn} onPress={onClose}>
-            <Text style={styles.applyText}>Apply</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+          <View style={footerStyle}>
+            <TouchableOpacity style={styles.applyBtn} onPress={handleClose}>
+              <Text style={styles.applyText}>Apply</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.neutral[50] },
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  sheet: {
+    backgroundColor: Colors.neutral[50],
+    borderTopLeftRadius: Radii.lg,
+    borderTopRightRadius: Radii.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  handleRow: { alignItems: 'center', paddingTop: Spacing.s12, paddingBottom: Spacing.s8 },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.neutral[200],
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.s20,
-    paddingVertical: Spacing.s16,
+    paddingBottom: Spacing.s12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutral[100],
   },
@@ -246,7 +259,8 @@ const styles = StyleSheet.create({
   },
   chipTextActive: { color: Colors.white },
   footer: {
-    padding: Spacing.s20,
+    paddingHorizontal: Spacing.s20,
+    paddingTop: Spacing.s16,
     borderTopWidth: 1,
     borderTopColor: Colors.neutral[100],
   },

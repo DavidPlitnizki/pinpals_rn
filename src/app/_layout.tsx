@@ -9,7 +9,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { trackAppOpen } from '../services/analytics';
-import { installGlobalCrashHandlers, setCrashReportingUserContext } from '../services/crashReporting';
+import {
+  installGlobalCrashHandlers,
+  setCrashReportingUserContext,
+} from '../services/crashReporting';
 import { useProfileStore } from '../store/useProfileStore';
 import { applyFontScale, useResolvedTheme } from '../shared/appearance';
 import { useSettingsStore } from '../store/useSettingsStore';

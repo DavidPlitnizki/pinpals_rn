@@ -20,7 +20,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
+import { FLAG_FAVORITE_COLOR, FLAG_WANT_COLOR } from '../../../design-system/components/PlaceFlags';
 import { useCoverImage } from '../../../hooks/usePlaceCoverImage';
+import { useReverseGeocodedAddress } from '../../../hooks/useReverseGeocodedAddress';
 import { MoodPicker } from '../../../design-system/components/MoodPicker';
 import { PinColorPicker } from '../../../design-system/components/PinColorPicker';
 import { PinRatingView } from '../../../design-system/components/PinRatingView';
@@ -139,6 +141,10 @@ export function QuickAddPlaceSheet({
     localPhotoUri: suggestedImageUrl,
     wikipedia: !suggestedImageUrl,
   });
+
+  // A POI or search result arrives with its address already; a point long-pressed on a plain
+  // street doesn't, and raw coordinates say nothing about where it is — so look it up.
+  const resolvedAddress = useReverseGeocodedAddress(coordinates, address);
 
   const wasVisibleRef = useRef(visible);
   // Reset to a clean form synchronously during render on the closed->open transition
@@ -375,13 +381,13 @@ export function QuickAddPlaceSheet({
                         {suggestedName}
                       </Text>
                     ) : null}
-                    {address ? (
+                    {resolvedAddress ? (
                       <Text style={styles.addressText} numberOfLines={2}>
-                        📍 {address}
+                        📍 {resolvedAddress}
                       </Text>
                     ) : null}
                     <Text style={styles.coordsText}>
-                      {address ? '' : '📍 '}
+                      {resolvedAddress ? '' : '📍 '}
                       {coordinates.latitude.toFixed(4)}, {coordinates.longitude.toFixed(4)}
                     </Text>
                   </View>
@@ -416,6 +422,33 @@ export function QuickAddPlaceSheet({
                       <Text style={styles.iconActionButtonEmoji}>
                         {mood ? MOOD_CONFIG[mood].emoji : '🙂'}
                       </Text>
+                    </TouchableOpacity>
+
+                    {/* Same square as the photo/mood buttons and the same gap, so the four
+                        controls read as one row rather than two unrelated groups. */}
+                    <TouchableOpacity
+                      style={[styles.iconActionButton, favorite && styles.iconActionButtonFav]}
+                      onPress={handleToggleFavorite}
+                      accessibilityLabel="Favorite"
+                      accessibilityState={{ selected: favorite }}
+                    >
+                      <Ionicons
+                        name={favorite ? 'heart' : 'heart-outline'}
+                        size={26}
+                        color={favorite ? Colors.white : FLAG_FAVORITE_COLOR}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.iconActionButton, wantToVisit && styles.iconActionButtonWant]}
+                      onPress={handleToggleWantToVisit}
+                      accessibilityLabel="Want to visit"
+                      accessibilityState={{ selected: wantToVisit }}
+                    >
+                      <Ionicons
+                        name={wantToVisit ? 'bookmark' : 'bookmark-outline'}
+                        size={26}
+                        color={wantToVisit ? Colors.white : FLAG_WANT_COLOR}
+                      />
                     </TouchableOpacity>
                   </View>
 
@@ -494,33 +527,8 @@ export function QuickAddPlaceSheet({
               </View>
 
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Tags</Text>
-                <TagPicker tags={tags} options={PRESET_TAGS} onToggle={handleToggleTag} />
-              </View>
-
-              <View style={styles.actionRow}>
-                <TouchableOpacity
-                  style={[styles.actionButton, favorite && styles.actionButtonActive]}
-                  onPress={handleToggleFavorite}
-                >
-                  <Text style={styles.actionButtonEmoji}>{favorite ? '❤️' : '🤍'}</Text>
-                  <Text
-                    style={[styles.actionButtonText, favorite && styles.actionButtonTextActive]}
-                  >
-                    Favorite
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionButton, wantToVisit && styles.actionButtonActive]}
-                  onPress={handleToggleWantToVisit}
-                >
-                  <Text style={styles.actionButtonEmoji}>{wantToVisit ? '⭐' : '☆'}</Text>
-                  <Text
-                    style={[styles.actionButtonText, wantToVisit && styles.actionButtonTextActive]}
-                  >
-                    Want to visit
-                  </Text>
-                </TouchableOpacity>
+                <Text style={styles.fieldLabel}>Rating</Text>
+                <PinRatingView rating={rating} onRatingChange={setRating} size={28} />
               </View>
 
               <View style={styles.fieldGroup}>
@@ -529,8 +537,8 @@ export function QuickAddPlaceSheet({
               </View>
 
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Rating</Text>
-                <PinRatingView rating={rating} onRatingChange={setRating} size={28} />
+                <Text style={styles.fieldLabel}>Tags</Text>
+                <TagPicker tags={tags} options={PRESET_TAGS} onToggle={handleToggleTag} />
               </View>
             </ScrollView>
           </View>
@@ -665,35 +673,6 @@ const styles = StyleSheet.create({
     color: Colors.brand.primary,
     fontWeight: '600',
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: Spacing.s12,
-    marginTop: Spacing.s16,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.s8,
-    paddingVertical: Spacing.s12,
-    borderRadius: Radii.md,
-    borderWidth: 1.5,
-    borderColor: Colors.neutral[200],
-  },
-  actionButtonText: {
-    ...Typography.subheadline,
-    color: Colors.neutral[900],
-    fontWeight: '600',
-  },
-  actionButtonActive: {
-    backgroundColor: Colors.brand.light,
-    borderColor: Colors.brand.primary,
-  },
-  actionButtonTextActive: {
-    color: Colors.brand.dark,
-  },
-  actionButtonEmoji: { fontSize: 18 },
   // Icon-only variant (photo/mood toggles) — a fixed-size square instead of the full-width
   // pill used by the labeled favorite/want-to-visit buttons below, since there's no text to
   // stretch for.
@@ -728,6 +707,14 @@ const styles = StyleSheet.create({
     borderColor: Colors.neutral[200],
   },
   iconActionButtonEmoji: { fontSize: 26 },
+  iconActionButtonFav: {
+    backgroundColor: FLAG_FAVORITE_COLOR,
+    borderColor: FLAG_FAVORITE_COLOR,
+  },
+  iconActionButtonWant: {
+    backgroundColor: FLAG_WANT_COLOR,
+    borderColor: FLAG_WANT_COLOR,
+  },
   moodPickerWrap: {
     marginTop: Spacing.s12,
     marginHorizontal: -Spacing.s20,

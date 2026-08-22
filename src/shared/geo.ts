@@ -3,6 +3,13 @@ import { Coordinates } from '../models/types';
 // Whether `inner` (the currently visible viewport) still fits entirely within `outer` (the
 // bbox a search was last run against) — used to decide whether panning/zooming has moved the
 // map far enough that the on-screen results might be stale.
+// (0, 0) is open ocean off West Africa, and it's also what every "we have no location yet"
+// default collapses to. Treating it as a real position points the camera at empty water and
+// sends weather/geocode lookups to the Gulf of Guinea, so callers check for it first.
+export function isNullIsland(coords: Coordinates): boolean {
+  return Math.abs(coords.latitude) < 0.01 && Math.abs(coords.longitude) < 0.01;
+}
+
 export function bboxContains(
   outer: [number, number, number, number],
   inner: [number, number, number, number],

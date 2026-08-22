@@ -8,7 +8,7 @@ import { HIT_SLOP_8 } from '../constants';
 interface Props {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   // Omit for an icon-only button (MapMarkers' Directions/Delete style) — pass it when the
-  // icon alone wouldn't be obvious (RouteDestinationMarker's Save route/Save point).
+  // icon alone wouldn't be obvious.
   label?: string;
   iconSize?: number;
   iconColor: string;

@@ -4,12 +4,17 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { useReverseGeocodedAddress } from '../../../hooks/useReverseGeocodedAddress';
+import { Coordinates } from '../../../models/types';
 import { formatDistance, formatDuration } from '../../../shared/format';
-import { HIT_SLOP_16 } from '../constants';
+import { HIT_SLOP_16, MAP_TOP_BUTTON_GUTTER, MAP_TOP_BUTTON_OFFSET } from '../constants';
 import { RouteProfile, RouteStep } from '../types';
 
 interface Props {
   destinationLabel: string;
+  // Used to look up the destination's street address — the label alone is usually just a
+  // street or POI name, which doesn't say which part of town the route ends in.
+  destinationCoordinates: Coordinates | null;
   profile: RouteProfile;
   distanceMeters: number;
   durationSeconds: number;
@@ -24,16 +29,11 @@ const PROFILE_ICON: Record<RouteProfile, React.ComponentProps<typeof Ionicons>['
   cycling: 'bicycle',
 };
 
-// ClearMapButton floats top-right (44pt button, Spacing.s16 top inset). A long
-// destination label can grow this card up to its maxWidth and reach that corner,
-// so push the card below the button's row instead of relying on horizontal luck.
-// The extra 1.2x pushes the card down another 20% below that clearance so it sits clear of
-// the search bar/chips row above it too.
-const CLEAR_BUTTON_CLEARANCE = (Spacing.s16 + 44 + Spacing.s12) * 1.05;
 const STEPS_LIST_MAX_HEIGHT = 220;
 
 export function RouteInfoCard({
   destinationLabel,
+  destinationCoordinates,
   profile,
   distanceMeters,
   durationSeconds,
@@ -43,10 +43,19 @@ export function RouteInfoCard({
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const toggleExpanded = useCallback(() => setExpanded((e) => !e), []);
+  const address = useReverseGeocodedAddress(destinationCoordinates);
 
   return (
     <SafeAreaView style={styles.wrap} pointerEvents="box-none" edges={['top']}>
       <View style={styles.card}>
+        {/* Share sits top-left in its own header row, the same slot it occupies on every map
+            callout — one place to look for it regardless of which card is open. */}
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={onShareRoute} hitSlop={HIT_SLOP_16} style={styles.shareButton}>
+            <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.summaryRow}>
           <Ionicons name={PROFILE_ICON[profile]} size={18} color={Colors.brand.primary} />
           <View style={styles.textCol}>
@@ -56,10 +65,12 @@ export function RouteInfoCard({
             <Text style={styles.meta}>
               {formatDistance(distanceMeters)} · {formatDuration(durationSeconds)}
             </Text>
+            {address ? (
+              <Text style={styles.address} numberOfLines={2}>
+                {address}
+              </Text>
+            ) : null}
           </View>
-          <TouchableOpacity onPress={onShareRoute} hitSlop={HIT_SLOP_16} style={styles.saveButton}>
-            <Ionicons name="share-outline" size={18} color={Colors.neutral[500]} />
-          </TouchableOpacity>
           {steps.length > 0 && (
             <TouchableOpacity onPress={toggleExpanded} hitSlop={HIT_SLOP_16}>
               <Ionicons
@@ -104,14 +115,18 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingTop: CLEAR_BUTTON_CLEARANCE,
+    // Level with the round clear buttons rather than below them, and inset from the right by
+    // enough to keep a long destination label out from under them.
+    paddingTop: MAP_TOP_BUTTON_OFFSET,
+    paddingLeft: Spacing.s16,
+    paddingRight: MAP_TOP_BUTTON_GUTTER,
   },
   card: {
     backgroundColor: Colors.white,
     borderRadius: Radii.md,
     paddingHorizontal: Spacing.s16,
     paddingVertical: Spacing.s12,
-    maxWidth: '85%',
+    maxWidth: '100%',
     borderWidth: 1,
     borderColor: Colors.neutral[200],
     shadowColor: '#000',
@@ -126,7 +141,22 @@ const styles = StyleSheet.create({
     gap: Spacing.s8,
   },
   textCol: { flexShrink: 1 },
-  saveButton: { padding: Spacing.s2 },
+  // Pulled out past the card's own padding so the button sits near its corner rather than
+  // floating inset with the text below it.
+  headerRow: {
+    flexDirection: 'row',
+    marginTop: -Spacing.s4,
+    marginLeft: -Spacing.s8,
+    marginBottom: Spacing.s2,
+  },
+  shareButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.neutral[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   destination: {
     ...Typography.subheadline,
     color: Colors.neutral[900],
@@ -135,6 +165,11 @@ const styles = StyleSheet.create({
   meta: {
     ...Typography.caption,
     color: Colors.neutral[600],
+    marginTop: Spacing.s2,
+  },
+  address: {
+    ...Typography.caption,
+    color: Colors.neutral[500],
     marginTop: Spacing.s2,
   },
   stepsList: {

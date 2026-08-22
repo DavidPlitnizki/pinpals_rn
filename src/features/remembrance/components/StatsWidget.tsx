@@ -1,40 +1,67 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { categoryColor } from '../../../shared/constants';
 import { PlaceStats } from '../hooks/useRemembranceScreen';
 
 interface Props {
   stats: PlaceStats;
+  onPlacePress: (placeId: string) => void;
 }
 
-export function StatsWidget({ stats }: Props) {
-  if (stats.total === 0) return null;
+export function StatsWidget({ stats, onPlacePress }: Props) {
+  const handleMostVisitedPress = useCallback(() => {
+    if (stats.mostVisited) onPlacePress(stats.mostVisited.id);
+  }, [onPlacePress, stats.mostVisited]);
 
-  const catColor = stats.favCategory
-    ? categoryColor(stats.favCategory.category)
-    : Colors.brand.primary;
+  if (stats.total === 0) return null;
 
   return (
     <View style={styles.container}>
-      <StatCell value={String(stats.total)} label="places" accent={Colors.brand.primary} />
+      <StatCell value={String(stats.total)} label="total places" accent={Colors.brand.primary} />
       <View style={styles.divider} />
-      <StatCell value={stats.favCategory?.label ?? '—'} label="favorite" accent={catColor} />
+      <StatCell
+        value={stats.mostVisited?.name ?? '—'}
+        label={
+          stats.mostVisited ? `most visited · ${stats.mostVisited.visitCount}×` : 'most visited'
+        }
+        accent={Colors.brand.dark}
+        onPress={stats.mostVisited ? handleMostVisitedPress : undefined}
+      />
       <View style={styles.divider} />
-      <StatCell value={stats.activeMonth ?? '—'} label="active" accent={Colors.accent.primary} />
+      <StatCell
+        value={stats.topMonth?.label ?? '—'}
+        label={stats.topMonth ? `${stats.topMonth.count} added` : 'added'}
+        accent={Colors.accent.primary}
+      />
     </View>
   );
 }
 
-function StatCell({ value, label, accent }: { value: string; label: string; accent: string }) {
+function StatCell({
+  value,
+  label,
+  accent,
+  onPress,
+}: {
+  value: string;
+  label: string;
+  accent: string;
+  onPress?: () => void;
+}) {
+  const Container = onPress ? TouchableOpacity : View;
   return (
-    <View style={styles.cell}>
-      <Text style={[styles.value, { color: accent }]} numberOfLines={1} adjustsFontSizeToFit>
+    // A place name can be far longer than its share of the row, so it truncates with an
+    // ellipsis instead of shrinking to an unreadable size — adjustsFontSizeToFit only helps
+    // when the overflow is slight.
+    <Container style={styles.cell} onPress={onPress} activeOpacity={0.7}>
+      <Text style={[styles.value, { color: accent }]} numberOfLines={1} ellipsizeMode="tail">
         {value}
       </Text>
-      <Text style={styles.label}>{label}</Text>
-    </View>
+      <Text style={styles.label} numberOfLines={2}>
+        {label}
+      </Text>
+    </Container>
   );
 }
 
@@ -56,6 +83,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     gap: 2,
+    paddingHorizontal: Spacing.s4,
   },
   value: {
     ...Typography.title2,
@@ -65,7 +93,8 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.neutral[400],
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
+    textAlign: 'center',
   },
   divider: {
     width: 1,
