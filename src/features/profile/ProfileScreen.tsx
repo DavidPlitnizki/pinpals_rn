@@ -1,5 +1,4 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
 import {
@@ -20,7 +19,9 @@ import { PinTextField } from '../../design-system/components/PinTextField';
 import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
 import { AuthProviderId } from '../../services/firebaseAuth';
 import { AvatarPickerSheet } from './components/AvatarPickerSheet';
+import { WhatsNewModal } from './components/WhatsNewModal';
 import { useProfileScreen } from './hooks/useProfileScreen';
+import { APP_VERSION } from '../../shared/releaseNotes';
 import { getInitials } from './utils/getInitials';
 
 const PROVIDER_BADGE: Record<
@@ -70,6 +71,9 @@ export default function ProfileScreen() {
     avatarSheetVisible,
     openAvatarSheet,
     closeAvatarSheet,
+    whatsNewVisible,
+    openWhatsNew,
+    closeWhatsNew,
     handlePickPhoto,
     handleSelectAvatarPreset,
     handleClearAvatarPreset,
@@ -79,7 +83,6 @@ export default function ProfileScreen() {
     handleDeleteAccount,
   } = useProfileScreen();
 
-  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   const providerBadge = PROVIDER_BADGE[authData?.providerId ?? 'anonymous'];
 
   const handleOpenPrivacy = useCallback(() => router.push('/legal?type=privacy' as any), [router]);
@@ -228,14 +231,17 @@ export default function ProfileScreen() {
             {/* App Info */}
             <PinCard style={styles.infoCard}>
               <Text style={styles.infoTitle}>About Pinpals</Text>
-              <View style={styles.infoRow}>
+              <TouchableOpacity
+                style={styles.infoRow}
+                onPress={openWhatsNew}
+                accessibilityLabel="What's new"
+              >
                 <Text style={styles.infoLabel}>Version</Text>
-                <Text style={styles.infoValue}>{appVersion}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Platform</Text>
-                <Text style={styles.infoValue}>iOS</Text>
-              </View>
+                <View style={styles.versionValueRow}>
+                  <Text style={styles.infoValue}>{APP_VERSION}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={Colors.neutral[300]} />
+                </View>
+              </TouchableOpacity>
             </PinCard>
 
             {/* Account Actions */}
@@ -263,6 +269,8 @@ export default function ProfileScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {whatsNewVisible && <WhatsNewModal visible={whatsNewVisible} onClose={closeWhatsNew} />}
 
       {avatarSheetVisible && (
         <AvatarPickerSheet
@@ -390,11 +398,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: Spacing.s8,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[50],
   },
   infoLabel: { ...Typography.subheadline, color: Colors.neutral[600] },
   infoValue: { ...Typography.subheadline, color: Colors.neutral[400] },
+  versionValueRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.s4 },
   accountCard: { marginBottom: 0 },
   accountRow: {
     flexDirection: 'row',

@@ -103,6 +103,10 @@ export function RouteInfoCard({
             ))}
           </ScrollView>
         )}
+
+        {/* Mapbox requires their Directions results to be credited wherever they're shown
+            off-map — the map's own attribution control doesn't cover this card. */}
+        <Text style={styles.attribution}>Directions powered by Mapbox © OpenStreetMap</Text>
       </View>
     </SafeAreaView>
   );
@@ -171,6 +175,13 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.neutral[500],
     marginTop: Spacing.s2,
+  },
+  attribution: {
+    ...Typography.caption,
+    fontSize: 9,
+    lineHeight: 12,
+    color: Colors.neutral[400],
+    marginTop: Spacing.s8,
   },
   stepsList: {
     maxHeight: STEPS_LIST_MAX_HEIGHT,

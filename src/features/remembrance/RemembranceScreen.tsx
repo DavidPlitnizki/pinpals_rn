@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
   ListRenderItemInfo,
@@ -12,12 +12,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
-import { Meeting, Place } from '../../models/types';
+import { Place } from '../../models/types';
 import { DayMemoryWidget } from './components/DayMemoryWidget';
+import { PhotoViewerModal } from '../../design-system/components/PhotoViewerModal';
 import { PlaceFlagToggle } from '../../design-system/components/PlaceFlags';
 import { FiltersSheet } from './components/FiltersSheet';
 import { StatsWidget } from './components/StatsWidget';
-import { MeetingCard } from './components/MeetingCard';
 import { PlaceGridCard } from './components/PlaceGridCard';
 import { PlaceRow } from './components/PlaceRow';
 import { PlacesMiniMap } from './components/PlacesMiniMap';
@@ -79,7 +79,6 @@ export default function RemembranceScreen() {
   const {
     places,
     displayedPlaces,
-    upcomingMeetings,
     viewMode,
     setViewMode,
     dayMemory,
@@ -100,6 +99,14 @@ export default function RemembranceScreen() {
   } = useRemembranceScreen();
 
   const isMapMode = viewMode === 'map';
+
+  // Null until a photo is tapped — the viewer mounts only while open, so its native Modal
+  // isn't attached to this screen's tree the rest of the time.
+  const [viewer, setViewer] = useState<{ photoUris: string[]; index: number } | null>(null);
+  const handleOpenViewer = useCallback((photoUris: string[], index: number) => {
+    if (photoUris.length > 0) setViewer({ photoUris, index });
+  }, []);
+  const handleCloseViewer = useCallback(() => setViewer(null), []);
 
   const flagCounts = useMemo(
     () => ({
@@ -133,16 +140,6 @@ export default function RemembranceScreen() {
     ),
     [handlePlacePress],
   );
-
-  const listFooter =
-    upcomingMeetings.length > 0 ? (
-      <View style={styles.meetingsSection}>
-        <Text style={styles.sectionTitle}>Upcoming Meetings</Text>
-        {upcomingMeetings.map((m: Meeting) => (
-          <MeetingCard key={m.id} meeting={m} />
-        ))}
-      </View>
-    ) : null;
 
   return (
     <GestureHandlerRootView style={styles.flex}>
@@ -186,7 +183,11 @@ export default function RemembranceScreen() {
 
         {/* Day Memory Widget */}
         {dayMemory && !isMapMode && (
-          <DayMemoryWidget memory={dayMemory} onPress={handlePlacePress} />
+          <DayMemoryWidget
+            memory={dayMemory}
+            onPress={handlePlacePress}
+            onPhotoPress={handleOpenViewer}
+          />
         )}
 
         {/* All / Favorites tabs — hidden in map mode */}
@@ -264,7 +265,6 @@ export default function RemembranceScreen() {
             ListEmptyComponent={
               <EmptyState scope={placeScope} hasFilters={activeFilterCount > 0} />
             }
-            ListFooterComponent={listFooter}
           />
         )}
 
@@ -297,6 +297,15 @@ export default function RemembranceScreen() {
           onSetPeriod={setPeriod}
           onClear={clearFilters}
         />
+
+        {viewer && (
+          <PhotoViewerModal
+            visible
+            photoUris={viewer.photoUris}
+            initialIndex={viewer.index}
+            onClose={handleCloseViewer}
+          />
+        )}
       </SafeAreaView>
     </GestureHandlerRootView>
   );
@@ -446,12 +455,5 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.neutral[400],
     textAlign: 'center',
-  },
-  meetingsSection: { marginTop: Spacing.s24 },
-  sectionTitle: {
-    ...Typography.title3,
-    color: Colors.neutral[900],
-    marginBottom: Spacing.s12,
-    paddingHorizontal: Spacing.s4,
   },
 });

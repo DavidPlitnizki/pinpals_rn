@@ -68,6 +68,10 @@ export function PhotoViewerModal({
     [],
   );
 
+  // Index-based, not the URI: the same photo can legitimately appear twice in one memory,
+  // and duplicate keys make FlatList drop pages.
+  const keyExtractor = useCallback((uri: string, index: number) => `${index}-${uri}`, []);
+
   return (
     <Modal
       visible={visible}
@@ -89,8 +93,9 @@ export function PhotoViewerModal({
         </View>
 
         <FlatList
+          style={styles.pager}
           data={photoUris}
-          keyExtractor={(uri) => uri}
+          keyExtractor={keyExtractor}
           renderItem={renderItem}
           horizontal
           pagingEnabled
@@ -108,6 +113,10 @@ const hitSlop = { top: Spacing.s12, bottom: Spacing.s12, left: Spacing.s12, righ
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)' },
+  // Without flex the horizontal list sizes to its content, and since each page had no
+  // height of its own that collapsed the swipe area to a sliver — the photo still filled
+  // the screen, but there was nothing left to drag on. Both need explicit height.
+  pager: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -136,6 +145,7 @@ const styles = StyleSheet.create({
   closeText: { color: Colors.white, fontSize: 20, fontWeight: '700', lineHeight: 22 },
   page: {
     width: screenWidth,
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },

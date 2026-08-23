@@ -127,22 +127,9 @@ export function useCreateMemory() {
     router.back();
   }
 
-  const canGoNext = (() => {
-    switch (step) {
-      case 0:
-        return true; // photos optional
-      case 1:
-        return !!mood; // mood required
-      case 2:
-        return true; // companions optional
-      case 3:
-        return true; // text optional
-      case 4:
-        return true; // date always valid
-      default:
-        return true;
-    }
-  })();
+  // Every step is optional — a memory is worth saving even as just a date and a place, and
+  // anything skipped here can still be filled in later by editing it.
+  const canGoNext = true;
 
   const isLastStep = step === totalSteps - 1;
 

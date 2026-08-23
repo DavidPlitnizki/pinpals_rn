@@ -63,7 +63,9 @@ export function PlaceRow({ place, onPress, onDelete }: Props) {
               <View style={styles.meta}>
                 <PinRatingView rating={place.rating} size={12} />
               </View>
-              <Text style={styles.date}>{new Date(place.createdAt).toLocaleDateString()}</Text>
+              <Text style={styles.date}>
+                {new Date(place.createdAt).toLocaleDateString('en-US')}
+              </Text>
             </View>
             <Ionicons
               name="chevron-forward"

@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { MapDataAttribution } from '../../../design-system/components/MapDataAttribution';
 import { usePlaceCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { MOOD_CONFIG, Place } from '../../../models/types';
 import { categoryColor, CATEGORY_LABELS } from '../../../shared/constants';
@@ -23,7 +24,7 @@ export function PlaceGridCard({ place, onPress }: Props) {
   const accentColor = mood
     ? MOOD_CONFIG[mood].color
     : (place.pinColor ?? categoryColor(place.category));
-  const coverUri = usePlaceCoverImage(place);
+  const cover = usePlaceCoverImage(place);
 
   const handlePress = useCallback(() => onPress(place.id), [onPress, place.id]);
   const handleAddTag = useCallback(
@@ -37,8 +38,11 @@ export function PlaceGridCard({ place, onPress }: Props) {
 
   return (
     <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.75}>
-      {coverUri ? (
-        <Image source={{ uri: coverUri }} style={styles.cover} resizeMode="cover" />
+      {cover.uri ? (
+        <View>
+          <Image source={{ uri: cover.uri }} style={styles.cover} resizeMode="cover" />
+          {cover.source === 'mapbox' && <MapDataAttribution />}
+        </View>
       ) : (
         <View style={[styles.accent, { backgroundColor: accentColor }]} />
       )}

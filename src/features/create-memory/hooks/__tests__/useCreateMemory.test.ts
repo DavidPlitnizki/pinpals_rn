@@ -71,11 +71,13 @@ describe('canGoNext', () => {
     expect(result.current.canGoNext).toBe(true);
   });
 
-  it('step 1 (mood): false when no mood selected', () => {
+  // Mood used to be the one required step; it isn't any more — a memory can be saved with
+  // nothing but its place and date, and skipped fields can be added later by editing it.
+  it('step 1 (mood): true even with no mood selected', () => {
     const { result } = renderCreateMemory();
     act(() => result.current.nextStep()); // → step 1
     expect(result.current.step).toBe(1);
-    expect(result.current.canGoNext).toBe(false);
+    expect(result.current.canGoNext).toBe(true);
   });
 
   it('step 1 (mood): true after mood is selected', () => {

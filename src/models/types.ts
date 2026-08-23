@@ -79,22 +79,6 @@ export interface PlaceNote {
   colorTag?: string; // mood-derived color for map pin
 }
 
-export type MeetingStatus = 'draft' | 'proposed' | 'confirmed' | 'done';
-
-export interface Meeting {
-  id: string;
-  title: string;
-  description?: string;
-  coordinates: Coordinates;
-  address?: string;
-  date: string; // ISO date
-  placeId?: string;
-  createdAt: string;
-  status: MeetingStatus;
-  proposedPlaceIds: string[];
-  participants: string[];
-}
-
 export interface UserProfile {
   id: string;
   name: string;

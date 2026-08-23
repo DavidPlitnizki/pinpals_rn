@@ -12,6 +12,7 @@ import {
 import { Image } from 'expo-image';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
+import { MapDataAttribution } from '../../../design-system/components/MapDataAttribution';
 import { useCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { formatSlugLabel } from '../../../shared/format';
@@ -132,7 +133,14 @@ export function NativePoiMarker({
               {cover.loading ? (
                 <ActivityIndicator color={POI_COLOR} />
               ) : cover.uri ? (
-                <Image source={{ uri: cover.uri }} style={styles.calloutPhoto} contentFit="cover" />
+                <>
+                  <Image
+                    source={{ uri: cover.uri }}
+                    style={styles.calloutPhoto}
+                    contentFit="cover"
+                  />
+                  {cover.source === 'mapbox' && <MapDataAttribution />}
+                </>
               ) : (
                 <Ionicons name={iconForMaki(marker.maki)} size={32} color={POI_COLOR} />
               )}

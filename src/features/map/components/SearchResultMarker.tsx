@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
+import { MapDataAttribution } from '../../../design-system/components/MapDataAttribution';
 import { useCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { openPlaceSearch } from '../../../services/webSearch';
@@ -206,11 +207,14 @@ export function SearchResultMarker({
                     <ActivityIndicator color={Colors.brand.primary} />
                   </View>
                 ) : cover.uri ? (
-                  <Image
-                    source={{ uri: cover.uri }}
-                    style={styles.calloutImage}
-                    contentFit="cover"
-                  />
+                  <>
+                    <Image
+                      source={{ uri: cover.uri }}
+                      style={styles.calloutImage}
+                      contentFit="cover"
+                    />
+                    {cover.source === 'mapbox' && <MapDataAttribution />}
+                  </>
                 ) : (
                   <View style={styles.calloutImagePlaceholder}>
                     <Ionicons

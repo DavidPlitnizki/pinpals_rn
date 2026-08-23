@@ -29,8 +29,8 @@ const ANIMATION_DURATION = 280;
 
 function formatSavedAt(createdAt: string): string {
   const date = new Date(createdAt);
-  const dateStr = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-  const timeStr = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   return `${dateStr}, ${timeStr}`;
 }
 

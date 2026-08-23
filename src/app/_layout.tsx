@@ -101,10 +101,6 @@ export default function RootLayout() {
               name="weather-detail"
               options={{ title: '', presentation: 'modal', headerShown: false }}
             />
-            <Stack.Screen
-              name="paywall"
-              options={{ title: '', presentation: 'modal', headerShown: false }}
-            />
           </Stack>
         </AuthGate>
       </AuthProvider>

@@ -5,46 +5,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CircleCloseButton } from '../../design-system/components/CircleCloseButton';
 import { Colors, Spacing, Typography } from '../../design-system/tokens';
-
-type LegalType = 'privacy' | 'terms';
-
-const CONTENT: Record<LegalType, { title: string; body: string }> = {
-  privacy: {
-    title: 'Privacy Policy',
-    body: `Last updated: ${new Date().getFullYear()}
-
-Pinpals stores the places, notes, photos, and meetings you create locally on your device. Account data (email, display name) is managed through Firebase Authentication solely to sign you in.
-
-We do not sell your data, and we do not share it with third parties except the infrastructure providers (e.g. Firebase, Mapbox) required to operate core features like maps and sign-in.
-
-This app is provided for personal use "as is," without warranty of any kind. To the fullest extent permitted by law, the developer disclaims all liability for any loss or damage arising from your use of the app, including but not limited to data loss, service interruptions, or inaccuracies in map or location data.
-
-You are responsible for backing up any information you consider important. Continued use of the app constitutes acceptance of this policy, which may be updated from time to time.
-
-For questions, contact the developer through the app store listing.`,
-  },
-  terms: {
-    title: 'Terms of Service',
-    body: `Last updated: ${new Date().getFullYear()}
-
-By using Pinpals, you agree to use the app for lawful, personal purposes only.
-
-The app is provided "as is" and "as available," without warranties of any kind, express or implied, including but not limited to fitness for a particular purpose, accuracy, or uninterrupted availability.
-
-To the maximum extent permitted by applicable law, the developer shall not be liable for any indirect, incidental, special, or consequential damages resulting from your use of, or inability to use, the app — including but not limited to data loss, missed meetings, or reliance on map/directions data.
-
-Features described as in development or "coming soon" (including payments and social features) are not guaranteed to ship on any particular timeline.
-
-The developer reserves the right to modify or discontinue the app or these terms at any time without prior notice.
-
-For questions, contact the developer through the app store listing.`,
-  },
-};
+import { LEGAL_CONTACT, LEGAL_DOCS, LEGAL_LAST_UPDATED } from '../../shared/legalContent';
 
 export default function LegalScreen() {
   const router = useRouter();
   const { type } = useLocalSearchParams<{ type: string }>();
-  const content = CONTENT[type === 'terms' ? 'terms' : 'privacy'];
+  // The text itself lives in src/shared/legalContent.ts, shared with the public page at
+  // /legal that App Store Connect links to — so the two can never drift apart.
+  const content = LEGAL_DOCS[type === 'terms' ? 'terms' : 'privacy'];
   const handleClose = useCallback(() => router.back(), [router]);
 
   return (
@@ -54,7 +22,18 @@ export default function LegalScreen() {
         <CircleCloseButton onPress={handleClose} />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.body}>{content.body}</Text>
+        <Text style={styles.updated}>Last updated: {LEGAL_LAST_UPDATED}</Text>
+        {content.sections.map((section) => (
+          <View key={section.heading} style={styles.section}>
+            <Text style={styles.heading}>{section.heading}</Text>
+            {section.paragraphs.map((paragraph) => (
+              <Text key={paragraph} style={styles.body}>
+                {paragraph}
+              </Text>
+            ))}
+          </View>
+        ))}
+        <Text style={styles.contact}>{LEGAL_CONTACT}</Text>
         <TouchableOpacity onPress={handleClose} style={styles.doneBtn}>
           <Text style={styles.doneText}>Done</Text>
         </TouchableOpacity>
@@ -76,7 +55,21 @@ const styles = StyleSheet.create({
   },
   title: { ...Typography.headline, color: Colors.neutral[900] },
   content: { padding: Spacing.s20, paddingBottom: Spacing.s48 },
+  updated: { ...Typography.caption, color: Colors.neutral[500], marginBottom: Spacing.s20 },
+  section: { marginBottom: Spacing.s20, gap: Spacing.s8 },
+  heading: {
+    ...Typography.subheadline,
+    color: Colors.neutral[900],
+    fontWeight: '700',
+    marginBottom: Spacing.s8,
+  },
   body: { ...Typography.body, color: Colors.neutral[700], lineHeight: 24 },
+  contact: {
+    ...Typography.caption,
+    color: Colors.neutral[500],
+    lineHeight: 20,
+    marginTop: Spacing.s8,
+  },
   doneBtn: {
     marginTop: Spacing.s24,
     alignSelf: 'center',

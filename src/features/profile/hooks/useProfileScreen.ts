@@ -6,7 +6,6 @@ import { Alert } from 'react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { promptPhotoSource } from '../../../shared/photoSourcePrompt';
 import { setCrashReportingUserContext } from '../../../services/crashReporting';
-import { useMeetingsStore } from '../../../store/useMeetingsStore';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
 import { useSettingsStore } from '../../../store/useSettingsStore';
@@ -19,10 +18,10 @@ interface AvatarDraft {
 export function useProfileScreen() {
   const { profile, updateProfile } = useProfileStore();
   const { places } = usePlacesStore();
-  const { meetings } = useMeetingsStore();
   const { logout, deleteAccount, isGuest, authData } = useAuth();
   const { fontScale, setFontScale, theme, setTheme } = useSettingsStore();
   const [isEditing, setIsEditing] = useState(false);
+  const [whatsNewVisible, setWhatsNewVisible] = useState(false);
   const [name, setName] = useState(profile.name);
   const [avatarSheetVisible, setAvatarSheetVisible] = useState(false);
   // Avatar edits are staged here instead of being written straight to the store, so Cancel
@@ -56,6 +55,9 @@ export function useProfileScreen() {
   }, []);
 
   const closeAvatarSheet = useCallback(() => setAvatarSheetVisible(false), []);
+
+  const openWhatsNew = useCallback(() => setWhatsNewVisible(true), []);
+  const closeWhatsNew = useCallback(() => setWhatsNewVisible(false), []);
 
   async function handlePickPhoto() {
     const source = await promptPhotoSource();
@@ -133,10 +135,18 @@ export function useProfileScreen() {
     await logout();
   }
 
+  // Kept as "Delete Account" even in guest mode: a guest is an anonymous Firebase account,
+  // and App Review looks for this exact wording (guideline 5.1.1(v)) — often while testing
+  // through "Skip for now". A more literal label for guests isn't worth that risk. The guest
+  // copy still spells out what actually goes, since they have no account to picture.
   function handleDeleteAccount() {
+    const message = isGuest
+      ? 'This permanently deletes your guest account and all your places and memories on this device, and returns you to the sign-in screen. This action cannot be undone.'
+      : 'Are you sure you want to delete your account? This permanently deletes your account and all your places and memories. This action cannot be undone.';
+
     Alert.alert(
       'Delete Account',
-      'Are you sure you want to delete your account? This permanently deletes your account and all your places, memories, and meetings. This action cannot be undone.',
+      message,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -148,7 +158,6 @@ export function useProfileScreen() {
               // Firebase signs the user out as part of deleting the account — clear local
               // content too, so nothing from the deleted account lingers on the device.
               usePlacesStore.setState({ places: [], notes: [] });
-              useMeetingsStore.setState({ meetings: [] });
               useProfileStore.setState({ profile: { id: '1', name: 'User' } });
             } catch (e: any) {
               Alert.alert('Couldn’t delete account', e?.message ?? 'Please try again.');
@@ -169,7 +178,6 @@ export function useProfileScreen() {
     theme,
     setTheme,
     places,
-    meetings,
     savedCounts,
     isEditing,
     handleStartEdit,
@@ -178,6 +186,9 @@ export function useProfileScreen() {
     avatarSheetVisible,
     openAvatarSheet,
     closeAvatarSheet,
+    whatsNewVisible,
+    openWhatsNew,
+    closeWhatsNew,
     handlePickPhoto,
     handleSelectAvatarPreset,
     handleClearAvatarPreset,

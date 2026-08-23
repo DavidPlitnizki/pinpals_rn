@@ -7,6 +7,7 @@ import { Dimensions, Linking, Share, StyleSheet, Text, TouchableOpacity, View } 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { PlaceFlagBadges } from '../../../design-system/components/PlaceFlags';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
+import { MapDataAttribution } from '../../../design-system/components/MapDataAttribution';
 import { usePlaceCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { MemoryMood, Place, MOOD_CONFIG } from '../../../models/types';
 import { buildGoogleMapsSearchUrl } from '../../../shared/mapLinks';
@@ -143,7 +144,7 @@ function MarkerCallout({
   onDirectionsPress,
   onDeletePress,
 }: MarkerCalloutProps) {
-  const coverUri = usePlaceCoverImage(place, preview?.photoUri);
+  const cover = usePlaceCoverImage(place, preview?.photoUri);
   const accentColor = categoryColor(place.category);
 
   const handleCallPhone = useCallback(() => {
@@ -173,8 +174,11 @@ function MarkerCallout({
       </View>
       <TouchableOpacity onPress={onCalloutPress}>
         <View style={styles.calloutPhotoWrap}>
-          {coverUri ? (
-            <Image source={{ uri: coverUri }} style={styles.calloutPhoto} contentFit="cover" />
+          {cover.uri ? (
+            <>
+              <Image source={{ uri: cover.uri }} style={styles.calloutPhoto} contentFit="cover" />
+              {cover.source === 'mapbox' && <MapDataAttribution />}
+            </>
           ) : (
             <View
               style={[

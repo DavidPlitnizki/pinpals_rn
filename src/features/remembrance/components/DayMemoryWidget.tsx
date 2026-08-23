@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
@@ -10,9 +10,12 @@ import { DayMemory } from '../hooks/useRemembranceScreen';
 interface Props {
   memory: DayMemory;
   onPress: (id: string) => void;
+  // Opens the fullscreen, swipeable viewer. The card itself still navigates to the place —
+  // only the thumbnail opens the photos.
+  onPhotoPress: (photoUris: string[], index: number) => void;
 }
 
-export function DayMemoryWidget({ memory, onPress }: Props) {
+export function DayMemoryWidget({ memory, onPress, onPhotoPress }: Props) {
   const { place, note, label } = memory;
   const getLatestMoodForPlace = usePlacesStore((s) => s.getLatestMoodForPlace);
   const mood = getLatestMoodForPlace(place.id);
@@ -34,10 +37,26 @@ export function DayMemoryWidget({ memory, onPress }: Props) {
   // Any picture the place has, not just one attached to this particular note — the place's
   // own map-pin photo and the cover captured when it was saved both count, so the card shows
   // a real image whenever one exists instead of falling back to the emoji placeholder.
-  const photoUri =
-    note?.photoUris?.[0] ?? note?.photoUri ?? place.mainPhotoUri ?? place.coverImageUrl ?? null;
+  // Every picture this memory has, so the fullscreen viewer can page through them rather
+  // than showing the single one the card had room for.
+  const galleryUris = useMemo(() => {
+    const fromNote = note?.photoUris?.length
+      ? note.photoUris
+      : note?.photoUri
+        ? [note.photoUri]
+        : [];
+    if (fromNote.length > 0) return fromNote;
+    const fallback = place.mainPhotoUri ?? place.coverImageUrl;
+    return fallback ? [fallback] : [];
+  }, [note, place.mainPhotoUri, place.coverImageUrl]);
+
+  const photoUri = galleryUris[0] ?? null;
 
   const handlePress = useCallback(() => onPress(place.id), [onPress, place.id]);
+  const handlePhotoPress = useCallback(
+    () => onPhotoPress(galleryUris, 0),
+    [onPhotoPress, galleryUris],
+  );
 
   return (
     <TouchableOpacity style={styles.container} onPress={handlePress} activeOpacity={0.82}>
@@ -74,7 +93,9 @@ export function DayMemoryWidget({ memory, onPress }: Props) {
 
       {/* Photo or color placeholder */}
       {photoUri ? (
-        <Image source={{ uri: photoUri }} style={styles.photo} />
+        <TouchableOpacity onPress={handlePhotoPress} activeOpacity={0.85}>
+          <Image source={{ uri: photoUri }} style={styles.photo} />
+        </TouchableOpacity>
       ) : (
         <View style={[styles.photoPlaceholder, { backgroundColor: accentColor + '33' }]}>
           <Text style={styles.photoPlaceholderEmoji}>{mood ? MOOD_CONFIG[mood].emoji : '📍'}</Text>
