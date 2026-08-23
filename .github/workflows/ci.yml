@@ -42,6 +42,22 @@ jobs:
       - run: npm ci
       - run: npm run format:check
 
+  legal:
+    name: Legal page
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # 24, not 22 like the other jobs: the generator imports the .ts source directly and
+          # relies on Node's built-in type stripping.
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # public/legal.html is generated from src/shared/legalContent.ts — fail if an edit to the
+      # legal text never made it into the public page App Store Connect links to.
+      - run: npm run build:legal -- --check
+
   test:
     name: Test
     runs-on: ubuntu-latest

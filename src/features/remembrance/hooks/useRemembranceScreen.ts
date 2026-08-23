@@ -4,7 +4,6 @@ import { Alert } from 'react-native';
 
 import { Place, PlaceNote } from '../../../models/types';
 import { logFilterUsed } from '../../../services/analytics';
-import { useMeetingsStore } from '../../../store/useMeetingsStore';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { EMPTY_FILTERS, FilterPeriod, PlaceFilters, SortOption, ViewMode } from '../types';
 
@@ -167,7 +166,6 @@ function pickDayMemory(places: Place[], notes: PlaceNote[]): DayMemory | null {
 export function useRemembranceScreen() {
   const router = useRouter();
   const { places, notes, deletePlace } = usePlacesStore();
-  const { meetings } = useMeetingsStore();
   const [placeScope, setPlaceScope] = useState<PlaceScope>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [filters, setFilters] = useState<PlaceFilters>(EMPTY_FILTERS);
@@ -206,10 +204,6 @@ export function useRemembranceScreen() {
 
   const dayMemory = useMemo(() => pickDayMemory(places, notes), [places, notes]);
   const placeStats = useMemo(() => computeStats(places), [places]);
-
-  const upcomingMeetings = meetings
-    .filter((m) => new Date(m.date) >= new Date())
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   function handlePlacePress(id: string) {
     router.push({ pathname: '/place/[id]', params: { id } } as any);
@@ -258,7 +252,6 @@ export function useRemembranceScreen() {
   return {
     places,
     displayedPlaces,
-    upcomingMeetings,
     dayMemory,
     placeStats,
     viewMode,

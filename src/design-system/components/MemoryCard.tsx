@@ -156,7 +156,7 @@ export function MemoryCard({ note, onPress, onPhotoPress, onDeletePhoto }: Memor
         )}
 
         <Text style={styles.date}>
-          {new Date(note.createdAt).toLocaleDateString('ru-RU', {
+          {new Date(note.createdAt).toLocaleDateString('en-US', {
             day: 'numeric',
             month: 'long',
             year: 'numeric',

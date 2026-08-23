@@ -40,14 +40,19 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Pinpals uses your location to center the map on your area, get directions to places, and show live turn-by-turn navigation while you're on the way."
+          "locationWhenInUsePermission": "Pinpals uses your location to center the map on your area, get directions to places, and show live turn-by-turn navigation while you're on the way.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "isIosBackgroundLocationEnabled": false,
+          "motionUsagePermission": false
         }
       ],
       [
         "expo-image-picker",
         {
           "photosPermission": "Pinpals uses your photo library so you can choose existing photos for your profile picture and for your places and memories.",
-          "cameraPermission": "Pinpals uses your camera to take photos for your profile picture and for your places and memories."
+          "cameraPermission": "Pinpals uses your camera to take photos for your profile picture and for your places and memories.",
+          "microphonePermission": false
         }
       ],
       [

@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { FLAG_FAVORITE_COLOR, FLAG_WANT_COLOR } from '../../../design-system/components/PlaceFlags';
+import { MapDataAttribution } from '../../../design-system/components/MapDataAttribution';
 import { useCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { useReverseGeocodedAddress } from '../../../hooks/useReverseGeocodedAddress';
 import { MoodPicker } from '../../../design-system/components/MoodPicker';
@@ -405,7 +406,10 @@ export function QuickAddPlaceSheet({
                     {cover.loading ? (
                       <ActivityIndicator color={Colors.brand.primary} />
                     ) : cover.uri ? (
-                      <Image source={{ uri: cover.uri }} style={styles.coverImage} />
+                      <>
+                        <Image source={{ uri: cover.uri }} style={styles.coverImage} />
+                        {cover.source === 'mapbox' && <MapDataAttribution />}
+                      </>
                     ) : (
                       <Ionicons name="map-outline" size={28} color={Colors.neutral[400]} />
                     )}

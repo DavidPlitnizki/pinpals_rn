@@ -206,8 +206,15 @@ export async function deleteAccount(): Promise<void> {
   if (!user) throw new Error('No signed-in user to delete.');
   try {
     await deleteUser(user);
-  } catch (error) {
+  } catch (error: any) {
     reportError('auth', error, 'account deletion failed');
+    // The stock advice for a stale session is "sign in again, then retry" — impossible for
+    // a guest, who has no credential to sign back in with. Their data is local anyway, so
+    // signing out (which drops the anonymous user) achieves what they asked for.
+    if (error?.code === 'auth/requires-recent-login' && user.isAnonymous) {
+      await signOut(getAuth());
+      return;
+    }
     throw new Error(mapFirebaseError(error));
   }
 }

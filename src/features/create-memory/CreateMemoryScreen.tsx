@@ -253,8 +253,8 @@ function DateStep({ date, onChangeDate }: { date: Date; onChangeDate: (d: Date) 
     [date, onChangeDate],
   );
 
-  const weekday = date.toLocaleDateString([], { weekday: 'long' });
-  const dayMonth = date.toLocaleDateString([], { day: 'numeric', month: 'long' });
+  const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+  const dayMonth = date.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
   const year = date.getFullYear();
 
   return (
@@ -273,6 +273,7 @@ function DateStep({ date, onChangeDate }: { date: Date; onChangeDate: (d: Date) 
             value={date}
             mode="date"
             display="inline"
+            locale="en-US"
             onChange={handleChangeDate}
             accentColor={Colors.brand.primary}
             themeVariant="light"
@@ -289,13 +290,14 @@ function DateStep({ date, onChangeDate }: { date: Date; onChangeDate: (d: Date) 
         <AnalogClock date={date} />
         <View style={styles.clockSide}>
           <Text style={styles.timeText}>
-            {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
           </Text>
           {Platform.OS === 'ios' ? (
             <DateTimePicker
               value={date}
               mode="time"
               display="compact"
+              locale="en-US"
               onChange={handleChangeTime}
               accentColor={Colors.brand.primary}
               themeVariant="light"

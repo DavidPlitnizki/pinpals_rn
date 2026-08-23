@@ -92,8 +92,15 @@ function DecorPinMci({ icon, color, style, delay }: DecorPinMciProps) {
 // screen-relative offset does. marginTop just closes the gap up to the buttons above.
 const SKIP_LIFT_RATIO = 0.045;
 
+// The background image's baked-in tagline sits just above where this column starts. On a
+// 4.7" screen (SE) the image is cropped harder by `cover` while the column keeps its full
+// height, so the lift pushes the buttons up over that tagline — drop it there and let the
+// column sit flush at the bottom instead.
+const SHORT_SCREEN_HEIGHT = 700;
+
 export default function LoginScreen() {
   const { height: windowHeight } = useWindowDimensions();
+  const skipLift = windowHeight < SHORT_SCREEN_HEIGHT ? 0 : windowHeight * SKIP_LIFT_RATIO;
   const {
     isLoading,
     error,
@@ -160,7 +167,7 @@ export default function LoginScreen() {
           <TouchableOpacity
             onPress={handleSkip}
             activeOpacity={0.7}
-            style={[styles.skipButtonWrap, { marginBottom: windowHeight * SKIP_LIFT_RATIO }]}
+            style={[styles.skipButtonWrap, { marginBottom: skipLift }]}
           >
             <View style={styles.skipButton}>
               <Text style={styles.skipText}>Skip for now</Text>
@@ -243,7 +250,7 @@ const styles = StyleSheet.create({
     left: '14%',
   },
   decorPinParking: {
-    top: '30%',
+    top: '25%',
     left: '46%',
   },
   social: {
