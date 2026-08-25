@@ -23,6 +23,8 @@ import { useCreateMemory } from './hooks/useCreateMemory';
 const STEP_TITLES = ['Photo', 'Mood', 'Companions', 'Note', 'Date & time'];
 
 // Created once at module level — an inline element would be a new object on every render.
+// The chevron is small; this brings its touch target up to the 44pt minimum.
+const BACK_HIT_SLOP = { top: 12, bottom: 12, left: 12, right: 12 };
 const SAVE_ICON = <Ionicons name="checkmark" size={20} color={Colors.white} />;
 const NEXT_ICON = <Ionicons name="arrow-forward" size={20} color={Colors.white} />;
 
@@ -63,8 +65,11 @@ export default function CreateMemoryScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={prevStep}>
-          <Text style={styles.backBtn}>{step === 0 ? 'Cancel' : 'Back'}</Text>
+        {/* The same chevron on every step, including the first, where it closes the screen:
+            one control that always means "go back one" reads faster than a label that
+            changes between Cancel and Back. */}
+        <TouchableOpacity onPress={prevStep} style={styles.backBtn} hitSlop={BACK_HIT_SLOP}>
+          <Ionicons name="chevron-back" size={28} color={Colors.brand.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{place.name}</Text>
         <View style={styles.backBtnPlaceholder} />
@@ -335,13 +340,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.s16,
     paddingVertical: Spacing.s12,
   },
+  // Matched width on both sides so the place name stays optically centred in the header.
   backBtn: {
-    ...Typography.body,
-    color: Colors.brand.primary,
-    fontWeight: '600',
+    width: 32,
+    alignItems: 'flex-start',
   },
   backBtnPlaceholder: {
-    width: 60,
+    width: 32,
   },
   headerTitle: {
     ...Typography.headline,

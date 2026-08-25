@@ -1,26 +1,31 @@
 import { Camera, MapView, UserLocation } from '@rnmapbox/maps';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Share, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Linking, Share, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
+import { usePlacesStore } from '../../store/usePlacesStore';
+import { getPlacePhotoPreview } from './utils/placePhoto';
+import { openPlaceSearch } from '../../services/webSearch';
+import { shareSpot } from '../../shared/sharePlace';
 import { ClearMapButton } from './components/ClearMapButton';
 import { ClearRouteButton } from './components/ClearRouteButton';
 import { FlyToLandingMarker } from './components/FlyToLandingMarker';
 import { FlyToSheet } from './components/FlyToSheet';
 import { MapControls } from './components/MapControls';
-import { MapMarkers } from './components/MapMarkers';
+import { MapCardSheet } from './components/MapCardSheet';
+import { MapMarkers, MarkerCallout } from './components/MapMarkers';
 import { MapSearchBar } from './components/MapSearchBar';
 import { MapToast } from './components/MapToast';
-import { NativePoiMarker } from './components/NativePoiMarker';
+import { NativePoiCallout, NativePoiMarker } from './components/NativePoiMarker';
 import { QuickAddPlaceSheet } from './components/QuickAddPlaceSheet';
 import { QuickAddPreviewMarker } from './components/QuickAddPreviewMarker';
-import { RouteDestinationMarker } from './components/RouteDestinationMarker';
+import { RouteDestinationMarker, RouteWaypointCallout } from './components/RouteDestinationMarker';
 import { RouteInfoCard } from './components/RouteInfoCard';
 import { RouteLineLayer } from './components/RouteLineLayer';
 import { RouteModePicker } from './components/RouteModePicker';
-import { SearchResultMarker } from './components/SearchResultMarker';
+import { SearchResultCallout, SearchResultMarker } from './components/SearchResultMarker';
 import { SearchSheet } from './components/SearchSheet';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from './constants';
 import { useFlyToSheet } from './hooks/useFlyToSheet';
@@ -31,9 +36,9 @@ import { useSearchSheet } from './hooks/useSearchSheet';
 import { useWeather } from './hooks/useWeather';
 import { NativePoiMarker as NativePoiMarkerData, RouteWaypoint } from './types';
 import { Coordinates, Place } from '../../models/types';
-import { logRouteShared } from '../../services/analytics';
-import { MapboxSearchResult } from '../../services/mapboxSearch';
-import { buildGoogleMapsDirectionsUrl } from '../../shared/mapLinks';
+import { logPlaceShared, logRouteShared } from '../../services/analytics';
+import { MapboxSearchResult, MapboxSuggestion } from '../../services/mapboxSearch';
+import { buildGoogleMapsDirectionsUrl, buildGoogleMapsSearchUrl } from '../../shared/mapLinks';
 
 // Stable empty list — a fresh `[]` each render would remount every annotation in MapMarkers.
 const EMPTY_PLACES: Place[] = [];
@@ -70,6 +75,7 @@ export default function MapScreen() {
     handleLongPress,
     handleMapPress,
     markAnnotationTapped,
+    dismissCallouts,
     handleCloseNativePoiMarker,
     handleConfirmNativePoiMarker,
     handleAddAtCurrentLocation,
@@ -111,7 +117,6 @@ export default function MapScreen() {
   );
   const route = useRouteDirections(gpsCoords, locationGranted, onWaypointReached);
   const weather = useWeather(gpsCoords, getMapCenter, getVisibleBbox);
-  const resultWasTappedRef = useRef(false);
 
   // "Open on map" from a place's detail screen hands the coordinates over as route params;
   // the ref makes sure one navigation flies the camera exactly once, not again on every
@@ -128,6 +133,69 @@ export default function MapScreen() {
   // Keep the screen on while actively navigating a route — the phone auto-locking mid-walk
   // or mid-drive forces the user to unlock it again just to glance at directions.
   const isRouteActive = route.activeRoute?.status === 'success';
+  // Map cards live in MapCardSheet at the bottom of the screen rather than anchored to their
+  // pin — see that file for why. The marker components still own which pin is selected; this
+  // screen owns what the card shows and what its buttons do.
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [selectedSearchMarkerId, setSelectedSearchMarkerId] = useState<string | null>(null);
+  const selectedSearchMarker =
+    searchResultMarkers.find((m) => m.id === selectedSearchMarkerId) ?? null;
+  const [selectedWaypointIndex, setSelectedWaypointIndex] = useState<number | null>(null);
+  // Only one card at a time. Anchored callouts could coexist harmlessly — they hung off
+  // different pins — but two sheets share the same slot at the bottom and would stack. The
+  // marker components can't sort this out themselves: tapping a second annotation is guarded
+  // out of handleMapPress, so nothing else clears the first one.
+  //
+  // Each component gets its own dismiss counter rather than having this screen null out the
+  // other selections directly: the components own their internal selectedId, and clearing
+  // only the copy up here would leave that stale — the same pin, tapped again, would report
+  // an unchanged id and its card would never come back.
+  const [placeDismiss, setPlaceDismiss] = useState(0);
+  const [searchDismiss, setSearchDismiss] = useState(0);
+  const [waypointDismiss, setWaypointDismiss] = useState(0);
+
+  const selectPlace = useCallback(
+    (id: string | null) => {
+      setSelectedPlaceId(id);
+      if (id === null) return;
+      setSearchDismiss((n) => n + 1);
+      setWaypointDismiss((n) => n + 1);
+      handleCloseNativePoiMarker();
+    },
+    [handleCloseNativePoiMarker],
+  );
+
+  const selectSearchMarker = useCallback(
+    (id: string | null) => {
+      setSelectedSearchMarkerId(id);
+      if (id === null) return;
+      setPlaceDismiss((n) => n + 1);
+      setWaypointDismiss((n) => n + 1);
+      handleCloseNativePoiMarker();
+    },
+    [handleCloseNativePoiMarker],
+  );
+
+  const selectWaypoint = useCallback(
+    (index: number | null) => {
+      setSelectedWaypointIndex(index);
+      if (index === null) return;
+      setPlaceDismiss((n) => n + 1);
+      setSearchDismiss((n) => n + 1);
+      handleCloseNativePoiMarker();
+    },
+    [handleCloseNativePoiMarker],
+  );
+
+  const selectedPlace = places.find((p) => p.id === selectedPlaceId) ?? null;
+  const notes = usePlacesStore((state) => state.notes);
+  const getLatestMoodForPlace = usePlacesStore((state) => state.getLatestMoodForPlace);
+  const selectedPlacePreview = useMemo(
+    () => (selectedPlace ? getPlacePhotoPreview(selectedPlace, notes) : null),
+    [selectedPlace, notes],
+  );
+  const selectedPlaceMood = selectedPlace ? getLatestMoodForPlace(selectedPlace.id) : undefined;
+
   useEffect(() => {
     if (!isRouteActive) return;
     void activateKeepAwakeAsync(ACTIVE_ROUTE_KEEP_AWAKE_TAG);
@@ -152,21 +220,25 @@ export default function MapScreen() {
       !searchResultMarkers.some((m) => isSameCoordinates(m.coordinates, w.coordinates)),
   );
 
-  const onExternalResultPress = useCallback(
-    (result: MapboxSearchResult) => {
-      resultWasTappedRef.current = true;
+  // A suggestion carries no coordinates — retrieve resolves it, and only then is there
+  // something to put on the map.
+  const onSuggestionPress = useCallback(
+    async (suggestion: MapboxSuggestion) => {
+      const result = await search.selectSuggestion(suggestion);
+      if (!result) return false;
       handleSelectSearchResult(result);
+      return true;
     },
-    [handleSelectSearchResult],
+    [search, handleSelectSearchResult],
   );
 
+  // Closing without picking anything no longer pins the whole result list: suggestions have
+  // no coordinates, and resolving all ten just to drop pins would cost ten retrieves. Pinning
+  // many results at once is what the category chips do, and that path still uses forward
+  // search, which returns coordinates up front.
   const onSearchClose = useCallback(() => {
-    if (!resultWasTappedRef.current && search.externalResults.length > 0) {
-      handleShowSearchResultsOnMap(search.externalResults);
-    }
-    resultWasTappedRef.current = false;
     search.close();
-  }, [search, handleShowSearchResultsOnMap]);
+  }, [search]);
 
   const onLongPress = useCallback(
     (feature: unknown) => {
@@ -263,11 +335,11 @@ export default function MapScreen() {
     handleClearSearchResultMarkers();
     quickSearch.clear();
     search.resetFilters();
-    // The route (if any) was built to one of these markers — once the marker's gone,
-    // a route pointing at it doesn't make sense either. Clearing the route alone
-    // (ClearRouteButton) must NOT touch these markers — that direction stays one-way.
-    route.clearRoute();
-  }, [handleClearSearchResultMarkers, quickSearch, search, route]);
+    // Deliberately leaves any active route alone. The two red buttons are now strictly one
+    // control each: this one clears search results and category filters, ClearRouteButton
+    // clears the route. A route keeps its own waypoints and pins, so it survives its search
+    // markers disappearing perfectly well.
+  }, [handleClearSearchResultMarkers, quickSearch, search]);
 
   const onPlaceDirections = useCallback(
     (place: Place) => {
@@ -276,12 +348,74 @@ export default function MapScreen() {
     [route],
   );
 
+  const onPlaceCardOpen = useCallback(() => {
+    if (selectedPlace) handleMarkerPress(selectedPlace.id);
+  }, [handleMarkerPress, selectedPlace]);
+
+  const onPlaceCardDirections = useCallback(() => {
+    if (!selectedPlace) return;
+    dismissCallouts();
+    onPlaceDirections(selectedPlace);
+  }, [dismissCallouts, onPlaceDirections, selectedPlace]);
+
+  const onPlaceCardDelete = useCallback(() => {
+    if (!selectedPlace) return;
+    dismissCallouts();
+    handleDeleteMarker(selectedPlace.id, selectedPlace.name);
+  }, [dismissCallouts, handleDeleteMarker, selectedPlace]);
+
+  const onPlaceCardShare = useCallback(() => {
+    if (!selectedPlace) return;
+    const { latitude, longitude } = selectedPlace.coordinates;
+    const mapsUrl = buildGoogleMapsSearchUrl(selectedPlace.coordinates);
+    // The message always carries the name, coordinates, and Google Maps link as text; when
+    // there's a photo it's attached via `url` too (iOS's share sheet renders it inline) —
+    // falls back to sharing the maps link itself as `url` when there's no photo.
+    const message = `${selectedPlace.name}\n${latitude.toFixed(5)}, ${longitude.toFixed(5)}\n${mapsUrl}`;
+    logPlaceShared();
+    void Share.share({ message, url: selectedPlacePreview?.photoUri ?? mapsUrl });
+  }, [selectedPlace, selectedPlacePreview]);
+
+  const onSearchCardShare = useCallback(() => {
+    if (!selectedSearchMarker) return;
+    shareSpot({
+      name: selectedSearchMarker.name,
+      coordinates: selectedSearchMarker.coordinates,
+      address: selectedSearchMarker.fullAddress,
+    });
+  }, [selectedSearchMarker]);
+
+  const onSearchCardWebsite = useCallback(() => {
+    if (selectedSearchMarker?.website) void Linking.openURL(selectedSearchMarker.website);
+  }, [selectedSearchMarker]);
+
+  const onSearchCardSearch = useCallback(() => {
+    if (!selectedSearchMarker) return;
+    void openPlaceSearch(
+      selectedSearchMarker.name,
+      selectedSearchMarker.coordinates,
+      'search_result',
+    );
+  }, [selectedSearchMarker]);
+
   const onSearchResultDirections = useCallback(
     (marker: MapboxSearchResult) => {
       route.openModePicker(marker.coordinates, marker.name);
     },
     [route],
   );
+
+  const onSearchCardDirections = useCallback(() => {
+    if (!selectedSearchMarker) return;
+    dismissCallouts();
+    onSearchResultDirections(selectedSearchMarker);
+  }, [dismissCallouts, onSearchResultDirections, selectedSearchMarker]);
+
+  const onSearchCardConfirm = useCallback(() => {
+    if (!selectedSearchMarker) return;
+    dismissCallouts();
+    handleConfirmSearchResultMarker(selectedSearchMarker);
+  }, [dismissCallouts, handleConfirmSearchResultMarker, selectedSearchMarker]);
 
   const onNativePoiDirections = useCallback(
     (marker: NativePoiMarkerData) => {
@@ -311,6 +445,22 @@ export default function MapScreen() {
     },
     [handleSaveWaypointAsPlace],
   );
+
+  const selectedWaypoint =
+    selectedWaypointIndex !== null ? (routeWaypoints[selectedWaypointIndex] ?? null) : null;
+
+  const onWaypointCardSave = useCallback(() => {
+    if (!selectedWaypoint) return;
+    dismissCallouts();
+    onSavePoint(selectedWaypoint);
+  }, [dismissCallouts, onSavePoint, selectedWaypoint]);
+
+  // Shares the stop as a Google Maps link — opening it drops the recipient straight on the
+  // point, which a bare "lat, lng" line doesn't do.
+  const onWaypointCardShare = useCallback(() => {
+    if (!selectedWaypoint) return;
+    shareSpot({ name: selectedWaypoint.label, coordinates: selectedWaypoint.coordinates });
+  }, [selectedWaypoint]);
 
   const onShareRoute = useCallback(() => {
     if (route.activeRoute?.status !== 'success') return;
@@ -357,33 +507,24 @@ export default function MapScreen() {
           />
         )}
         <MapMarkers
-          mapViewRef={mapViewRef}
           places={myPlacesHidden ? EMPTY_PLACES : places}
-          onMarkerPress={handleMarkerPress}
-          onDeleteMarker={handleDeleteMarker}
-          onDirections={onPlaceDirections}
           refreshSignal={annotationRefreshSignal}
           onAnnotationSelected={markAnnotationTapped}
-          dismissSignal={dismissSignal}
+          onSelectedPlaceIdChange={selectPlace}
+          dismissSignal={`${dismissSignal}|${placeDismiss}`}
         />
         {searchResultMarkers.length > 0 && (
           <SearchResultMarker
-            mapViewRef={mapViewRef}
             markers={searchResultMarkers}
-            onConfirm={handleConfirmSearchResultMarker}
-            onDirections={onSearchResultDirections}
             refreshSignal={annotationRefreshSignal}
             onAnnotationSelected={markAnnotationTapped}
-            dismissSignal={dismissSignal}
+            onSelectedMarkerIdChange={selectSearchMarker}
+            dismissSignal={`${dismissSignal}|${searchDismiss}`}
           />
         )}
         {nativePoiMarker && (
           <NativePoiMarker
-            mapViewRef={mapViewRef}
             marker={nativePoiMarker}
-            onClose={handleCloseNativePoiMarker}
-            onDirections={onNativePoiDirections}
-            onAddPlace={handleConfirmNativePoiMarker}
             refreshSignal={annotationRefreshSignal}
             onAnnotationSelected={markAnnotationTapped}
           />
@@ -399,8 +540,8 @@ export default function MapScreen() {
             waypoints={routeWaypoints}
             refreshSignal={annotationRefreshSignal}
             onAnnotationSelected={markAnnotationTapped}
-            dismissSignal={dismissSignal}
-            onSavePoint={onSavePoint}
+            onSelectedWaypointIndexChange={selectWaypoint}
+            dismissSignal={`${dismissSignal}|${waypointDismiss}`}
           />
         )}
       </MapView>
@@ -459,13 +600,15 @@ export default function MapScreen() {
 
       {route.activeRoute?.status === 'success' && (
         <ClearRouteButton
-          onPress={route.removeLastWaypoint}
-          onLongPress={route.clearRoute}
+          onPress={route.clearRoute}
+          onLongPress={route.removeLastWaypoint}
           stacked={searchResultMarkers.length > 0}
         />
       )}
 
-      {searchResultMarkers.length > 0 && <ClearMapButton onPress={onClearSearchResults} />}
+      {searchResultMarkers.length > 0 && (
+        <ClearMapButton onPress={onClearSearchResults} raised={isRouteActive} />
+      )}
 
       <MapControls
         gpsCoords={gpsCoords}
@@ -473,6 +616,59 @@ export default function MapScreen() {
         onAdd={handleAddAtCurrentLocation}
         onFlyTo={flyTo.open}
       />
+
+      {/* Last of the map chrome on purpose: rendering after MapSearchBar and MapControls is
+          what puts the card above them. */}
+      {nativePoiMarker && (
+        <MapCardSheet>
+          <NativePoiCallout
+            marker={nativePoiMarker}
+            onClose={handleCloseNativePoiMarker}
+            onDirections={onNativePoiDirections}
+            onAddPlace={handleConfirmNativePoiMarker}
+          />
+        </MapCardSheet>
+      )}
+
+      {selectedWaypoint && (
+        <MapCardSheet>
+          <RouteWaypointCallout
+            waypoint={selectedWaypoint}
+            onClose={dismissCallouts}
+            onSavePointPress={onWaypointCardSave}
+            onSharePress={onWaypointCardShare}
+          />
+        </MapCardSheet>
+      )}
+
+      {selectedSearchMarker && (
+        <MapCardSheet>
+          <SearchResultCallout
+            marker={selectedSearchMarker}
+            onClose={dismissCallouts}
+            onSharePress={onSearchCardShare}
+            onWebsitePress={onSearchCardWebsite}
+            onSearchPress={onSearchCardSearch}
+            onDirectionsPress={onSearchCardDirections}
+            onConfirmPress={onSearchCardConfirm}
+          />
+        </MapCardSheet>
+      )}
+
+      {selectedPlace && (
+        <MapCardSheet>
+          <MarkerCallout
+            place={selectedPlace}
+            preview={selectedPlacePreview}
+            mood={selectedPlaceMood}
+            onClose={dismissCallouts}
+            onSharePress={onPlaceCardShare}
+            onCalloutPress={onPlaceCardOpen}
+            onDirectionsPress={onPlaceCardDirections}
+            onDeletePress={onPlaceCardDelete}
+          />
+        </MapCardSheet>
+      )}
 
       <QuickAddPlaceSheet
         visible={showQuickAddSheet}
@@ -515,13 +711,13 @@ export default function MapScreen() {
         visible={search.visible}
         query={search.query}
         filteredPlaces={search.filteredPlaces}
-        externalResults={search.externalResults}
+        suggestions={search.suggestions}
         externalLoading={search.externalLoading}
         externalSearched={search.externalSearched}
+        retrievingId={search.retrievingId}
         onChangeQuery={search.setQuery}
         onPlacePress={onSearchPlacePress}
-        onExternalResultPress={onExternalResultPress}
-        onSearchExternal={search.searchExternal}
+        onSuggestionPress={onSuggestionPress}
         onClose={onSearchClose}
       />
     </View>

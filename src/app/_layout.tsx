@@ -31,6 +31,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     SplashScreen.setOptions({ duration: 400, fade: true });
     SplashScreen.hideAsync();
 
+    // Reachable signed out, on purpose: the Terms and Privacy Policy links live on the
+    // sign-in screen, i.e. they are used by people who have no account yet. Without this
+    // exception the gate saw a non-(auth) route with no session and replaced it with the
+    // login screen mid-navigation, so the links did nothing at all. App Review requires the
+    // policy to be reachable inside the app, and this is the only place it is linked before
+    // signing in.
+    if (segments[0] === 'legal') return;
+
     const inAuthGroup = segments[0] === '(auth)';
     const canAccess = isAuth || isGuest;
 

@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { Place } from '../../../models/types';
-import { MapboxSearchResult } from '../../../services/mapboxSearch';
+import { MapboxSuggestion } from '../../../services/mapboxSearch';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { categoryColor } from '../constants';
 import { MIN_EXTERNAL_QUERY_LENGTH } from '../hooks/useSearchSheet';
@@ -66,35 +66,39 @@ const SearchPlaceRow = React.memo(function SearchPlaceRow({
   );
 });
 
-interface ExternalPlaceRowProps {
-  result: MapboxSearchResult;
-  onPress: (result: MapboxSearchResult) => void;
+interface SuggestionRowProps {
+  suggestion: MapboxSuggestion;
+  // The row that's being resolved shows a spinner in place of its chevron — retrieve is a
+  // network round-trip, and without it a tap looks like it did nothing.
+  retrieving: boolean;
+  onPress: (suggestion: MapboxSuggestion) => void;
 }
 
-const ExternalPlaceRow = React.memo(function ExternalPlaceRow({
-  result,
+const SuggestionRow = React.memo(function SuggestionRow({
+  suggestion,
+  retrieving,
   onPress,
-}: ExternalPlaceRowProps) {
-  const handlePress = useCallback(() => onPress(result), [onPress, result]);
+}: SuggestionRowProps) {
+  const handlePress = useCallback(() => onPress(suggestion), [onPress, suggestion]);
 
   return (
     <TouchableOpacity style={styles.placeRow} onPress={handlePress} activeOpacity={0.7}>
-      {result.imageUrl ? (
-        <Image source={{ uri: result.imageUrl }} style={styles.rowThumb} contentFit="cover" />
-      ) : (
-        <Ionicons name="location-outline" size={20} color={Colors.brand.primary} />
-      )}
+      <Ionicons name="location-outline" size={20} color={Colors.brand.primary} />
       <View style={styles.placeInfo}>
         <Text style={styles.placeName} numberOfLines={1}>
-          {result.name}
+          {suggestion.name}
         </Text>
-        {result.fullAddress && (
+        {suggestion.placeFormatted && (
           <Text style={styles.placeMeta} numberOfLines={1}>
-            {result.fullAddress}
+            {suggestion.placeFormatted}
           </Text>
         )}
       </View>
-      <Text style={styles.chevron}>›</Text>
+      {retrieving ? (
+        <ActivityIndicator size="small" color={Colors.brand.primary} />
+      ) : (
+        <Text style={styles.chevron}>›</Text>
+      )}
     </TouchableOpacity>
   );
 });
@@ -103,13 +107,15 @@ interface Props {
   visible: boolean;
   query: string;
   filteredPlaces: Place[];
-  externalResults: MapboxSearchResult[];
+  suggestions: MapboxSuggestion[];
   externalLoading: boolean;
   externalSearched: boolean;
   onChangeQuery: (q: string) => void;
   onPlacePress: (placeId: string) => void;
-  onExternalResultPress: (result: MapboxSearchResult) => void;
-  onSearchExternal: () => void;
+  retrievingId: string | null;
+  // Resolves true once the suggestion became a real place — the sheet closes on that, and
+  // stays open (with the query intact) if the lookup failed.
+  onSuggestionPress: (suggestion: MapboxSuggestion) => Promise<boolean>;
   onClose: () => void;
 }
 
@@ -119,13 +125,13 @@ export function SearchSheet({
   visible,
   query,
   filteredPlaces,
-  externalResults,
+  suggestions,
   externalLoading,
   externalSearched,
   onChangeQuery,
   onPlacePress,
-  onExternalResultPress,
-  onSearchExternal,
+  retrievingId,
+  onSuggestionPress,
   onClose,
 }: Props) {
   const insets = useSafeAreaInsets();
@@ -188,12 +194,12 @@ export function SearchSheet({
     [handleClose, onPlacePress],
   );
 
-  const handleSelectExternal = useCallback(
-    (result: MapboxSearchResult) => {
-      handleClose();
-      onExternalResultPress(result);
+  const handleSelectSuggestion = useCallback(
+    async (suggestion: MapboxSuggestion) => {
+      const resolved = await onSuggestionPress(suggestion);
+      if (resolved) handleClose();
     },
-    [handleClose, onExternalResultPress],
+    [handleClose, onSuggestionPress],
   );
 
   return (
@@ -230,28 +236,11 @@ export function SearchSheet({
               placeholder="Search your places or find something new…"
               placeholderTextColor={Colors.neutral[400]}
               autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
               clearButtonMode="while-editing"
             />
           </View>
-
-          <TouchableOpacity
-            style={[
-              styles.searchButton,
-              query.trim().length < MIN_EXTERNAL_QUERY_LENGTH && styles.searchButtonDisabled,
-            ]}
-            onPress={onSearchExternal}
-            disabled={query.trim().length < MIN_EXTERNAL_QUERY_LENGTH}
-            activeOpacity={0.85}
-          >
-            {externalLoading ? (
-              <ActivityIndicator color={Colors.white} />
-            ) : (
-              <>
-                <Ionicons name="search" size={18} color={Colors.white} />
-                <Text style={styles.searchButtonText}>Search for new places</Text>
-              </>
-            )}
-          </TouchableOpacity>
 
           <ScrollView
             style={styles.listContainer}
@@ -273,12 +262,24 @@ export function SearchSheet({
               <Text style={styles.emptyText}>No places match your search</Text>
             )}
 
-            <Text style={styles.sectionHeader}>Find New Place</Text>
-            {externalLoading ? (
+            <View style={styles.externalHeaderRow}>
+              <Text style={styles.sectionHeader}>Find New Place</Text>
+              {/* Inline, not in place of the list: suggestions refresh on every keystroke, and
+                  swapping the whole section for a spinner made it flash on each one. */}
+              {externalLoading && suggestions.length > 0 && (
+                <ActivityIndicator size="small" color={Colors.neutral[400]} />
+              )}
+            </View>
+            {externalLoading && suggestions.length === 0 ? (
               <ActivityIndicator style={styles.loadingIndicator} color={Colors.brand.primary} />
-            ) : externalResults.length > 0 ? (
-              externalResults.map((result) => (
-                <ExternalPlaceRow key={result.id} result={result} onPress={handleSelectExternal} />
+            ) : suggestions.length > 0 ? (
+              suggestions.map((suggestion) => (
+                <SuggestionRow
+                  key={suggestion.mapboxId}
+                  suggestion={suggestion}
+                  retrieving={retrievingId === suggestion.mapboxId}
+                  onPress={handleSelectSuggestion}
+                />
               ))
             ) : (
               <ExternalEmptyState query={query} searched={externalSearched} />
@@ -293,14 +294,19 @@ export function SearchSheet({
 function ExternalEmptyState({ query, searched }: { query: string; searched: boolean }) {
   const message =
     query.trim().length < MIN_EXTERNAL_QUERY_LENGTH
-      ? 'Type at least 2 characters, then tap Search'
+      ? 'Type at least 2 characters to see suggestions'
       : searched
         ? 'No results found'
-        : 'Tap Search to find a place';
+        : 'Searching…';
   return <Text style={styles.emptyText}>{message}</Text>;
 }
 
 const styles = StyleSheet.create({
+  externalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.s8,
+  },
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',

@@ -1,14 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { MapView, MarkerView, PointAnnotation } from '@rnmapbox/maps';
-import React, { RefObject, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  Dimensions,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { PointAnnotation } from '@rnmapbox/maps';
+import React, { useCallback } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
@@ -20,18 +13,13 @@ import { openPlaceSearch } from '../../../services/webSearch';
 import { shareSpot } from '../../../shared/sharePlace';
 import { PlaceInfoRows } from '../../../design-system/components/PlaceInfoRows';
 import { HIT_SLOP_8 } from '../constants';
-import { useCalloutAnchor } from '../hooks/useCalloutAnchor';
 import { NativePoiDetails, useNativePoiDetails } from '../hooks/useNativePoiDetails';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { NativePoiMarker as NativePoiMarkerData } from '../types';
 import { iconForMaki } from '../utils/mapboxIcons';
 import { CalloutActionButton } from './CalloutActionButton';
-import { CalloutContainer } from './CalloutContainer';
 
 const PIN_SIZE = 40;
-// Same 80%-of-screen cap as the saved-place callout: MarkerView grows to fit its content, so
-// a long name or address would otherwise stretch the card across the whole display.
-const CALLOUT_MAX_WIDTH = Math.round(Dimensions.get('window').width * 0.8);
 // Distinct from CATEGORY_COLORS (food/coffee/nature/art/sports), SearchResultMarker's
 // DROP_RED and ROUTE_LINE_COLOR — reads as "basemap data", not user/app data. Reuses the
 // `warning` design token rather than a new hardcoded hex.
@@ -39,162 +27,40 @@ const POI_COLOR = Colors.warning;
 
 interface Props {
   marker: NativePoiMarkerData;
-  onClose: () => void;
-  onDirections: (marker: NativePoiMarkerData) => void;
-  onAddPlace: (marker: NativePoiMarkerData, details?: NativePoiDetails) => void;
   // Bump this (e.g. with route.pickerVisible) to force the marker to re-register its
   // native image — see usePointAnnotationRefresh for why this is needed.
   refreshSignal?: unknown;
   // Called when this annotation is selected, so the base MapView's onPress (which also
   // fires on this tap) can skip re-querying for a native basemap POI underneath.
   onAnnotationSelected?: () => void;
-  // Used to work out where this marker currently sits on screen, so the callout can flip
-  // below / slide sideways instead of being clipped at an edge.
-  mapViewRef?: RefObject<MapView | null>;
 }
 
-export function NativePoiMarker({
-  marker,
-  onClose,
-  onDirections,
-  onAddPlace,
-  refreshSignal,
-  onAnnotationSelected,
-  mapViewRef,
-}: Props) {
+export function NativePoiMarker({ marker, refreshSignal, onAnnotationSelected }: Props) {
   const { registerRef } = usePointAnnotationRefresh(refreshSignal);
-  const { anchor: calloutAnchor, placement: calloutPlacement } = useCalloutAnchor(
-    mapViewRef,
-    marker.coordinates,
-  );
-  // A tapped basemap POI gets the same cover art a saved place would — no need to save it
-  // first just to see what it looks like.
-  const cover = useCoverImage(marker.coordinates, { wikipedia: true });
-  // The basemap gives us only a name + category; this fills in address/phone/website.
-  const details = useNativePoiDetails(marker.id, marker.name, marker.coordinates);
-
   const handleSelected = useCallback(() => onAnnotationSelected?.(), [onAnnotationSelected]);
-  const handleDirectionsPress = useCallback(() => onDirections(marker), [onDirections, marker]);
-  const handleAddPlacePress = useCallback(
-    () => onAddPlace(marker, details),
-    [onAddPlace, marker, details],
-  );
-  const handleSearchPress = useCallback(
-    () => void openPlaceSearch(marker.name, marker.coordinates, 'native_poi'),
-    [marker.name, marker.coordinates],
-  );
-  const handleSharePress = useCallback(
-    () => shareSpot({ name: marker.name, coordinates: marker.coordinates }),
-    [marker.name, marker.coordinates],
-  );
-
   return (
-    <>
-      <PointAnnotation
-        key={marker.id}
-        ref={registerRef(marker.id)}
-        id={marker.id}
-        coordinate={[marker.coordinates.longitude, marker.coordinates.latitude]}
-        anchor={{ x: 0.5, y: 1 }}
-        onSelected={handleSelected}
-      >
-        <View style={styles.markerColumn}>
-          <View style={styles.markerLabel}>
-            <Text style={styles.markerLabelText} numberOfLines={1}>
-              {marker.name}
-            </Text>
-          </View>
-          <View style={styles.pinWrap}>
-            <Ionicons name="location-sharp" size={PIN_SIZE} color={POI_COLOR} />
-            <View style={styles.iconBadge}>
-              <Ionicons name={iconForMaki(marker.maki)} size={12} color={POI_COLOR} />
-            </View>
+    <PointAnnotation
+      key={marker.id}
+      ref={registerRef(marker.id)}
+      id={marker.id}
+      coordinate={[marker.coordinates.longitude, marker.coordinates.latitude]}
+      anchor={{ x: 0.5, y: 1 }}
+      onSelected={handleSelected}
+    >
+      <View style={styles.markerColumn}>
+        <View style={styles.markerLabel}>
+          <Text style={styles.markerLabelText} numberOfLines={1}>
+            {marker.name}
+          </Text>
+        </View>
+        <View style={styles.pinWrap}>
+          <Ionicons name="location-sharp" size={PIN_SIZE} color={POI_COLOR} />
+          <View style={styles.iconBadge}>
+            <Ionicons name={iconForMaki(marker.maki)} size={12} color={POI_COLOR} />
           </View>
         </View>
-      </PointAnnotation>
-
-      <MarkerView
-        coordinate={[marker.coordinates.longitude, marker.coordinates.latitude]}
-        anchor={calloutAnchor}
-      >
-        <CalloutContainer placement={calloutPlacement} pinHeight={PIN_SIZE}>
-          <View style={styles.callout}>
-            <View style={styles.calloutHeaderRow}>
-              <TouchableOpacity
-                style={styles.calloutShareButton}
-                onPress={handleSharePress}
-                hitSlop={HIT_SLOP_8}
-              >
-                <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
-              </TouchableOpacity>
-              <CircleCloseButton onPress={onClose} style={styles.calloutCloseButton} />
-            </View>
-            <View style={styles.calloutPhotoWrap}>
-              {cover.loading ? (
-                <ActivityIndicator color={POI_COLOR} />
-              ) : cover.uri ? (
-                <>
-                  <Image
-                    source={{ uri: cover.uri }}
-                    style={styles.calloutPhoto}
-                    contentFit="cover"
-                  />
-                  {cover.source === 'mapbox' && <MapDataAttribution />}
-                </>
-              ) : (
-                <Ionicons name={iconForMaki(marker.maki)} size={32} color={POI_COLOR} />
-              )}
-            </View>
-            <Text style={styles.calloutName} numberOfLines={2}>
-              {marker.name}
-            </Text>
-            {marker.category && (
-              <Text style={styles.calloutCategory}>{formatSlugLabel(marker.category)}</Text>
-            )}
-
-            <View style={styles.calloutInfoSection}>
-              <PlaceInfoRows
-                info={{
-                  address: details.address,
-                  phone: details.phone,
-                  website: details.website,
-                  latitude: marker.coordinates.latitude,
-                  longitude: marker.coordinates.longitude,
-                }}
-                compact
-              />
-            </View>
-
-            <View style={styles.calloutActionsRow}>
-              <CalloutActionButton
-                icon="globe-outline"
-                iconSize={24}
-                iconColor={Colors.neutral[600]}
-                backgroundColor={Colors.neutral[100]}
-                borderColor={Colors.neutral[400]}
-                onPress={handleSearchPress}
-              />
-              <CalloutActionButton
-                icon="navigate-outline"
-                iconSize={24}
-                iconColor={Colors.brand.primary}
-                backgroundColor={Colors.brand.light}
-                borderColor={Colors.brand.primary}
-                onPress={handleDirectionsPress}
-              />
-              <CalloutActionButton
-                icon="add-circle-outline"
-                iconSize={24}
-                iconColor={Colors.accent.primary}
-                backgroundColor={Colors.accent.light}
-                borderColor={Colors.accent.primary}
-                onPress={handleAddPlacePress}
-              />
-            </View>
-          </View>
-        </CalloutContainer>
-      </MarkerView>
-    </>
+      </View>
+    </PointAnnotation>
   );
 }
 
@@ -239,8 +105,7 @@ const styles = StyleSheet.create({
   callout: {
     backgroundColor: Colors.white,
     borderRadius: Radii.md,
-    minWidth: 200,
-    maxWidth: CALLOUT_MAX_WIDTH,
+    width: '100%',
     paddingHorizontal: Spacing.s12,
     paddingBottom: Spacing.s12,
     alignItems: 'center',
@@ -317,3 +182,112 @@ const styles = StyleSheet.create({
     marginTop: Spacing.s12,
   },
 });
+
+interface NativePoiCalloutProps {
+  marker: NativePoiMarkerData;
+  onClose: () => void;
+  onDirections: (marker: NativePoiMarkerData) => void;
+  onAddPlace: (marker: NativePoiMarkerData, details?: NativePoiDetails) => void;
+}
+
+// Rendered by MapScreen inside MapCardSheet, not anchored to the pin — see MapCardSheet for
+// why. It owns the two lookups the card needs, so they only run while the card is on screen.
+export function NativePoiCallout({
+  marker,
+  onClose,
+  onDirections,
+  onAddPlace,
+}: NativePoiCalloutProps) {
+  // A tapped basemap POI gets the same cover art a saved place would — no need to save it
+  // first just to see what it looks like.
+  const cover = useCoverImage(marker.coordinates, { wikipedia: true });
+  // The basemap gives us only a name + category; this fills in address/phone/website.
+  const details = useNativePoiDetails(marker.id, marker.name, marker.coordinates);
+
+  const handleDirectionsPress = useCallback(() => onDirections(marker), [onDirections, marker]);
+  const handleAddPlacePress = useCallback(
+    () => onAddPlace(marker, details),
+    [onAddPlace, marker, details],
+  );
+  const handleSearchPress = useCallback(
+    () => void openPlaceSearch(marker.name, marker.coordinates, 'native_poi'),
+    [marker.name, marker.coordinates],
+  );
+  const handleSharePress = useCallback(
+    () => shareSpot({ name: marker.name, coordinates: marker.coordinates }),
+    [marker.name, marker.coordinates],
+  );
+
+  return (
+    <View style={styles.callout}>
+      <View style={styles.calloutHeaderRow}>
+        <TouchableOpacity
+          style={styles.calloutShareButton}
+          onPress={handleSharePress}
+          hitSlop={HIT_SLOP_8}
+        >
+          <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
+        </TouchableOpacity>
+        <CircleCloseButton onPress={onClose} style={styles.calloutCloseButton} />
+      </View>
+      <View style={styles.calloutPhotoWrap}>
+        {cover.loading ? (
+          <ActivityIndicator color={POI_COLOR} />
+        ) : cover.uri ? (
+          <>
+            <Image source={{ uri: cover.uri }} style={styles.calloutPhoto} contentFit="cover" />
+            {cover.source === 'mapbox' && <MapDataAttribution />}
+          </>
+        ) : (
+          <Ionicons name={iconForMaki(marker.maki)} size={32} color={POI_COLOR} />
+        )}
+      </View>
+      <Text style={styles.calloutName} numberOfLines={2}>
+        {marker.name}
+      </Text>
+      {marker.category && (
+        <Text style={styles.calloutCategory}>{formatSlugLabel(marker.category)}</Text>
+      )}
+
+      <View style={styles.calloutInfoSection}>
+        <PlaceInfoRows
+          info={{
+            address: details.address,
+            phone: details.phone,
+            website: details.website,
+            latitude: marker.coordinates.latitude,
+            longitude: marker.coordinates.longitude,
+          }}
+          compact
+        />
+      </View>
+
+      <View style={styles.calloutActionsRow}>
+        <CalloutActionButton
+          icon="globe-outline"
+          iconSize={24}
+          iconColor={Colors.neutral[600]}
+          backgroundColor={Colors.neutral[100]}
+          borderColor={Colors.neutral[400]}
+          onPress={handleSearchPress}
+        />
+        <CalloutActionButton
+          icon="navigate-outline"
+          iconSize={24}
+          iconColor={Colors.brand.primary}
+          backgroundColor={Colors.brand.light}
+          borderColor={Colors.brand.primary}
+          onPress={handleDirectionsPress}
+        />
+        <CalloutActionButton
+          icon="add-circle-outline"
+          iconSize={24}
+          iconColor={Colors.accent.primary}
+          backgroundColor={Colors.accent.light}
+          borderColor={Colors.accent.primary}
+          onPress={handleAddPlacePress}
+        />
+      </View>
+    </View>
+  );
+}

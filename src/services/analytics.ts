@@ -40,6 +40,24 @@ export function logFilterUsed(filterType: FilterType, value?: string): void {
   });
 }
 
+// Every Mapbox call that costs money, by the unit Mapbox actually bills:
+//
+//   search_session   one suggest→retrieve autocomplete session (billed per session, however
+//                    many keystrokes it took)
+//   search_forward   one Search Box forward request (category chips, fly-to, POI enrichment)
+//   geocode_reverse  one Geocoding reverse request
+//   static_image     one Static Images render (place cover art)
+//
+// Logged per call so usage is attributable to a user in Firebase rather than only visible as
+// a total on the Mapbox invoice — that's the difference between "we're over budget" and
+// "we're over budget because of this behaviour".
+export type MapboxBillableUnit =
+  'search_session' | 'search_forward' | 'geocode_reverse' | 'static_image';
+
+export function logMapboxUsage(unit: MapboxBillableUnit): void {
+  void logEvent(getAnalytics(), 'mapbox_usage', { unit });
+}
+
 export type SearchSource = 'map_pin' | 'search_result' | 'native_poi';
 
 export function logExternalSearchOpened(source: SearchSource): void {

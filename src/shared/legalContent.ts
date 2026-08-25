@@ -20,7 +20,7 @@ export type LegalDocType = 'privacy' | 'terms';
 // Bump this whenever the text below changes materially — it is the date users and App Review
 // see. Deliberately a fixed string rather than a computed "current year": a policy that
 // silently re-dates itself every January claims a review that never happened.
-export const LEGAL_LAST_UPDATED = 'August 22, 2026';
+export const LEGAL_LAST_UPDATED = 'August 24, 2026';
 
 export const LEGAL_CONTACT =
   "Questions about either document? Reach the developer through the app's App Store listing.";
@@ -33,6 +33,13 @@ export const LEGAL_DOCS: Record<LegalDocType, LegalDocument> = {
         heading: 'What we store',
         paragraphs: [
           'Pinpals stores the places, notes, and photos you create locally on your device. Account data — email address and display name — is managed through Firebase Authentication to sign you in; your display name is also used as noted below.',
+        ],
+      },
+      {
+        heading: 'Signing in with Google or Apple',
+        paragraphs: [
+          'When you sign in, the provider passes us a user identifier, your email address, and your display name; Google also passes a profile photo. Apple returns your name only the first time you authorize the app, and will pass a private relay address instead of your real email if you choose to hide it. We request nothing beyond this — no contacts, calendar, files, or anything else in your account.',
+          "Your name and photo are used to fill in your Pinpals profile if you haven't set your own; you can change either at any time from the Profile screen.",
         ],
       },
       {

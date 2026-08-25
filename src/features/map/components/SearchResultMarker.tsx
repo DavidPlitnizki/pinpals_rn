@@ -1,44 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
-import { MapView, MarkerView, PointAnnotation } from '@rnmapbox/maps';
+import { PointAnnotation } from '@rnmapbox/maps';
 import { Image } from 'expo-image';
-import React, { RefObject, useCallback, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Dimensions,
-  Linking,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { MapDataAttribution } from '../../../design-system/components/MapDataAttribution';
 import { useCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { openPlaceSearch } from '../../../services/webSearch';
-import { shareSpot } from '../../../shared/sharePlace';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { HIT_SLOP_8 } from '../constants';
-import { useCalloutAnchor } from '../hooks/useCalloutAnchor';
 import { PendingSearchMarker } from '../types';
 import { iconForMaki } from '../utils/mapboxIcons';
 import { CalloutActionButton } from './CalloutActionButton';
-import { CalloutContainer } from './CalloutContainer';
 
 const PIN_SIZE = 40;
-// Same 80%-of-screen cap as the saved-place callout: MarkerView grows to fit its content, so
-// a long name or address would otherwise stretch the card across the whole display.
-const CALLOUT_MAX_WIDTH = Math.round(Dimensions.get('window').width * 0.8);
 const DROP_RED = '#E4483C';
-// The cover hook needs a coordinate even while nothing is selected (hooks can't be skipped);
-// its result is never rendered in that state.
-const FALLBACK_COORDS = { latitude: 0, longitude: 0 };
 
 interface Props {
   markers: PendingSearchMarker[];
-  onConfirm: (marker: PendingSearchMarker) => void;
-  onDirections: (marker: PendingSearchMarker) => void;
   // Bump this (e.g. with route.pickerVisible) to force markers to re-register their
   // native image — see usePointAnnotationRefresh for why this is needed.
   refreshSignal?: unknown;
@@ -48,9 +28,8 @@ interface Props {
   // Bumped whenever the user taps empty map space (or a different POI) — closes this
   // marker's open callout the same way tapping a different annotation would.
   dismissSignal?: unknown;
-  // Used to work out where the selected marker currently sits on screen, so the callout can
-  // flip below / slide sideways instead of being clipped at an edge.
-  mapViewRef?: RefObject<MapView | null>;
+  // Reports which result is selected; MapScreen renders its card in MapCardSheet.
+  onSelectedMarkerIdChange?: (markerId: string | null) => void;
 }
 
 interface MarkerPinProps {
@@ -99,27 +78,21 @@ const MarkerPin = React.memo(function MarkerPin({
 
 export function SearchResultMarker({
   markers,
-  onConfirm,
-  onDirections,
   refreshSignal,
   onAnnotationSelected,
   dismissSignal,
-  mapViewRef,
+  onSelectedMarkerIdChange,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = markers.find((m) => m.id === selectedId) ?? null;
-  const { registerRef } = usePointAnnotationRefresh(refreshSignal);
-  const { anchor: calloutAnchor, placement: calloutPlacement } = useCalloutAnchor(
-    mapViewRef,
-    selected?.coordinates,
-  );
-  // Mapbox only supplies an imageUrl for some results — everything else falls back to the
-  // same cover lookup a saved place uses, so a result shows a picture without being saved.
-  const cover = useCoverImage(selected?.coordinates ?? FALLBACK_COORDS, {
-    localPhotoUri: selected?.imageUrl,
-    wikipedia: !!selected && !selected.imageUrl,
-  });
 
+  // The cleanup matters: this component unmounts as soon as the results are cleared, and a
+  // card for a marker that no longer exists would otherwise stay on screen.
+  useEffect(() => {
+    onSelectedMarkerIdChange?.(selectedId);
+    return () => onSelectedMarkerIdChange?.(null);
+  }, [selectedId, onSelectedMarkerIdChange]);
+
+  const { registerRef } = usePointAnnotationRefresh(refreshSignal);
   // Adjust state during render (React's documented pattern for "reset on prop change")
   // rather than in a useEffect — see MapMarkers' identical dismissSignal handling.
   const prevDismissSignalRef = useRef(dismissSignal);
@@ -140,38 +113,6 @@ export function SearchResultMarker({
     setSelectedId((cur) => (cur === id ? null : cur));
   }, []);
 
-  const handleCloseCallout = useCallback(() => setSelectedId(null), []);
-
-  const handleWebsitePress = useCallback(() => {
-    if (selected?.website) Linking.openURL(selected.website);
-  }, [selected]);
-
-  const handleDirectionsPress = useCallback(() => {
-    if (!selected) return;
-    setSelectedId(null);
-    onDirections(selected);
-  }, [onDirections, selected]);
-
-  const handleConfirmPress = useCallback(() => {
-    if (!selected) return;
-    setSelectedId(null);
-    onConfirm(selected);
-  }, [onConfirm, selected]);
-
-  const handleSearchPress = useCallback(() => {
-    if (!selected) return;
-    void openPlaceSearch(selected.name, selected.coordinates, 'search_result');
-  }, [selected]);
-
-  const handleSharePress = useCallback(() => {
-    if (!selected) return;
-    shareSpot({
-      name: selected.name,
-      coordinates: selected.coordinates,
-      address: selected.fullAddress,
-    });
-  }, [selected]);
-
   return (
     <>
       {markers.map((marker) => (
@@ -183,99 +124,6 @@ export function SearchResultMarker({
           onDeselect={handleDeselect}
         />
       ))}
-
-      {selected && (
-        <MarkerView
-          coordinate={[selected.coordinates.longitude, selected.coordinates.latitude]}
-          anchor={calloutAnchor}
-        >
-          <CalloutContainer placement={calloutPlacement} pinHeight={PIN_SIZE}>
-            <View style={styles.callout}>
-              <View style={styles.calloutHeaderRow}>
-                <TouchableOpacity
-                  style={styles.calloutShareButton}
-                  onPress={handleSharePress}
-                  hitSlop={HIT_SLOP_8}
-                >
-                  <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
-                </TouchableOpacity>
-                <CircleCloseButton onPress={handleCloseCallout} style={styles.calloutCloseButton} />
-              </View>
-              <View style={styles.calloutImageWrap}>
-                {cover.loading ? (
-                  <View style={styles.calloutImagePlaceholder}>
-                    <ActivityIndicator color={Colors.brand.primary} />
-                  </View>
-                ) : cover.uri ? (
-                  <>
-                    <Image
-                      source={{ uri: cover.uri }}
-                      style={styles.calloutImage}
-                      contentFit="cover"
-                    />
-                    {cover.source === 'mapbox' && <MapDataAttribution />}
-                  </>
-                ) : (
-                  <View style={styles.calloutImagePlaceholder}>
-                    <Ionicons
-                      name={iconForMaki(selected.maki)}
-                      size={26}
-                      color={Colors.neutral[400]}
-                    />
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.calloutBody}>
-                <Text style={styles.calloutName} numberOfLines={1}>
-                  {selected.name}
-                </Text>
-                {selected.category && (
-                  <Text style={styles.calloutCategory}>{selected.category}</Text>
-                )}
-                {selected.fullAddress && (
-                  <Text style={styles.calloutAddress} numberOfLines={2}>
-                    {selected.fullAddress}
-                  </Text>
-                )}
-                {selected.website && (
-                  <TouchableOpacity onPress={handleWebsitePress}>
-                    <Text style={styles.calloutWebsite} numberOfLines={1}>
-                      {selected.website.replace(/^https?:\/\//, '')}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                <View style={styles.calloutActionsRow}>
-                  <CalloutActionButton
-                    icon="globe-outline"
-                    iconSize={24}
-                    iconColor={Colors.neutral[600]}
-                    backgroundColor={Colors.neutral[100]}
-                    borderColor={Colors.neutral[400]}
-                    onPress={handleSearchPress}
-                  />
-                  <CalloutActionButton
-                    icon="navigate-outline"
-                    iconSize={24}
-                    iconColor={Colors.brand.primary}
-                    backgroundColor={Colors.brand.light}
-                    borderColor={Colors.brand.primary}
-                    onPress={handleDirectionsPress}
-                  />
-                  <CalloutActionButton
-                    icon="add-circle-outline"
-                    iconSize={24}
-                    iconColor={Colors.accent.primary}
-                    backgroundColor={Colors.accent.light}
-                    borderColor={Colors.accent.primary}
-                    onPress={handleConfirmPress}
-                  />
-                </View>
-              </View>
-            </View>
-          </CalloutContainer>
-        </MarkerView>
-      )}
     </>
   );
 }
@@ -321,8 +169,7 @@ const styles = StyleSheet.create({
   callout: {
     backgroundColor: Colors.white,
     borderRadius: Radii.md,
-    minWidth: 200,
-    maxWidth: CALLOUT_MAX_WIDTH,
+    width: '100%',
     borderWidth: 1,
     borderColor: Colors.neutral[200],
     shadowColor: '#000',
@@ -414,3 +261,108 @@ const styles = StyleSheet.create({
     marginTop: Spacing.s12,
   },
 });
+
+interface SearchResultCalloutProps {
+  marker: PendingSearchMarker;
+  onClose: () => void;
+  onSharePress: () => void;
+  onWebsitePress: () => void;
+  onSearchPress: () => void;
+  onDirectionsPress: () => void;
+  onConfirmPress: () => void;
+}
+
+// Rendered by MapScreen inside MapCardSheet, not by SearchResultMarker — see MapCardSheet for
+// why the cards left the map. This component keeps the styles it shares with the pins above.
+export function SearchResultCallout({
+  marker,
+  onClose,
+  onSharePress,
+  onWebsitePress,
+  onSearchPress,
+  onDirectionsPress,
+  onConfirmPress,
+}: SearchResultCalloutProps) {
+  // Mapbox only supplies an imageUrl for some results — everything else falls back to the
+  // same cover lookup a saved place uses, so a result shows a picture without being saved.
+  const cover = useCoverImage(marker.coordinates, {
+    localPhotoUri: marker.imageUrl,
+    wikipedia: !marker.imageUrl,
+  });
+
+  return (
+    <View style={styles.callout}>
+      <View style={styles.calloutHeaderRow}>
+        <TouchableOpacity
+          style={styles.calloutShareButton}
+          onPress={onSharePress}
+          hitSlop={HIT_SLOP_8}
+        >
+          <Ionicons name="share-outline" size={16} color={Colors.neutral[600]} />
+        </TouchableOpacity>
+        <CircleCloseButton onPress={onClose} style={styles.calloutCloseButton} />
+      </View>
+      <View style={styles.calloutImageWrap}>
+        {cover.loading ? (
+          <View style={styles.calloutImagePlaceholder}>
+            <ActivityIndicator color={Colors.brand.primary} />
+          </View>
+        ) : cover.uri ? (
+          <>
+            <Image source={{ uri: cover.uri }} style={styles.calloutImage} contentFit="cover" />
+            {cover.source === 'mapbox' && <MapDataAttribution />}
+          </>
+        ) : (
+          <View style={styles.calloutImagePlaceholder}>
+            <Ionicons name={iconForMaki(marker.maki)} size={26} color={Colors.neutral[400]} />
+          </View>
+        )}
+      </View>
+
+      <View style={styles.calloutBody}>
+        <Text style={styles.calloutName} numberOfLines={1}>
+          {marker.name}
+        </Text>
+        {marker.category && <Text style={styles.calloutCategory}>{marker.category}</Text>}
+        {marker.fullAddress && (
+          <Text style={styles.calloutAddress} numberOfLines={2}>
+            {marker.fullAddress}
+          </Text>
+        )}
+        {marker.website && (
+          <TouchableOpacity onPress={onWebsitePress}>
+            <Text style={styles.calloutWebsite} numberOfLines={1}>
+              {marker.website.replace(/^https?:\/\//, '')}
+            </Text>
+          </TouchableOpacity>
+        )}
+        <View style={styles.calloutActionsRow}>
+          <CalloutActionButton
+            icon="globe-outline"
+            iconSize={24}
+            iconColor={Colors.neutral[600]}
+            backgroundColor={Colors.neutral[100]}
+            borderColor={Colors.neutral[400]}
+            onPress={onSearchPress}
+          />
+          <CalloutActionButton
+            icon="navigate-outline"
+            iconSize={24}
+            iconColor={Colors.brand.primary}
+            backgroundColor={Colors.brand.light}
+            borderColor={Colors.brand.primary}
+            onPress={onDirectionsPress}
+          />
+          <CalloutActionButton
+            icon="add-circle-outline"
+            iconSize={24}
+            iconColor={Colors.accent.primary}
+            backgroundColor={Colors.accent.light}
+            borderColor={Colors.accent.primary}
+            onPress={onConfirmPress}
+          />
+        </View>
+      </View>
+    </View>
+  );
+}

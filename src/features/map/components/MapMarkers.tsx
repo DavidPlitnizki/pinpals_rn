@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { MapView, MarkerView, PointAnnotation } from '@rnmapbox/maps';
+import { PointAnnotation } from '@rnmapbox/maps';
 import { Image } from 'expo-image';
-import React, { RefObject, useCallback, useMemo, useRef, useState } from 'react';
-import { Dimensions, Linking, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { PlaceFlagBadges } from '../../../design-system/components/PlaceFlags';
@@ -10,23 +10,16 @@ import { Colors, Radii, Spacing, Typography } from '../../../design-system/token
 import { MapDataAttribution } from '../../../design-system/components/MapDataAttribution';
 import { usePlaceCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { MemoryMood, Place, MOOD_CONFIG } from '../../../models/types';
-import { buildGoogleMapsSearchUrl } from '../../../shared/mapLinks';
 import { categoryColor, categoryIcon } from '../../../shared/constants';
-import { logPlaceShared } from '../../../services/analytics';
 import { openPlaceSearch } from '../../../services/webSearch';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { HIT_SLOP_8 } from '../constants';
-import { useCalloutAnchor } from '../hooks/useCalloutAnchor';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { iconForMaki } from '../utils/mapboxIcons';
 import { getPlacePhotoPreview, PlacePhotoPreview } from '../utils/placePhoto';
 import { CalloutActionButton } from './CalloutActionButton';
-import { CalloutContainer } from './CalloutContainer';
 
 const PIN_SIZE = 46;
-// MarkerView sizes itself to its content, so a long address or venue name stretched the card
-// across the whole screen. Cap it at 80% of the window and let the text wrap instead.
-const CALLOUT_MAX_WIDTH = Math.round(Dimensions.get('window').width * 0.8);
 const CALLOUT_DESCRIPTION_MAX_CHARS = 24;
 
 function truncate(text: string, maxChars: number): string {
@@ -35,9 +28,6 @@ function truncate(text: string, maxChars: number): string {
 
 interface Props {
   places: Place[];
-  onMarkerPress: (placeId: string) => void;
-  onDeleteMarker: (placeId: string, placeName: string) => void;
-  onDirections: (place: Place) => void;
   // Bump this (e.g. with route.pickerVisible) to force markers to re-register their
   // native image — see usePointAnnotationRefresh for why this is needed.
   refreshSignal?: unknown;
@@ -47,9 +37,9 @@ interface Props {
   // Bumped whenever the user taps empty map space (or a different POI) — closes this
   // marker's open callout the same way tapping a different annotation would.
   dismissSignal?: unknown;
-  // Used to work out where the selected pin currently sits on screen, so the callout can
-  // flip below / slide sideways instead of being clipped at an edge.
-  mapViewRef?: RefObject<MapView | null>;
+  // Reports which pin is selected. MapScreen renders the card for it in MapCardSheet —
+  // this component only owns the pins and the selection.
+  onSelectedPlaceIdChange?: (placeId: string | null) => void;
 }
 
 interface MarkerPinProps {
@@ -134,7 +124,10 @@ interface MarkerCalloutProps {
   onDeletePress: () => void;
 }
 
-function MarkerCallout({
+// Exported: MapMarkers no longer renders this itself. The card lives in MapCardSheet at the
+// bottom of the screen (see that file for why), while this component keeps only the pins and
+// which one is selected. The styles it uses stay here alongside it.
+export function MarkerCallout({
   place,
   preview,
   mood,
@@ -284,16 +277,20 @@ function MarkerCallout({
 
 export function MapMarkers({
   places,
-  onMarkerPress,
-  onDeleteMarker,
-  onDirections,
   refreshSignal,
   onAnnotationSelected,
   dismissSignal,
-  mapViewRef,
+  onSelectedPlaceIdChange,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selectedPlace = places.find((p) => p.id === selectedId);
+
+  // The cleanup matters: this component can unmount with a pin still selected, and the card
+  // would otherwise stay on screen with nothing behind it.
+  useEffect(() => {
+    onSelectedPlaceIdChange?.(selectedId);
+    return () => onSelectedPlaceIdChange?.(null);
+  }, [selectedId, onSelectedPlaceIdChange]);
+
   const getLatestMoodForPlace = usePlacesStore((s) => s.getLatestMoodForPlace);
   const notes = usePlacesStore((s) => s.notes);
   const { registerRef, refreshOne } = usePointAnnotationRefresh(refreshSignal);
@@ -306,12 +303,6 @@ export function MapMarkers({
     prevDismissSignalRef.current = dismissSignal;
     if (selectedId !== null) setSelectedId(null);
   }
-
-  const selectedMood = selectedPlace ? getLatestMoodForPlace(selectedPlace.id) : undefined;
-  const { anchor: calloutAnchor, placement: calloutPlacement } = useCalloutAnchor(
-    mapViewRef,
-    selectedPlace?.coordinates,
-  );
 
   // Per-place preview + pin color, computed once per places/notes change instead of on every
   // MapMarkers render (e.g. selecting a different pin no longer re-scans every place's notes).
@@ -330,8 +321,6 @@ export function MapMarkers({
     return map;
   }, [places, notes, getLatestMoodForPlace]);
 
-  const selectedPreview = selectedPlace ? markerData.get(selectedPlace.id)?.preview : null;
-
   // Keying the whole annotation set on place composition forces PointAnnotation to fully
   // remount on add/remove — @rnmapbox/maps can otherwise leave a stale native annotation
   // behind when the array shrinks (e.g. deleting a place after filtering).
@@ -348,36 +337,6 @@ export function MapMarkers({
   const handleDeselect = useCallback((id: string) => {
     setSelectedId((cur) => (cur === id ? null : cur));
   }, []);
-
-  const handleCloseCallout = useCallback(() => setSelectedId(null), []);
-
-  const handleCalloutPress = useCallback(() => {
-    if (selectedPlace) onMarkerPress(selectedPlace.id);
-  }, [onMarkerPress, selectedPlace]);
-
-  const handleDirectionsPress = useCallback(() => {
-    if (!selectedPlace) return;
-    setSelectedId(null);
-    onDirections(selectedPlace);
-  }, [onDirections, selectedPlace]);
-
-  const handleDeletePress = useCallback(() => {
-    if (!selectedPlace) return;
-    setSelectedId(null);
-    onDeleteMarker(selectedPlace.id, selectedPlace.name);
-  }, [onDeleteMarker, selectedPlace]);
-
-  const handleSharePress = useCallback(() => {
-    if (!selectedPlace) return;
-    const { latitude, longitude } = selectedPlace.coordinates;
-    const mapsUrl = buildGoogleMapsSearchUrl(selectedPlace.coordinates);
-    // The message always carries the name, coordinates, and Google Maps link as text; when
-    // there's a photo it's attached via `url` too (iOS's share sheet renders it inline) —
-    // falls back to sharing the maps link itself as `url` when there's no photo.
-    const message = `${selectedPlace.name}\n${latitude.toFixed(5)}, ${longitude.toFixed(5)}\n${mapsUrl}`;
-    logPlaceShared();
-    void Share.share({ message, url: selectedPreview?.photoUri ?? mapsUrl });
-  }, [selectedPlace, selectedPreview]);
 
   return (
     <React.Fragment key={annotationsKey}>
@@ -396,26 +355,6 @@ export function MapMarkers({
           />
         );
       })}
-
-      {selectedPlace && (
-        <MarkerView
-          coordinate={[selectedPlace.coordinates.longitude, selectedPlace.coordinates.latitude]}
-          anchor={calloutAnchor}
-        >
-          <CalloutContainer placement={calloutPlacement} pinHeight={PIN_SIZE}>
-            <MarkerCallout
-              place={selectedPlace}
-              preview={selectedPreview ?? null}
-              mood={selectedMood}
-              onClose={handleCloseCallout}
-              onSharePress={handleSharePress}
-              onCalloutPress={handleCalloutPress}
-              onDirectionsPress={handleDirectionsPress}
-              onDeletePress={handleDeletePress}
-            />
-          </CalloutContainer>
-        </MarkerView>
-      )}
     </React.Fragment>
   );
 }
@@ -484,8 +423,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: Radii.md,
     padding: Spacing.s16,
-    minWidth: 200,
-    maxWidth: CALLOUT_MAX_WIDTH,
+    width: '100%',
     borderWidth: 1,
     borderColor: Colors.neutral[200],
     shadowColor: '#000',

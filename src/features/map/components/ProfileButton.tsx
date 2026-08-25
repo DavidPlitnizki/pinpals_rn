@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '../../../design-system/components/Avatar';
 import { Colors, Spacing } from '../../../design-system/tokens';
 import { UserProfile } from '../../../models/types';
-import { getInitials } from '../utils/getInitials';
+import { getInitials } from '../../../shared/getInitials';
 
 const AVATAR_SIZE = 44;
 

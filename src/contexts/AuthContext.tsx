@@ -11,7 +11,7 @@ import {
 } from '../services/authService';
 import { setAnalyticsUserId, setAnalyticsUserProperty } from '../services/analytics';
 import { setCrashReportingUserContext, setCrashReportingUserId } from '../services/crashReporting';
-import { useProfileStore } from '../store/useProfileStore';
+import { adoptProviderProfile } from '../store/useProfileStore';
 
 interface AuthContextValue {
   isAuth: boolean;
@@ -62,14 +62,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           auth_provider: providerId,
           display_name: firebaseUser.displayName ?? '',
         });
-        // Adopt the provider's photo as the profile avatar only if the user hasn't already
-        // set one locally (photo or preset) — never clobber their choice.
-        if (firebaseUser.photoURL) {
-          const { profile, updateProfile } = useProfileStore.getState();
-          if (!profile.avatarUri && !profile.avatarPreset) {
-            updateProfile({ avatarUri: firebaseUser.photoURL });
-          }
-        }
+        // Take the name and avatar Google/Apple provided, for anyone who hasn't set their
+        // own. Anonymous users have neither, so this is a no-op for guests.
+        void adoptProviderProfile({
+          name: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
+        });
       } else {
         setAuthData(null);
         setIsAuth(false);
@@ -83,13 +81,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const signInWithGoogle = useCallback(async () => {
-    await serviceSignInWithGoogle();
+  // Both providers run their result through here rather than relying on onAuthStateChanged
+  // alone. That listener fires the moment Firebase has a user — which for Apple is before the
+  // name exists: Apple returns fullName outside the credential, so signInWithApple writes it
+  // to the Firebase profile in a second step, and updateProfile does not emit an auth-state
+  // event. The listener had therefore already seen displayName === null and moved on, leaving
+  // the profile stuck on the "User" placeholder with no later chance to fill it in.
+  const adoptSignedInProfile = useCallback((data: AuthData) => {
+    setAuthData(data);
+    void adoptProviderProfile({ name: data.name, photoURL: data.photoURL });
   }, []);
 
+  const signInWithGoogle = useCallback(async () => {
+    adoptSignedInProfile(await serviceSignInWithGoogle());
+  }, [adoptSignedInProfile]);
+
   const signInWithApple = useCallback(async () => {
-    await serviceSignInWithApple();
-  }, []);
+    adoptSignedInProfile(await serviceSignInWithApple());
+  }, [adoptSignedInProfile]);
 
   const logout = useCallback(async () => {
     await serviceLogout();

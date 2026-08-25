@@ -7,7 +7,6 @@ import {
   Alert,
   Animated,
   Dimensions,
-  Keyboard,
   Modal,
   ScrollView,
   StyleSheet,
@@ -166,29 +165,6 @@ export function QuickAddPlaceSheet({
     setPhone(suggestedPhone ?? '');
   }
   wasVisibleRef.current = visible;
-
-  // Temporary diagnostic logging — same keyboard bug reported in the prior build of this
-  // sheet. This build's only remaining untested difference from the working SearchSheet is
-  // the ScrollView-nested layout; the PinTextField-vs-bare-TextInput variable has now been
-  // eliminated too. Remove once confirmed fixed (or once these logs point somewhere new).
-  useEffect(() => {
-    if (!visible) return undefined;
-    const subs = [
-      Keyboard.addListener('keyboardWillShow', (e) =>
-        console.log('[QuickAddPlaceSheet] keyboardWillShow', e.endCoordinates.height),
-      ),
-      Keyboard.addListener('keyboardDidShow', (e) =>
-        console.log('[QuickAddPlaceSheet] keyboardDidShow', e.endCoordinates.height),
-      ),
-      Keyboard.addListener('keyboardWillHide', () =>
-        console.log('[QuickAddPlaceSheet] keyboardWillHide'),
-      ),
-      Keyboard.addListener('keyboardDidHide', () =>
-        console.log('[QuickAddPlaceSheet] keyboardDidHide'),
-      ),
-    ];
-    return () => subs.forEach((s) => s.remove());
-  }, [visible]);
 
   useEffect(() => {
     if (visible) {

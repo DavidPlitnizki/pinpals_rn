@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { UserProfile } from '../../models/types';
@@ -15,11 +15,24 @@ interface Props {
 // icon, or initials as the final fallback. Used by ProfileScreen, ProfileButton, and
 // ProfileMenuSheet so all three stay in sync as avatar options grow.
 export function Avatar({ profile, size, getInitials }: Props) {
+  // Which URI failed, rather than a plain boolean: avatarUri can be a remote URL adopted from
+  // Google, and those rotate when the user changes their account photo. Remembering the URI
+  // means a new one gets its own chance to load instead of inheriting the old one's failure —
+  // and needs no effect to reset.
+  const [failedUri, setFailedUri] = useState<string | null>(null);
   const preset = getAvatarPreset(profile.avatarPreset);
   const commonStyle = { width: size, height: size, borderRadius: size / 2 };
 
-  if (profile.avatarUri) {
-    return <Image source={{ uri: profile.avatarUri }} style={commonStyle} />;
+  const handleError = useCallback(
+    () => setFailedUri(profile.avatarUri ?? null),
+    [profile.avatarUri],
+  );
+
+  // A remote avatar has plenty of ways to not arrive — no network on first launch, a URL that
+  // has since 404'd. Without this the component rendered an empty circle: avatarUri was
+  // truthy, so the preset and initials below were never reached.
+  if (profile.avatarUri && profile.avatarUri !== failedUri) {
+    return <Image source={{ uri: profile.avatarUri }} style={commonStyle} onError={handleError} />;
   }
 
   if (preset) {
