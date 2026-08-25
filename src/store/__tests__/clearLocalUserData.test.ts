@@ -5,7 +5,6 @@ import { usePlacesStore } from '../usePlacesStore';
 import { DEFAULT_PROFILE_NAME, useProfileStore } from '../useProfileStore';
 import { useRouteStore } from '../useRouteStore';
 import { useSearchFiltersStore } from '../useSearchFiltersStore';
-import { useSettingsStore } from '../useSettingsStore';
 
 const place = {
   id: 'p1',
@@ -50,14 +49,5 @@ describe('clearLocalUserData', () => {
     expect(useProfileStore.getState().profile).toEqual({ id: '1', name: DEFAULT_PROFILE_NAME });
     expect(useSearchFiltersStore.getState().query).toBe('');
     expect(useRouteStore.getState().activeRoute).toBeNull();
-  });
-
-  it('resets appearance settings too — nothing persisted survives', () => {
-    useSettingsStore.setState({ fontScale: 'large', theme: 'dark' });
-
-    clearLocalUserData();
-
-    expect(useSettingsStore.getState().fontScale).toBe('medium');
-    expect(useSettingsStore.getState().theme).toBe('system');
   });
 });

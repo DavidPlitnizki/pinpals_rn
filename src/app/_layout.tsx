@@ -14,11 +14,13 @@ import {
   setCrashReportingUserContext,
 } from '../services/crashReporting';
 import { useProfileStore } from '../store/useProfileStore';
-import { applyFontScale, useResolvedTheme } from '../shared/appearance';
-import { useSettingsStore } from '../store/useSettingsStore';
 
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '');
 SplashScreen.preventAutoHideAsync();
+
+// Matches Colors.background — the window behind the screens, visible for a frame during
+// navigation transitions and rotation.
+const APP_BACKGROUND = '#FAF8F4';
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuth, isGuest, isLoading } = useAuth();
@@ -55,21 +57,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Every screen in the app is light — there is no dark theme and no font-size control, so
+// both the window background behind the screens and the status bar are simply fixed. This
+// used to read a settings store that no UI could ever change.
 function AppearanceEffects() {
-  const fontScale = useSettingsStore((s) => s.fontScale);
-  const resolvedTheme = useResolvedTheme();
-
   useEffect(() => {
-    applyFontScale(fontScale);
-  }, [fontScale]);
+    void SystemUI.setBackgroundColorAsync(APP_BACKGROUND);
+  }, []);
 
-  useEffect(() => {
-    void SystemUI.setBackgroundColorAsync(resolvedTheme === 'dark' ? '#1C2B22' : '#FAF8F4');
-  }, [resolvedTheme]);
-
-  // Screens are light-background regardless of theme preference, so the status bar icons
-  // stay dark everywhere rather than following resolvedTheme (which would turn them white
-  // and make them disappear against those light backgrounds).
   return <StatusBar style="dark" />;
 }
 
