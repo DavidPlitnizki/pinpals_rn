@@ -7,7 +7,7 @@ import { Colors, Radii, Spacing, Typography } from '../../../design-system/token
 import { useReverseGeocodedAddress } from '../../../hooks/useReverseGeocodedAddress';
 import { Coordinates } from '../../../models/types';
 import { formatDistance, formatDuration } from '../../../shared/format';
-import { HIT_SLOP_16, MAP_TOP_BUTTON_GUTTER, MAP_TOP_BUTTON_OFFSET } from '../constants';
+import { HIT_SLOP_16, MAP_ROUTE_TOP_OFFSET, MAP_TOP_BUTTON_GUTTER } from '../constants';
 import { RouteProfile, RouteStep } from '../types';
 
 interface Props {
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     // Level with the round clear buttons rather than below them, and inset from the right by
     // enough to keep a long destination label out from under them.
-    paddingTop: MAP_TOP_BUTTON_OFFSET,
+    paddingTop: MAP_ROUTE_TOP_OFFSET,
     paddingLeft: Spacing.s16,
     paddingRight: MAP_TOP_BUTTON_GUTTER,
   },

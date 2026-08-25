@@ -13,7 +13,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { CurrentWeather } from '../../../services/weather';
-import { HIT_SLOP_8, QUICK_SEARCH_CATEGORIES, QuickSearchCategory } from '../constants';
+import {
+  HIT_SLOP_8,
+  MAP_SEARCH_PILL_TOP,
+  QUICK_SEARCH_CATEGORIES,
+  QuickSearchCategory,
+} from '../constants';
 import { colorForWeatherCode, iconForWeatherCode } from '../utils/weatherIcons';
 
 interface ChipProps {
@@ -213,7 +218,7 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.s16,
     // Nudged down from the base 8px (twice, +10px each time) so the pill/weather badge clear
     // Mapbox's own top-left scale bar ornament instead of overlapping it.
-    marginTop: Spacing.s16 + Spacing.s2 + Spacing.s8 + Spacing.s2,
+    marginTop: MAP_SEARCH_PILL_TOP,
   },
   weatherBadge: {
     flexDirection: 'row',

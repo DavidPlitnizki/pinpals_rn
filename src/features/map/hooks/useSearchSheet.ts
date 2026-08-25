@@ -1,11 +1,21 @@
-import { useMemo, useState } from 'react';
+import * as Crypto from 'expo-crypto';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { Coordinates, Place } from '../../../models/types';
-import { MapboxSearchResult, searchMapboxPlaces } from '../../../services/mapboxSearch';
+import {
+  MapboxSearchResult,
+  MapboxSuggestion,
+  retrieveMapboxPlace,
+  suggestMapboxPlaces,
+} from '../../../services/mapboxSearch';
+import { logMapboxUsage } from '../../../services/analytics';
 import { useSearchFiltersStore } from '../../../store/useSearchFiltersStore';
 
 export const MIN_EXTERNAL_QUERY_LENGTH = 2;
+
+// Stable empty reference so a too-short query doesn't hand the sheet a new array each render.
+const EMPTY_SUGGESTIONS: MapboxSuggestion[] = [];
 
 type GetVisibleBbox = () => Promise<[number, number, number, number] | undefined>;
 
@@ -22,9 +32,22 @@ export function useSearchSheet(
 
   const debouncedQuery = useDebouncedValue(query);
 
-  const [externalResults, setExternalResults] = useState<MapboxSearchResult[]>([]);
-  const [externalLoading, setExternalLoading] = useState(false);
-  const [externalSearched, setExternalSearched] = useState(false);
+  const [suggestions, setSuggestions] = useState<MapboxSuggestion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [retrievingId, setRetrievingId] = useState<string | null>(null);
+
+  // One Mapbox session spans every keystroke of a single search and ends at the retrieve that
+  // resolves it — that pairing is what makes the whole search one billable unit instead of one
+  // per keystroke. Regenerated after each retrieve, and whenever the sheet is opened afresh.
+  const sessionTokenRef = useRef(Crypto.randomUUID());
+  // Cancels the request already in flight when the next keystroke lands, so a slow early
+  // response can't overwrite the results for what's currently typed.
+  const abortRef = useRef<AbortController | null>(null);
+  // Mapbox bills the session, not the keystrokes — so this counts the first suggest of each
+  // session and ignores the rest. Sessions abandoned without a retrieve are billed too, which
+  // is why it's counted here and not at retrieve.
+  const sessionCountedRef = useRef(false);
 
   function open() {
     setVisible(true);
@@ -34,42 +57,75 @@ export function useSearchSheet(
     setVisible(false);
   }
 
-  async function runExternalSearch(textQuery: string) {
-    const trimmed = textQuery.trim();
-
-    // Nothing left to search for (the text was cleared) — clear any stale results instead of
-    // leaving the previous search's results on screen.
-    if (trimmed.length < MIN_EXTERNAL_QUERY_LENGTH) {
-      setExternalResults([]);
-      setExternalSearched(false);
-      return;
-    }
-
-    setExternalLoading(true);
-    setExternalSearched(true);
-    try {
-      // Search where the map is currently showing, not the user's GPS position — and scope
-      // results to whatever's actually visible on screen (Mapbox's own service limits make a
-      // broader radius pointless).
-      const bbox = await getVisibleBbox();
-      const results = await searchMapboxPlaces(trimmed, getMapCenter(), { bbox });
-      setExternalResults(results);
-    } catch {
-      setExternalResults([]);
-    } finally {
-      setExternalLoading(false);
-    }
-  }
-
-  function searchExternal() {
-    void runExternalSearch(query);
-  }
-
-  function resetFilters() {
+  const resetFilters = useCallback(() => {
     resetPersistedFilters();
-    setExternalResults([]);
-    setExternalSearched(false);
-  }
+    setSuggestions([]);
+    setSearched(false);
+  }, [resetPersistedFilters]);
+
+  // Below the minimum length there is nothing to ask Mapbox for. Handled by deriving what the
+  // sheet shows rather than by clearing state from the effect: the stored suggestions are
+  // simply not displayed, which keeps the effect free of synchronous setState and avoids a
+  // render pass whose only job is to blank a list.
+  const queryTooShort = debouncedQuery.trim().length < MIN_EXTERNAL_QUERY_LENGTH;
+
+  // Suggestions follow the typing rather than a Search button, so the effect is the whole
+  // mechanism here, not a shortcut around a user action.
+  useEffect(() => {
+    if (queryTooShort) return;
+
+    const controller = new AbortController();
+    abortRef.current?.abort();
+    abortRef.current = controller;
+
+    void (async () => {
+      setLoading(true);
+      if (!sessionCountedRef.current) {
+        sessionCountedRef.current = true;
+        logMapboxUsage('search_session');
+      }
+      try {
+        const bbox = await getVisibleBbox();
+        if (controller.signal.aborted) return;
+        const results = await suggestMapboxPlaces(
+          debouncedQuery.trim(),
+          getMapCenter(),
+          sessionTokenRef.current,
+          { bbox, signal: controller.signal },
+        );
+        if (controller.signal.aborted) return;
+        setSuggestions(results);
+        setSearched(true);
+      } catch {
+        if (!controller.signal.aborted) {
+          setSuggestions([]);
+          setSearched(true);
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    })();
+
+    return () => controller.abort();
+  }, [debouncedQuery, queryTooShort, getMapCenter, getVisibleBbox]);
+
+  // A suggestion is only an id and some text — this is where it becomes a real place.
+  const selectSuggestion = useCallback(
+    async (suggestion: MapboxSuggestion): Promise<MapboxSearchResult | null> => {
+      setRetrievingId(suggestion.mapboxId);
+      try {
+        return await retrieveMapboxPlace(suggestion.mapboxId, sessionTokenRef.current);
+      } catch {
+        return null;
+      } finally {
+        setRetrievingId(null);
+        // The session ends with the retrieve it paid for; the next query starts a new one.
+        sessionTokenRef.current = Crypto.randomUUID();
+        sessionCountedRef.current = false;
+      }
+    },
+    [],
+  );
 
   const filteredPlaces = useMemo(() => {
     if (!debouncedQuery.trim()) return places;
@@ -82,10 +138,11 @@ export function useSearchSheet(
     query,
     setQuery,
     filteredPlaces,
-    externalResults,
-    externalLoading,
-    externalSearched,
-    searchExternal,
+    suggestions: queryTooShort ? EMPTY_SUGGESTIONS : suggestions,
+    externalLoading: !queryTooShort && loading,
+    externalSearched: !queryTooShort && searched,
+    retrievingId,
+    selectSuggestion,
     open,
     close,
     resetFilters,

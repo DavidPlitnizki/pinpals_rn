@@ -7,8 +7,8 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { promptPhotoSource } from '../../../shared/photoSourcePrompt';
 import { setCrashReportingUserContext } from '../../../services/crashReporting';
 import { usePlacesStore } from '../../../store/usePlacesStore';
+import { clearLocalUserData } from '../../../store/clearLocalUserData';
 import { useProfileStore } from '../../../store/useProfileStore';
-import { useSettingsStore } from '../../../store/useSettingsStore';
 
 interface AvatarDraft {
   avatarUri?: string;
@@ -19,7 +19,6 @@ export function useProfileScreen() {
   const { profile, updateProfile } = useProfileStore();
   const { places } = usePlacesStore();
   const { logout, deleteAccount, isGuest, authData } = useAuth();
-  const { fontScale, setFontScale, theme, setTheme } = useSettingsStore();
   const [isEditing, setIsEditing] = useState(false);
   const [whatsNewVisible, setWhatsNewVisible] = useState(false);
   const [name, setName] = useState(profile.name);
@@ -157,8 +156,7 @@ export function useProfileScreen() {
               await deleteAccount();
               // Firebase signs the user out as part of deleting the account — clear local
               // content too, so nothing from the deleted account lingers on the device.
-              usePlacesStore.setState({ places: [], notes: [] });
-              useProfileStore.setState({ profile: { id: '1', name: 'User' } });
+              clearLocalUserData();
             } catch (e: any) {
               Alert.alert('Couldn’t delete account', e?.message ?? 'Please try again.');
             }
@@ -173,10 +171,6 @@ export function useProfileScreen() {
     profile: displayProfile,
     isGuest,
     authData,
-    fontScale,
-    setFontScale,
-    theme,
-    setTheme,
     places,
     savedCounts,
     isEditing,

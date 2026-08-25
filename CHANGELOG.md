@@ -36,7 +36,6 @@ First version. Phase 1 solo features: map, memories, place detail, profile, auth
 ### Profile
 - Editable name and avatar (photo or presets)
 - Saved block: total places, want to visit, favorite
-- Font size setting that composes with the system text-size setting
 - What's New: tap the version row to see the release notes for every version
 - Privacy Policy and Terms of Service, also linked from the sign-in screen
 

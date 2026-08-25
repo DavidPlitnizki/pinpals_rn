@@ -10,6 +10,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { PinButton } from '../../../design-system/components/PinButton';
@@ -23,10 +24,14 @@ interface ModeOption {
   icon: React.ComponentProps<typeof Ionicons>['name'];
 }
 
-// Pushes the centered card down 20% of the window height, off dead-center, per explicit
-// request — keeps the same center-aligned backdrop but biases the resting position lower.
+// Biases the card below dead-center without leaving the center-aligned backdrop. Kept well
+// clear of the tab bar so the OK/Cancel row is comfortable to reach with a thumb.
 const WINDOW_HEIGHT = Dimensions.get('window').height;
-const CARD_VERTICAL_OFFSET = WINDOW_HEIGHT * 0.2;
+const CARD_VERTICAL_OFFSET = WINDOW_HEIGHT * 0.1;
+
+// Modal's own fade covers the backdrop; the card gets a short spring up on top of it so it
+// arrives with some weight instead of just materialising.
+const CARD_ENTERING = FadeInDown.springify().damping(20).stiffness(180).mass(0.6);
 
 const MODE_OPTIONS: ModeOption[] = [
   { profile: 'walking', label: 'Walk', icon: 'walk' },
@@ -146,8 +151,7 @@ export function RouteModePicker({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop}>
           <TouchableWithoutFeedback>
-            <View style={styles.card}>
-              <CircleCloseButton onPress={onClose} style={styles.closeButton} />
+            <Animated.View style={styles.card} entering={CARD_ENTERING}>
               <Text style={styles.title}>Directions</Text>
               <Text style={styles.destination} numberOfLines={1}>
                 {destinationLabel}
@@ -183,7 +187,14 @@ export function RouteModePicker({
                   />
                 </View>
               </View>
-            </View>
+
+              {/* Last on purpose. iOS hit-testing hands a touch to the topmost subview under
+                  the finger, and every element above is laid out in flow across the full card
+                  width — the title's transparent Text box overlaps this corner. Rendered first,
+                  the button stayed visible but stopped receiving taps, which then bubbled to
+                  the card's TouchableWithoutFeedback and were swallowed. */}
+              <CircleCloseButton onPress={onClose} style={styles.closeButton} />
+            </Animated.View>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>

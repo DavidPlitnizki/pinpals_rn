@@ -22,7 +22,7 @@ import { AvatarPickerSheet } from './components/AvatarPickerSheet';
 import { WhatsNewModal } from './components/WhatsNewModal';
 import { useProfileScreen } from './hooks/useProfileScreen';
 import { APP_VERSION } from '../../shared/releaseNotes';
-import { getInitials } from './utils/getInitials';
+import { getInitials } from '../../shared/getInitials';
 
 const PROVIDER_BADGE: Record<
   AuthProviderId,

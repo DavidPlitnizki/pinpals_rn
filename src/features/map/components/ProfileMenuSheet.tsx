@@ -8,7 +8,7 @@ import { CircleCloseButton } from '../../../design-system/components/CircleClose
 import { PinButton } from '../../../design-system/components/PinButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { Place, UserProfile } from '../../../models/types';
-import { getInitials } from '../utils/getInitials';
+import { getInitials } from '../../../shared/getInitials';
 
 const AVATAR_SIZE = 64;
 

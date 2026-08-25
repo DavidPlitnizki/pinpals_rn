@@ -1,5 +1,6 @@
 import { Coordinates } from '../models/types';
 import { reportNetworkError } from './crashReporting';
+import { debugLog } from '../shared/debugLog';
 
 const WIKIPEDIA_API_URL = 'https://en.wikipedia.org/w/api.php';
 
@@ -22,19 +23,19 @@ export async function fetchWikipediaThumbnail(coords: Coordinates): Promise<stri
   });
 
   const url = `${WIKIPEDIA_API_URL}?${params.toString()}`;
-  console.log('[wikipedia] thumbnail request →', url);
+  debugLog('[wikipedia] thumbnail request →', url);
 
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      console.log('[wikipedia] thumbnail response ← error', response.status, await response.text());
+      debugLog('[wikipedia] thumbnail response ← error', response.status, await response.text());
       return null;
     }
 
     const data = (await response.json()) as {
       query?: { pages?: Record<string, { thumbnail?: { source?: string } }> };
     };
-    console.log('[wikipedia] thumbnail response ←', JSON.stringify(data));
+    debugLog('[wikipedia] thumbnail response ←', data);
 
     const pages = data.query?.pages ?? {};
     const first = Object.values(pages)[0];

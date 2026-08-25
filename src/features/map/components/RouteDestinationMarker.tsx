@@ -1,11 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { MarkerView, PointAnnotation } from '@rnmapbox/maps';
-import React, { useCallback, useRef, useState } from 'react';
+import { PointAnnotation } from '@rnmapbox/maps';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CircleCloseButton } from '../../../design-system/components/CircleCloseButton';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { shareSpot } from '../../../shared/sharePlace';
 import { usePointAnnotationRefresh } from '../hooks/usePointAnnotationRefresh';
 import { RouteWaypoint } from '../types';
 import { CalloutActionButton } from './CalloutActionButton';
@@ -27,7 +26,8 @@ interface Props {
   // Bumped whenever the user taps empty map space (or a different marker) — closes this
   // marker's open callout the same way tapping a different annotation would.
   dismissSignal?: unknown;
-  onSavePoint: (waypoint: RouteWaypoint) => void;
+  // Reports which stop is selected; MapScreen renders its card in MapCardSheet.
+  onSelectedWaypointIndexChange?: (index: number | null) => void;
 }
 
 interface MarkerPinProps {
@@ -86,12 +86,18 @@ export function RouteDestinationMarker({
   refreshSignal,
   onAnnotationSelected,
   dismissSignal,
-  onSavePoint,
+  onSelectedWaypointIndexChange,
 }: Props) {
   const { registerRef } = usePointAnnotationRefresh(refreshSignal);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedIndex = selectedId ? Number(selectedId.replace('route-waypoint-', '')) : -1;
-  const selected = selectedIndex >= 0 ? waypoints[selectedIndex] : undefined;
+
+  // The cleanup matters: the route can be cleared while a stop is selected, and its card
+  // would otherwise stay on screen pointing at a waypoint that no longer exists.
+  useEffect(() => {
+    onSelectedWaypointIndexChange?.(selectedIndex >= 0 ? selectedIndex : null);
+    return () => onSelectedWaypointIndexChange?.(null);
+  }, [selectedIndex, onSelectedWaypointIndexChange]);
 
   const prevDismissSignalRef = useRef(dismissSignal);
   if (dismissSignal !== prevDismissSignalRef.current) {
@@ -111,21 +117,6 @@ export function RouteDestinationMarker({
     setSelectedId((cur) => (cur === id ? null : cur));
   }, []);
 
-  const handleCloseCallout = useCallback(() => setSelectedId(null), []);
-
-  // Shares the stop as a Google Maps link — opening it drops the recipient straight on the
-  // point, which a bare "lat, lng" line doesn't do.
-  const handleSharePress = useCallback(() => {
-    if (!selected) return;
-    shareSpot({ name: selected.label, coordinates: selected.coordinates });
-  }, [selected]);
-
-  const handleSavePointPress = useCallback(() => {
-    if (!selected) return;
-    setSelectedId(null);
-    onSavePoint(selected);
-  }, [onSavePoint, selected]);
-
   return (
     <>
       {waypoints.map((waypoint, index) => (
@@ -138,43 +129,6 @@ export function RouteDestinationMarker({
           onDeselect={handleDeselect}
         />
       ))}
-
-      {selected && (
-        <MarkerView
-          coordinate={[selected.coordinates.longitude, selected.coordinates.latitude]}
-          anchor={{ x: 0.5, y: 1.3 }}
-        >
-          <View style={styles.callout}>
-            <View style={styles.calloutHeaderRow}>
-              <CircleCloseButton onPress={handleCloseCallout} style={styles.calloutCloseButton} />
-            </View>
-            <View style={styles.calloutIconWrap}>
-              <Ionicons name="flag" size={28} color={DESTINATION_COLOR} />
-            </View>
-            <Text style={styles.calloutName} numberOfLines={1}>
-              {selected.label}
-            </Text>
-            <View style={styles.calloutActionsRow}>
-              <CalloutActionButton
-                icon="location-outline"
-                iconSize={24}
-                iconColor={Colors.accent.primary}
-                backgroundColor={Colors.accent.light}
-                borderColor={Colors.accent.primary}
-                onPress={handleSavePointPress}
-              />
-              <CalloutActionButton
-                icon="share-outline"
-                iconSize={24}
-                iconColor={Colors.neutral[600]}
-                backgroundColor={Colors.neutral[100]}
-                borderColor={Colors.neutral[400]}
-                onPress={handleSharePress}
-              />
-            </View>
-          </View>
-        </MarkerView>
-      )}
     </>
   );
 }
@@ -221,7 +175,7 @@ const styles = StyleSheet.create({
     borderRadius: Radii.md,
     paddingHorizontal: Spacing.s16,
     paddingBottom: Spacing.s16,
-    minWidth: 220,
+    width: '100%',
     borderWidth: 1,
     borderColor: Colors.neutral[200],
     shadowColor: '#000',
@@ -265,3 +219,51 @@ const styles = StyleSheet.create({
     gap: Spacing.s12,
   },
 });
+
+interface RouteWaypointCalloutProps {
+  waypoint: RouteWaypoint;
+  onClose: () => void;
+  onSavePointPress: () => void;
+  onSharePress: () => void;
+}
+
+// Rendered by MapScreen inside MapCardSheet rather than anchored to the stop — see
+// MapCardSheet for why. The styles stay here, shared with the pins above.
+export function RouteWaypointCallout({
+  waypoint,
+  onClose,
+  onSavePointPress,
+  onSharePress,
+}: RouteWaypointCalloutProps) {
+  return (
+    <View style={styles.callout}>
+      <View style={styles.calloutHeaderRow}>
+        <CircleCloseButton onPress={onClose} style={styles.calloutCloseButton} />
+      </View>
+      <View style={styles.calloutIconWrap}>
+        <Ionicons name="flag" size={28} color={DESTINATION_COLOR} />
+      </View>
+      <Text style={styles.calloutName} numberOfLines={1}>
+        {waypoint.label}
+      </Text>
+      <View style={styles.calloutActionsRow}>
+        <CalloutActionButton
+          icon="location-outline"
+          iconSize={24}
+          iconColor={Colors.accent.primary}
+          backgroundColor={Colors.accent.light}
+          borderColor={Colors.accent.primary}
+          onPress={onSavePointPress}
+        />
+        <CalloutActionButton
+          icon="share-outline"
+          iconSize={24}
+          iconColor={Colors.neutral[600]}
+          backgroundColor={Colors.neutral[100]}
+          borderColor={Colors.neutral[400]}
+          onPress={onSharePress}
+        />
+      </View>
+    </View>
+  );
+}

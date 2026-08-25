@@ -1,5 +1,6 @@
 import { Coordinates } from '../models/types';
 import { reportNetworkError } from './crashReporting';
+import { debugLog } from '../shared/debugLog';
 
 export interface CurrentWeather {
   temperatureC: number;
@@ -52,12 +53,12 @@ export async function fetchCurrentWeather(coords: Coordinates): Promise<CurrentW
   });
 
   const url = `${FORECAST_URL}?${params.toString()}`;
-  console.log('[weather] current request →', url);
+  debugLog('[weather] current request →', url);
 
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      console.log('[weather] current response ← error', response.status, await response.text());
+      debugLog('[weather] current response ← error', response.status, await response.text());
       return null;
     }
 
@@ -72,7 +73,7 @@ export async function fetchCurrentWeather(coords: Coordinates): Promise<CurrentW
         precipitation?: number;
       };
     };
-    console.log('[weather] current response ←', JSON.stringify(data));
+    debugLog('[weather] current response ←', data);
 
     const {
       temperature_2m: temperatureC,
@@ -123,12 +124,12 @@ export async function fetchDailyWeather(coords: Coordinates): Promise<DailyWeath
   });
 
   const url = `${FORECAST_URL}?${params.toString()}`;
-  console.log('[weather] daily request →', url);
+  debugLog('[weather] daily request →', url);
 
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      console.log('[weather] daily response ← error', response.status, await response.text());
+      debugLog('[weather] daily response ← error', response.status, await response.text());
       return [];
     }
 
@@ -141,7 +142,7 @@ export async function fetchDailyWeather(coords: Coordinates): Promise<DailyWeath
         sunset?: string[];
       };
     };
-    console.log('[weather] daily response ←', JSON.stringify(data));
+    debugLog('[weather] daily response ←', data);
 
     const { time, weather_code, temperature_2m_max, temperature_2m_min, sunset } = data.daily ?? {};
     if (!time || !weather_code || !temperature_2m_max || !temperature_2m_min || !sunset) {
@@ -174,12 +175,12 @@ export async function fetchHourlyWeather(coords: Coordinates): Promise<HourlyWea
   });
 
   const url = `${FORECAST_URL}?${params.toString()}`;
-  console.log('[weather] hourly request →', url);
+  debugLog('[weather] hourly request →', url);
 
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      console.log('[weather] hourly response ← error', response.status, await response.text());
+      debugLog('[weather] hourly response ← error', response.status, await response.text());
       return [];
     }
 
@@ -191,7 +192,7 @@ export async function fetchHourlyWeather(coords: Coordinates): Promise<HourlyWea
         wind_speed_10m?: number[];
       };
     };
-    console.log('[weather] hourly response ←', JSON.stringify(data));
+    debugLog('[weather] hourly response ←', data);
 
     const { time, temperature_2m, weather_code, wind_speed_10m } = data.hourly ?? {};
     if (!time || !temperature_2m || !weather_code || !wind_speed_10m) return [];
@@ -222,12 +223,12 @@ export async function geocodeLocation(query: string): Promise<GeocodedPlace[]> {
   });
 
   const url = `${GEOCODING_URL}?${params.toString()}`;
-  console.log('[weather] geocode request →', url);
+  debugLog('[weather] geocode request →', url);
 
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      console.log('[weather] geocode response ← error', response.status, await response.text());
+      debugLog('[weather] geocode response ← error', response.status, await response.text());
       return [];
     }
 
@@ -241,7 +242,7 @@ export async function geocodeLocation(query: string): Promise<GeocodedPlace[]> {
         admin1?: string;
       }[];
     };
-    console.log('[weather] geocode response ←', JSON.stringify(data));
+    debugLog('[weather] geocode response ←', data);
 
     return (data.results ?? []).map((r) => ({
       id: r.id,

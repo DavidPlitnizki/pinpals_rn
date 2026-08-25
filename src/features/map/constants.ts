@@ -110,6 +110,15 @@ export const MAP_TOP_BUTTON_OFFSET = MAP_SEARCH_BAR_HEIGHT + Spacing.s12;
 export const MAP_TOP_BUTTON_RIGHT = Spacing.s16;
 export const MAP_TOP_BUTTON_STACKED_OFFSET =
   MAP_TOP_BUTTON_OFFSET + MAP_TOP_BUTTON_SIZE + Spacing.s8;
+
+// Top of MapSearchBar's pill, below the safe area. MapSearchBar itself uses this for the
+// pill's marginTop, so the two can't drift apart.
+export const MAP_SEARCH_PILL_TOP = Spacing.s16 + Spacing.s2 + Spacing.s8 + Spacing.s2;
+// While a route is active the search bar is swapped out for the route info card, leaving the
+// whole strip it occupied empty. The card and the clear buttons move up into that space
+// rather than hanging 100px below nothing — they line up with where the search pill was.
+export const MAP_ROUTE_TOP_OFFSET = MAP_SEARCH_PILL_TOP;
+export const MAP_ROUTE_TOP_STACKED_OFFSET = MAP_ROUTE_TOP_OFFSET + MAP_TOP_BUTTON_SIZE + Spacing.s8;
 // Horizontal gutter the card keeps clear so a long destination label can't slide under the
 // button column.
 export const MAP_TOP_BUTTON_GUTTER = MAP_TOP_BUTTON_RIGHT + MAP_TOP_BUTTON_SIZE + Spacing.s8;

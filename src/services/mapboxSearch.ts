@@ -1,5 +1,7 @@
 import { Coordinates } from '../models/types';
+import { logMapboxUsage } from './analytics';
 import { reportNetworkError } from './crashReporting';
+import { debugLog } from '../shared/debugLog';
 
 export interface MapboxSearchResult {
   id: string;
@@ -20,6 +22,8 @@ export interface MapboxSearchOptions {
   // whatever transliteration happens to score highest.
   language?: string;
   limit?: number;
+  // Lets a newer keystroke cancel the request already in flight.
+  signal?: AbortSignal;
 }
 
 // Mapbox defaults to English matching; a query written in Hebrew/Cyrillic/Arabic/Greek needs
@@ -36,6 +40,8 @@ export function detectQueryLanguage(query: string): string | undefined {
 }
 
 const SEARCH_BOX_FORWARD_URL = 'https://api.mapbox.com/search/searchbox/v1/forward';
+const SEARCH_BOX_SUGGEST_URL = 'https://api.mapbox.com/search/searchbox/v1/suggest';
+const SEARCH_BOX_RETRIEVE_URL = 'https://api.mapbox.com/search/searchbox/v1/retrieve';
 const GEOCODE_REVERSE_URL = 'https://api.mapbox.com/search/geocode/v6/reverse';
 
 interface MapboxFeature {
@@ -131,7 +137,8 @@ export async function searchMapboxPlaces(
   }
 
   const url = `${SEARCH_BOX_FORWARD_URL}?${params.toString()}`;
-  console.log('[mapboxSearch] request →', url.replace(token, '***'));
+  debugLog('[mapboxSearch] request →', url.replace(token, '***'));
+  logMapboxUsage('search_forward');
 
   let response: Response;
   try {
@@ -142,7 +149,7 @@ export async function searchMapboxPlaces(
   }
   if (!response.ok) {
     const body = await response.text();
-    console.log('[mapboxSearch] response ← error', response.status, body);
+    debugLog('[mapboxSearch] response ← error', response.status, body);
     const httpError = new Error(`Mapbox search failed: ${response.status}`);
     reportNetworkError(
       'mapboxSearch',
@@ -153,7 +160,7 @@ export async function searchMapboxPlaces(
   }
 
   const data = (await response.json()) as { features?: MapboxFeature[] };
-  console.log('[mapboxSearch] response ←', JSON.stringify(data, null, 2));
+  debugLog('[mapboxSearch] response ←', data);
 
   return (data.features ?? []).map((feature) => ({
     id: feature.properties?.mapbox_id ?? feature.id ?? feature.geometry.coordinates.join(','),
@@ -171,6 +178,149 @@ export async function searchMapboxPlaces(
   }));
 }
 
+// ── Autocomplete (suggest → retrieve) ────────────────────────────────────────
+//
+// Typing is served by /suggest, not /forward. Two reasons, and both matter:
+//
+//   * /forward expects a finished query and is billed per request, so firing it on every
+//     keystroke pause is both worse at matching prefixes and the most expensive option.
+//   * /suggest is built for it — prefix matching, and billed per session rather than per
+//     request. One session covers every keystroke up to the moment the user picks something.
+//
+// The trade-off is that a suggestion carries no coordinates: it's a mapbox_id and some text.
+// /retrieve turns the one the user chose into a real place. Pass the same session token to
+// both, then start a new session — that pairing is what makes the whole thing one billable
+// search instead of a dozen.
+
+export interface MapboxSuggestion {
+  // Mapbox's opaque id — only meaningful when handed back to retrieveMapboxPlace.
+  mapboxId: string;
+  name: string;
+  // Short context line ("San Francisco, California"), or the full street address when Mapbox
+  // has one. This is all a suggestion knows about where the place is.
+  placeFormatted?: string;
+  category?: string;
+  maki?: string;
+  distanceMeters?: number;
+}
+
+interface MapboxSuggestionResponse {
+  suggestions?: {
+    mapbox_id?: string;
+    name?: string;
+    place_formatted?: string;
+    full_address?: string;
+    poi_category?: string[];
+    maki?: string;
+    distance?: number;
+  }[];
+}
+
+export async function suggestMapboxPlaces(
+  query: string,
+  proximity: Coordinates | null,
+  sessionToken: string,
+  options?: MapboxSearchOptions,
+): Promise<MapboxSuggestion[]> {
+  const token = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
+  const trimmed = query.trim();
+  if (!token || !trimmed) return [];
+
+  const params = new URLSearchParams({
+    q: trimmed,
+    types: 'poi,address,place',
+    limit: String(Math.min(options?.limit ?? 10, 10)),
+    session_token: sessionToken,
+    access_token: token,
+  });
+  const language = options?.language ?? detectQueryLanguage(trimmed);
+  if (language) params.set('language', language);
+  if (proximity) params.set('proximity', `${proximity.longitude},${proximity.latitude}`);
+  if (options?.bbox) params.set('bbox', options.bbox.join(','));
+
+  let response: Response;
+  try {
+    response = await fetch(
+      `${SEARCH_BOX_SUGGEST_URL}?${params.toString()}`,
+      options?.signal ? { signal: options.signal } : undefined,
+    );
+  } catch (err) {
+    // An aborted request is the expected outcome of typing one more character, not a fault.
+    if ((err as Error)?.name === 'AbortError') return [];
+    reportNetworkError('mapboxSearch', err, 'suggest request failed');
+    throw err;
+  }
+  if (!response.ok) {
+    const body = await response.text();
+    const httpError = new Error(`Mapbox suggest failed: ${response.status}`);
+    reportNetworkError('mapboxSearch', httpError, `suggest returned ${response.status}: ${body}`);
+    throw httpError;
+  }
+
+  const data = (await response.json()) as MapboxSuggestionResponse;
+  return (data.suggestions ?? [])
+    .filter((suggestion) => !!suggestion.mapbox_id)
+    .map((suggestion) => ({
+      mapboxId: suggestion.mapbox_id!,
+      name: suggestion.name ?? trimmed,
+      placeFormatted: suggestion.full_address ?? suggestion.place_formatted,
+      category: suggestion.poi_category?.[0]
+        ? suggestion.poi_category[0]
+            .split('_')
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ')
+        : undefined,
+      maki: suggestion.maki,
+      distanceMeters: suggestion.distance,
+    }));
+}
+
+// Turns a chosen suggestion into a full result with coordinates. Must use the same session
+// token the suggestions came from, or the search is billed as a fresh one.
+export async function retrieveMapboxPlace(
+  mapboxId: string,
+  sessionToken: string,
+): Promise<MapboxSearchResult | null> {
+  const token = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
+  if (!token) return null;
+
+  const params = new URLSearchParams({ session_token: sessionToken, access_token: token });
+  const url = `${SEARCH_BOX_RETRIEVE_URL}/${encodeURIComponent(mapboxId)}?${params.toString()}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (err) {
+    reportNetworkError('mapboxSearch', err, 'retrieve request failed');
+    throw err;
+  }
+  if (!response.ok) {
+    const body = await response.text();
+    const httpError = new Error(`Mapbox retrieve failed: ${response.status}`);
+    reportNetworkError('mapboxSearch', httpError, `retrieve returned ${response.status}: ${body}`);
+    throw httpError;
+  }
+
+  const data = (await response.json()) as { features?: MapboxFeature[] };
+  const feature = data.features?.[0];
+  if (!feature) return null;
+
+  return {
+    id: feature.properties?.mapbox_id ?? mapboxId,
+    name: feature.properties?.name ?? feature.properties?.full_address ?? '',
+    fullAddress: feature.properties?.full_address ?? feature.properties?.place_formatted,
+    imageUrl: extractImageUrl(feature),
+    category: formatCategory(feature),
+    maki: feature.properties?.maki,
+    website: getOwnWebsite(feature),
+    phone: feature.properties?.metadata?.phone,
+    coordinates: {
+      longitude: feature.geometry.coordinates[0],
+      latitude: feature.geometry.coordinates[1],
+    },
+  };
+}
+
 // Street address for a raw coordinate — used when a place is saved from a point that carried
 // no address of its own (a long-press on the map, a route waypoint), so its card still shows
 // where it is rather than just a pair of numbers.
@@ -185,6 +335,7 @@ export async function reverseGeocodeAddress(coords: Coordinates): Promise<string
     access_token: token,
   });
 
+  logMapboxUsage('geocode_reverse');
   try {
     const response = await fetch(`${GEOCODE_REVERSE_URL}?${params.toString()}`);
     if (!response.ok) return null;
@@ -217,16 +368,13 @@ export async function reverseGeocodePlace(coords: Coordinates): Promise<string |
   });
 
   const url = `${GEOCODE_REVERSE_URL}?${params.toString()}`;
-  console.log('[mapboxSearch] reverse request →', url.replace(token, '***'));
+  debugLog('[mapboxSearch] reverse request →', url.replace(token, '***'));
+  logMapboxUsage('geocode_reverse');
 
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      console.log(
-        '[mapboxSearch] reverse response ← error',
-        response.status,
-        await response.text(),
-      );
+      debugLog('[mapboxSearch] reverse response ← error', response.status, await response.text());
       return null;
     }
 
@@ -235,7 +383,7 @@ export async function reverseGeocodePlace(coords: Coordinates): Promise<string |
         properties?: { name?: string; context?: { country?: { name?: string } } };
       }[];
     };
-    console.log('[mapboxSearch] reverse response ←', JSON.stringify(data));
+    debugLog('[mapboxSearch] reverse response ←', data);
 
     const feature = data.features?.[0];
     const city = feature?.properties?.name;

@@ -56,3 +56,24 @@ export function deletePhotoFile(uri: string | undefined | null): void {
 export function deletePhotoFiles(uris: (string | undefined | null)[]): void {
   uris.forEach(deletePhotoFile);
 }
+
+// The avatar a provider hands over is a remote URL (only Google supplies one — Apple never
+// does). Storing that URL as the profile avatar meant fetching it from Google's CDN on every
+// render, a blank avatar whenever the device was offline, and a permanently broken image once
+// the URL rotated — which it does whenever the person changes their Google account photo.
+// Downloading it once makes the stored avatar an ordinary local file like a picked photo.
+//
+// Returns the remote URL unchanged if the download fails: that is the old behaviour, still
+// better than no avatar, and Avatar falls back to initials if it can't be shown either.
+export async function downloadAvatarToAppStorage(remoteUrl: string): Promise<string> {
+  if (!remoteUrl.startsWith('http')) return remoteUrl;
+  try {
+    const dir = new Directory(Paths.document, PHOTOS_ROOT, 'avatars');
+    if (!dir.exists) dir.create({ intermediates: true });
+    const file = await File.downloadFileAsync(remoteUrl, dir);
+    return file.uri;
+  } catch (err) {
+    reportError('photoStorage', err, 'avatar download failed');
+    return remoteUrl;
+  }
+}

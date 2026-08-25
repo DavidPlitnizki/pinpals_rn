@@ -5,20 +5,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '../../../design-system/tokens';
 import {
-  MAP_TOP_BUTTON_OFFSET,
+  MAP_ROUTE_TOP_OFFSET,
+  MAP_ROUTE_TOP_STACKED_OFFSET,
   MAP_TOP_BUTTON_RIGHT,
   MAP_TOP_BUTTON_SIZE,
-  MAP_TOP_BUTTON_STACKED_OFFSET,
 } from '../constants';
 import { RoundMapButton } from './RoundMapButton';
 
 interface Props {
-  // Short press: drop just the last stop. Long press: clear the whole route.
+  // Short press clears the whole route — the obvious reading of a crossed-out road, and the
+  // only thing this button does to the map. Long press is the fine-grained version: drop just
+  // the most recently added stop, mirroring "extend the route" in reverse.
   onPress: () => void;
   onLongPress: () => void;
   // ClearMapButton (search-results X) only renders when there are search results — when it's
   // also on screen, this button sits directly below it in the same right-edge column;
-  // otherwise it takes ClearMapButton's own top slot, level with the route info card.
+  // otherwise it takes ClearMapButton's own top slot, level with the route info card. The two
+  // never touch each other's state: the X clears filters, this clears the route.
   stacked: boolean;
 }
 
@@ -29,7 +32,7 @@ export function ClearRouteButton({ onPress, onLongPress, stacked }: Props) {
     <SafeAreaView
       style={[
         styles.wrap,
-        { paddingTop: stacked ? MAP_TOP_BUTTON_STACKED_OFFSET : MAP_TOP_BUTTON_OFFSET },
+        { paddingTop: stacked ? MAP_ROUTE_TOP_STACKED_OFFSET : MAP_ROUTE_TOP_OFFSET },
       ]}
       pointerEvents="box-none"
     >

@@ -248,6 +248,10 @@ export function useMapScreen() {
     [],
   );
 
+  // Closes whichever map card is open — the marker components watch dismissSignal and clear
+  // their own selection when it changes.
+  const dismissCallouts = useCallback(() => setDismissSignal((n) => n + 1), []);
+
   const markAnnotationTapped = useCallback(() => {
     annotationTapRef.current = true;
     setTimeout(() => {
@@ -483,6 +487,7 @@ export function useMapScreen() {
     handleLongPress,
     handleMapPress,
     markAnnotationTapped,
+    dismissCallouts,
     handleCloseNativePoiMarker,
     handleConfirmNativePoiMarker,
     handleAddAtCurrentLocation,
