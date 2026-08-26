@@ -85,13 +85,18 @@ export function useSearchSheet(
         logMapboxUsage('search_session');
       }
       try {
-        const bbox = await getVisibleBbox();
-        if (controller.signal.aborted) return;
+        // Proximity only, deliberately no bbox: Mapbox treats bbox as a hard filter, so
+        // scoping typed search to the visible map meant you could only ever find what was
+        // already on screen. Searching for somewhere in another country — the usual reason
+        // to type its name rather than tap it — returned whatever happened to match inside
+        // the current view instead. Proximity biases towards where you're looking without
+        // excluding anywhere else. The category chips still pass bbox: "restaurants" is a
+        // question about the visible area, and there filtering is the point.
         const results = await suggestMapboxPlaces(
           debouncedQuery.trim(),
           getMapCenter(),
           sessionTokenRef.current,
-          { bbox, signal: controller.signal },
+          { signal: controller.signal },
         );
         if (controller.signal.aborted) return;
         setSuggestions(results);
@@ -107,7 +112,7 @@ export function useSearchSheet(
     })();
 
     return () => controller.abort();
-  }, [debouncedQuery, queryTooShort, getMapCenter, getVisibleBbox]);
+  }, [debouncedQuery, queryTooShort, getMapCenter]);
 
   // A suggestion is only an id and some text — this is where it becomes a real place.
   const selectSuggestion = useCallback(

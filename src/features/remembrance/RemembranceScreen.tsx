@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
 import { Place } from '../../models/types';
-import { DayMemoryWidget } from './components/DayMemoryWidget';
+import { MostVisitedWidget } from './components/MostVisitedWidget';
 import { PhotoViewerModal } from '../../design-system/components/PhotoViewerModal';
 import { PlaceFlagToggle } from '../../design-system/components/PlaceFlags';
 import { FiltersSheet } from './components/FiltersSheet';
@@ -81,7 +81,7 @@ export default function RemembranceScreen() {
     displayedPlaces,
     viewMode,
     setViewMode,
-    dayMemory,
+    mostVisited,
     placeStats,
     filters,
     filtersOpen,
@@ -179,12 +179,12 @@ export default function RemembranceScreen() {
         )}
 
         {/* Stats Widget */}
-        {!isMapMode && <StatsWidget stats={placeStats} onPlacePress={handlePlacePress} />}
+        {!isMapMode && <StatsWidget stats={placeStats} />}
 
-        {/* Day Memory Widget */}
-        {dayMemory && !isMapMode && (
-          <DayMemoryWidget
-            memory={dayMemory}
+        {/* Most visited place */}
+        {mostVisited && !isMapMode && (
+          <MostVisitedWidget
+            memory={mostVisited}
             onPress={handlePlacePress}
             onPhotoPress={handleOpenViewer}
           />

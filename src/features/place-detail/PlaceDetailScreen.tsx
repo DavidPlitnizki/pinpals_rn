@@ -230,18 +230,6 @@ export default function PlaceDetailScreen() {
             <PlaceInfoRows info={placeInfo} />
           </PinCard>
 
-          {/* Tags */}
-          <PinCard style={styles.section}>
-            <Text style={styles.sectionTitle}>Tags</Text>
-            <TagPicker tags={place.tags || []} options={PRESET_TAGS} onToggle={handleToggleTag} />
-          </PinCard>
-
-          {/* Pin color */}
-          <PinCard style={styles.section}>
-            <Text style={styles.sectionTitle}>Pin Color</Text>
-            <PinColorPicker selected={place.pinColor} onSelect={handleSetPinColor} />
-          </PinCard>
-
           {/* Description */}
           <PinCard style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -307,6 +295,18 @@ export default function PlaceDetailScreen() {
               </View>
             )}
           </View>
+
+          {/* Pin colour and tags last: they're settings for the place rather than things to
+              read about it, so they sit below the memories instead of pushing them down. */}
+          <PinCard style={styles.section}>
+            <Text style={styles.sectionTitle}>Pin Color</Text>
+            <PinColorPicker selected={place.pinColor} onSelect={handleSetPinColor} />
+          </PinCard>
+
+          <PinCard style={styles.section}>
+            <Text style={styles.sectionTitle}>Tags</Text>
+            <TagPicker tags={place.tags || []} options={PRESET_TAGS} onToggle={handleToggleTag} />
+          </PinCard>
 
           {/* Delete */}
           <View style={styles.dangerZone}>

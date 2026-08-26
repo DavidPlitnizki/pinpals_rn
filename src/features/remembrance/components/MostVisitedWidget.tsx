@@ -5,17 +5,17 @@ import { Colors, Radii, Spacing, Typography } from '../../../design-system/token
 import { MOOD_CONFIG } from '../../../models/types';
 import { categoryColor, CATEGORY_LABELS } from '../../../shared/constants';
 import { usePlacesStore } from '../../../store/usePlacesStore';
-import { DayMemory } from '../hooks/useRemembranceScreen';
+import { MostVisitedMemory } from '../hooks/useRemembranceScreen';
 
 interface Props {
-  memory: DayMemory;
+  memory: MostVisitedMemory;
   onPress: (id: string) => void;
   // Opens the fullscreen, swipeable viewer. The card itself still navigates to the place —
   // only the thumbnail opens the photos.
   onPhotoPress: (photoUris: string[], index: number) => void;
 }
 
-export function DayMemoryWidget({ memory, onPress, onPhotoPress }: Props) {
+export function MostVisitedWidget({ memory, onPress, onPhotoPress }: Props) {
   const { place, note, label } = memory;
   const getLatestMoodForPlace = usePlacesStore((s) => s.getLatestMoodForPlace);
   const mood = getLatestMoodForPlace(place.id);
@@ -65,7 +65,7 @@ export function DayMemoryWidget({ memory, onPress, onPhotoPress }: Props) {
 
       {/* Content */}
       <View style={styles.content}>
-        <Text style={styles.eyebrow}>Memory of the Day</Text>
+        <Text style={styles.eyebrow}>Most Visited</Text>
         <Text style={styles.placeName} numberOfLines={1}>
           {place.name}
         </Text>

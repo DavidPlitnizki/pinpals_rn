@@ -3,7 +3,12 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Place, PlaceNote, MemoryMood } from '../models/types';
 import { setPlacesCount } from '../services/analytics';
-import { deletePhotoFile, deletePhotoFiles } from '../shared/photoStorage';
+import {
+  deletePhotoFile,
+  deletePhotoFiles,
+  reanchorPhotoUri,
+  reanchorPhotoUris,
+} from '../shared/photoStorage';
 
 function notePhotoUris(note: PlaceNote): string[] {
   return [note.photoUri, ...(note.photoUris ?? [])].filter((uri): uri is string => !!uri);
@@ -256,6 +261,21 @@ export const usePlacesStore = create<PlacesState>()(
           state = { ...state, places };
         }
         return state;
+      },
+      // Runs after migrate, on every launch. Photo paths carry the app's container UUID,
+      // which iOS regenerates on reinstall — see reanchorPhotoUri. Doing it here means the
+      // repair happens once, before anything renders, instead of at every photo in the UI.
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.places = state.places.map((place) => ({
+          ...place,
+          mainPhotoUri: reanchorPhotoUri(place.mainPhotoUri),
+        }));
+        state.notes = state.notes.map((note) => ({
+          ...note,
+          photoUri: reanchorPhotoUri(note.photoUri),
+          photoUris: reanchorPhotoUris(note.photoUris),
+        }));
       },
     },
   ),
