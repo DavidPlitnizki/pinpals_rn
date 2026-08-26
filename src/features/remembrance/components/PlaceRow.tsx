@@ -23,7 +23,10 @@ interface Props {
 }
 
 export function PlaceRow({ place, onPress, onDelete }: Props) {
-  const { addTagToPlace, removeTagFromPlace } = usePlacesStore();
+  // Field selectors, not the whole store: destructuring usePlacesStore() subscribes the row
+  // to every change in it, so adding a note anywhere re-rendered every row in the list.
+  const addTagToPlace = usePlacesStore((s) => s.addTagToPlace);
+  const removeTagFromPlace = usePlacesStore((s) => s.removeTagFromPlace);
   const getLatestMoodForPlace = usePlacesStore((s) => s.getLatestMoodForPlace);
 
   // The same cover the grid cards use, not just the user's own photos: the full cascade also

@@ -101,13 +101,19 @@ export function PlacesMiniMap({ places }: Props) {
     return map;
   }, [places, notes]);
 
-  const centerCoordinate: [number, number] =
-    places.length > 0
-      ? [
-          places.reduce((sum, p) => sum + p.coordinates.longitude, 0) / places.length,
-          places.reduce((sum, p) => sum + p.coordinates.latitude, 0) / places.length,
-        ]
-      : DEFAULT_CENTER;
+  // Memoized for identity, not for the arithmetic: a fresh array on every render hands Camera
+  // a "new" centre each time the selection changes, which re-seats the map and undoes any
+  // panning the user did before tapping a pin.
+  const centerCoordinate = useMemo<[number, number]>(
+    () =>
+      places.length > 0
+        ? [
+            places.reduce((sum, p) => sum + p.coordinates.longitude, 0) / places.length,
+            places.reduce((sum, p) => sum + p.coordinates.latitude, 0) / places.length,
+          ]
+        : DEFAULT_CENTER,
+    [places],
+  );
 
   const handleLayout = useCallback((e: LayoutChangeEvent) => {
     setContainerSize({

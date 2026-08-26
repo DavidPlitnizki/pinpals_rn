@@ -95,7 +95,7 @@ export default function MapScreen() {
     toggleMyPlacesHidden,
   } = useMapScreen();
 
-  const search = useSearchSheet(places, getMapCenter, getVisibleBbox);
+  const search = useSearchSheet(places, getMapCenter);
 
   // Bumped on every confirmed fly-to so the landing animation replays even when the user
   // flies to the same place twice in a row.

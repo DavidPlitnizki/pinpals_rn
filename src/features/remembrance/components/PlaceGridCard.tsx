@@ -18,8 +18,11 @@ interface Props {
 }
 
 export function PlaceGridCard({ place, onPress }: Props) {
+  // Field selectors, not the whole store: destructuring usePlacesStore() subscribes the card
+  // to every change in it, so adding a note anywhere re-rendered every tile in the grid.
   const getLatestMoodForPlace = usePlacesStore((s) => s.getLatestMoodForPlace);
-  const { addTagToPlace, removeTagFromPlace } = usePlacesStore();
+  const addTagToPlace = usePlacesStore((s) => s.addTagToPlace);
+  const removeTagFromPlace = usePlacesStore((s) => s.removeTagFromPlace);
   const mood = getLatestMoodForPlace(place.id);
   const accentColor = mood
     ? MOOD_CONFIG[mood].color
