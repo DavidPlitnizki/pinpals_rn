@@ -12,14 +12,20 @@ interface Props {
   onCenterGPS: () => void;
   onAdd: () => void;
   onFlyTo: () => void;
+  onOpenStyles: () => void;
 }
 
 const FAB_SIZE = 56;
 
-export function MapControls({ gpsCoords, onCenterGPS, onAdd, onFlyTo }: Props) {
+export function MapControls({ gpsCoords, onCenterGPS, onAdd, onFlyTo, onOpenStyles }: Props) {
   return (
     <SafeAreaView style={styles.wrap} pointerEvents="box-none">
       <View style={styles.cluster}>
+        {/* Topmost of the cluster: switching the base map is the least frequent of these
+            actions, so it sits furthest from the thumb. */}
+        <RoundMapButton onPress={onOpenStyles} color={Colors.brand.primary} size={FAB_SIZE}>
+          <Ionicons name="layers-outline" size={24} color={Colors.white} />
+        </RoundMapButton>
         <RoundMapButton onPress={onFlyTo} color={Colors.brand.primary} size={FAB_SIZE}>
           <Ionicons name="airplane" size={22} color={Colors.white} style={styles.flyToIcon} />
         </RoundMapButton>
