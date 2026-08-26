@@ -20,7 +20,6 @@ import { useSearchFiltersStore } from '../../../../store/useSearchFiltersStore';
 import { Place } from '../../../../models/types';
 
 const getMapCenter = () => ({ latitude: 0, longitude: 0 });
-const getVisibleBbox = async () => undefined;
 
 function makePlace(overrides: Partial<Place> = {}): Place {
   return {
@@ -58,7 +57,7 @@ describe('filteredPlaces', () => {
       makePlace({ id: 'coffee-1', name: 'Blue Bottle Coffee' }),
       makePlace({ id: 'food-1', name: 'Pizza Place' }),
     ];
-    const { result } = renderHook(() => useSearchSheet(places, getMapCenter, getVisibleBbox));
+    const { result } = renderHook(() => useSearchSheet(places, getMapCenter));
 
     await act(async () => result.current.setQuery('coffee'));
     await act(async () => new Promise((resolve) => setTimeout(resolve, 350))); // let debounce settle
@@ -68,7 +67,7 @@ describe('filteredPlaces', () => {
 
   it('returns every place when the query is empty', () => {
     const places = [makePlace({ id: 'coffee-1' }), makePlace({ id: 'food-1' })];
-    const { result } = renderHook(() => useSearchSheet(places, getMapCenter, getVisibleBbox));
+    const { result } = renderHook(() => useSearchSheet(places, getMapCenter));
 
     expect(result.current.filteredPlaces.map((p) => p.id)).toEqual(['coffee-1', 'food-1']);
   });
@@ -76,7 +75,7 @@ describe('filteredPlaces', () => {
 
 describe('resetFilters', () => {
   it('clears the query', async () => {
-    const { result } = renderHook(() => useSearchSheet([], getMapCenter, getVisibleBbox));
+    const { result } = renderHook(() => useSearchSheet([], getMapCenter));
 
     await act(async () => result.current.setQuery('sushi'));
     await act(async () => result.current.resetFilters());
@@ -88,7 +87,7 @@ describe('resetFilters', () => {
 describe('suggestions', () => {
   it('asks Mapbox as the query is typed, with no explicit search action', async () => {
     mockSuggest.mockResolvedValue([{ mapboxId: 'abc', name: 'Blue Bottle' }]);
-    const { result } = renderHook(() => useSearchSheet([], getMapCenter, getVisibleBbox));
+    const { result } = renderHook(() => useSearchSheet([], getMapCenter));
 
     await act(async () => result.current.setQuery('blue'));
     await settleDebounce();
@@ -98,7 +97,7 @@ describe('suggestions', () => {
   });
 
   it('does not call Mapbox below the minimum query length', async () => {
-    const { result } = renderHook(() => useSearchSheet([], getMapCenter, getVisibleBbox));
+    const { result } = renderHook(() => useSearchSheet([], getMapCenter));
 
     await act(async () => result.current.setQuery('b'));
     await settleDebounce();
@@ -109,7 +108,7 @@ describe('suggestions', () => {
 
   it('hides already-loaded suggestions once the query drops below the minimum', async () => {
     mockSuggest.mockResolvedValue([{ mapboxId: 'abc', name: 'Blue Bottle' }]);
-    const { result } = renderHook(() => useSearchSheet([], getMapCenter, getVisibleBbox));
+    const { result } = renderHook(() => useSearchSheet([], getMapCenter));
 
     await act(async () => result.current.setQuery('blue'));
     await settleDebounce();
@@ -122,7 +121,7 @@ describe('suggestions', () => {
 
   it('reuses one session token across keystrokes, then starts a new one after retrieve', async () => {
     mockSuggest.mockResolvedValue([{ mapboxId: 'abc', name: 'Blue Bottle' }]);
-    const { result } = renderHook(() => useSearchSheet([], getMapCenter, getVisibleBbox));
+    const { result } = renderHook(() => useSearchSheet([], getMapCenter));
 
     await act(async () => result.current.setQuery('blue'));
     await settleDebounce();

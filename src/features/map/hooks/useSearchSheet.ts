@@ -17,13 +17,7 @@ export const MIN_EXTERNAL_QUERY_LENGTH = 2;
 // Stable empty reference so a too-short query doesn't hand the sheet a new array each render.
 const EMPTY_SUGGESTIONS: MapboxSuggestion[] = [];
 
-type GetVisibleBbox = () => Promise<[number, number, number, number] | undefined>;
-
-export function useSearchSheet(
-  places: Place[],
-  getMapCenter: () => Coordinates,
-  getVisibleBbox: GetVisibleBbox,
-) {
+export function useSearchSheet(places: Place[], getMapCenter: () => Coordinates) {
   const [visible, setVisible] = useState(false);
 
   const query = useSearchFiltersStore((s) => s.query);
