@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Pinpals — Places you've been, remembered</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta
+  name="description"
+  content="Pinpals is a private map of the places that meant something to you — kept with the photos, the mood, and the people you were with."
+/>
+<!-- Hand-written, unlike /legal which is generated from src/shared/legalContent.ts.
+     This page is the app's home page and support page: it is what Google's OAuth consent
+     screen links to as "Application home page", and what App Store Connect uses as the
+     Support URL, so it has to carry a way to reach a human. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=Inter:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  :root {
+    --bg: #faf8f4;
+    --surface: #ffffff;
+    --surface-alt: #f0f5f2;
+    --border: #e4ede8;
+    --text: #1c2b22;
+    --text-muted: #5a7a66;
+    --text-faint: #7a9887;
+    --brand: #4a7c59;
+    --brand-dark: #2c5c3f;
+    --accent: #e8834a;
+    --focus-ring: #4a7c59;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #16241c;
+      --surface: #1e3328;
+      --surface-alt: #223a2c;
+      --border: #2e4436;
+      --text: #eef4f0;
+      --text-muted: #a0b8aa;
+      --text-faint: #7a9887;
+      --brand: #82b791;
+      --brand-dark: #a3d0af;
+      --accent: #f2a06b;
+      --focus-ring: #82b791;
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --bg: #16241c;
+    --surface: #1e3328;
+    --surface-alt: #223a2c;
+    --border: #2e4436;
+    --text: #eef4f0;
+    --text-muted: #a0b8aa;
+    --text-faint: #7a9887;
+    --brand: #82b791;
+    --brand-dark: #a3d0af;
+    --accent: #f2a06b;
+    --focus-ring: #82b791;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a {
+    color: var(--brand);
+  }
+
+  a:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 56px 24px 96px;
+  }
+
+  header.brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 48px;
+  }
+
+  .pin-mark {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 12px;
+    background: var(--brand);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pin-mark svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .wordmark {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: 0.2px;
+    color: var(--text);
+  }
+
+  .tagline {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  h1 {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: clamp(28px, 6vw, 38px);
+    line-height: 1.18;
+    text-wrap: balance;
+    margin: 0 0 14px;
+    color: var(--text);
+  }
+
+  .lede {
+    font-size: 18px;
+    color: var(--text-muted);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+
+  h2 {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    margin: 44px 0 14px;
+    color: var(--text);
+  }
+
+  p {
+    margin: 0 0 16px;
+    max-width: 62ch;
+  }
+
+  ul.features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+
+  ul.features li {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    max-width: 62ch;
+  }
+
+  ul.features b {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  ul.features span {
+    color: var(--text-muted);
+    font-size: 15px;
+  }
+
+  .privacy-note {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-top: 16px;
+  }
+
+  .privacy-note p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text-muted);
+  }
+
+  .contact a {
+    font-weight: 600;
+  }
+
+  .meta {
+    font-size: 14px;
+    color: var(--text-faint);
+  }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  footer .foot-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-faint);
+  }
+
+  footer .foot-brand svg {
+    width: 14px;
+    height: 14px;
+    color: var(--brand);
+  }
+
+  footer .foot-links {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+  }
+
+  footer .foot-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+
+  footer .foot-links a:hover {
+    color: var(--brand);
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="brand">
+    <div class="pin-mark">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M12 2C7.86 2 4.5 5.36 4.5 9.5c0 5.5 6.5 12 7.5 12s7.5-6.5 7.5-12C19.5 5.36 16.14 2 12 2Z"
+          fill="#ffffff"
+        />
+        <circle cx="12" cy="9.5" r="2.5" fill="#4a7c59" />
+      </svg>
+    </div>
+    <div>
+      <div class="wordmark">Pinpals</div>
+      <div class="tagline">Places you've been. Moments worth keeping.</div>
+    </div>
+  </header>
+
+  <h1>A private map of the places that meant something to you</h1>
+  <p class="lede">
+    Drop a pin where you've been, and keep it with what actually happened there — the photos,
+    a note, how it felt, who you were with. Months later, the map remembers for you.
+  </p>
+
+  <h2>What it does</h2>
+  <ul class="features">
+    <li>
+      <b>Save a place in seconds</b>
+      <span>
+        Search, or tap anywhere on the map. Add a photo, tags, and a pin colour; mark it a
+        favourite, or somewhere you still want to visit.
+      </span>
+    </li>
+    <li>
+      <b>Keep the memory, not just the dot</b>
+      <span>
+        Attach notes with photos, a mood, and the people who were there. Each memory keeps its
+        own date, so a place you return to builds up a history.
+      </span>
+    </li>
+    <li>
+      <b>Find your way there</b>
+      <span>
+        Walking, driving, or cycling directions with step-by-step instructions, and one tap to
+        share the route with whoever's meeting you.
+      </span>
+    </li>
+    <li>
+      <b>Look back</b>
+      <span>
+        A timeline of everything you've saved, filtered by period, tag, or favourite — with a
+        memory of the day and stats on where you keep returning.
+      </span>
+    </li>
+  </ul>
+
+  <h2>Your data</h2>
+  <div class="privacy-note">
+    <p>
+      Your places, notes, and photos are stored on your device. There is no feed, no followers,
+      and no one else browsing where you've been. Sign in with Apple or Google, or skip it
+      entirely and use the app as a guest. You can delete your account and everything in it at
+      any time, from inside the app.
+    </p>
+  </div>
+
+  <h2>Support</h2>
+  <p class="contact">
+    Questions, bug reports, or anything about your data:
+    <a href="mailto:dplitnizki@gmail.com">dplitnizki@gmail.com</a>
+  </p>
+  <p class="meta">Pinpals is an independent app for iPhone, built by one developer.</p>
+
+  <footer>
+    <div class="foot-brand">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M12 2C7.86 2 4.5 5.36 4.5 9.5c0 5.5 6.5 12 7.5 12s7.5-6.5 7.5-12C19.5 5.36 16.14 2 12 2Z"
+          fill="currentColor"
+        />
+      </svg>
+      <span>Pinpals</span>
+    </div>
+    <div class="foot-links">
+      <a href="/legal#privacy">Privacy Policy</a>
+      <a href="/legal#terms">Terms of Service</a>
+      <a href="mailto:dplitnizki@gmail.com">Contact</a>
+    </div>
+  </footer>
+</div>
+
+</body>
+</html>
