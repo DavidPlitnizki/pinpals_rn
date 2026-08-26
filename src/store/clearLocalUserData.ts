@@ -1,6 +1,8 @@
+import { DEFAULT_MAP_STYLE } from '../features/map/mapStyles';
 import { DEFAULT_PROFILE_NAME, useProfileStore } from './useProfileStore';
 import { usePlacesStore } from './usePlacesStore';
 import { useRouteStore } from './useRouteStore';
+import { useMapStyleStore } from './useMapStyleStore';
 import { useSearchFiltersStore } from './useSearchFiltersStore';
 
 // Wipes everything the signed-in person put into the app, in one place so a new persisted
@@ -17,4 +19,5 @@ export function clearLocalUserData(): void {
   useProfileStore.setState({ profile: { id: '1', name: DEFAULT_PROFILE_NAME } });
   useRouteStore.getState().clearRoute();
   useSearchFiltersStore.getState().resetFilters();
+  useMapStyleStore.getState().setStyleId(DEFAULT_MAP_STYLE);
 }

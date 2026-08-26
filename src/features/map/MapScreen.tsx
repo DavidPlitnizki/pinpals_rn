@@ -7,6 +7,8 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { usePlacesStore } from '../../store/usePlacesStore';
 import { getPlacePhotoPreview } from './utils/placePhoto';
+import { mapStyleUrl } from './mapStyles';
+import { useMapStyleStore } from '../../store/useMapStyleStore';
 import { openPlaceSearch } from '../../services/webSearch';
 import { shareSpot } from '../../shared/sharePlace';
 import { ClearMapButton } from './components/ClearMapButton';
@@ -14,6 +16,7 @@ import { ClearRouteButton } from './components/ClearRouteButton';
 import { FlyToLandingMarker } from './components/FlyToLandingMarker';
 import { FlyToSheet } from './components/FlyToSheet';
 import { MapControls } from './components/MapControls';
+import { MapStyleSheet } from './components/MapStyleSheet';
 import { MapCardSheet } from './components/MapCardSheet';
 import { MapMarkers, MarkerCallout } from './components/MapMarkers';
 import { MapSearchBar } from './components/MapSearchBar';
@@ -125,10 +128,18 @@ export default function MapScreen() {
   const lastFocusRef = useRef<string | null>(null);
   const router = useRouter();
 
+  const mapStyleId = useMapStyleStore((state) => state.styleId);
+  const setMapStyleId = useMapStyleStore((state) => state.setStyleId);
+  const [styleSheetVisible, setStyleSheetVisible] = useState(false);
+  const openStyleSheet = useCallback(() => setStyleSheetVisible(true), []);
+  const closeStyleSheet = useCallback(() => setStyleSheetVisible(false), []);
+
   // Every Modal presented over the MapView can drop PointAnnotation bitmaps (see
   // usePointAnnotationRefresh), so markers must re-register whenever any of them opens
-  // or closes — not just the route picker.
-  const annotationRefreshSignal = `${route.pickerVisible}|${showQuickAddSheet}|${search.visible}|${flyTo.visible}`;
+  // or closes — not just the route picker. Switching the base map belongs here for a
+  // different reason with the same symptom: a new style tears down and rebuilds the map's
+  // layers, and the annotations come back blank unless they re-register too.
+  const annotationRefreshSignal = `${route.pickerVisible}|${showQuickAddSheet}|${search.visible}|${flyTo.visible}|${styleSheetVisible}|${mapStyleId}`;
 
   // Keep the screen on while actively navigating a route — the phone auto-locking mid-walk
   // or mid-drive forces the user to unlock it again just to glance at directions.
@@ -482,6 +493,7 @@ export default function MapScreen() {
       <MapView
         ref={mapViewRef}
         style={styles.map}
+        styleURL={mapStyleUrl(mapStyleId)}
         onPress={onPress}
         onLongPress={onLongPress}
         onCameraChanged={onCameraChanged}
@@ -615,6 +627,14 @@ export default function MapScreen() {
         onCenterGPS={handleCenterGPS}
         onAdd={handleAddAtCurrentLocation}
         onFlyTo={flyTo.open}
+        onOpenStyles={openStyleSheet}
+      />
+
+      <MapStyleSheet
+        visible={styleSheetVisible}
+        styleId={mapStyleId}
+        onSelect={setMapStyleId}
+        onClose={closeStyleSheet}
       />
 
       {/* Last of the map chrome on purpose: rendering after MapSearchBar and MapControls is

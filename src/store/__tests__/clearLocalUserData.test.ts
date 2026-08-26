@@ -4,6 +4,7 @@ import { clearLocalUserData } from '../clearLocalUserData';
 import { usePlacesStore } from '../usePlacesStore';
 import { DEFAULT_PROFILE_NAME, useProfileStore } from '../useProfileStore';
 import { useRouteStore } from '../useRouteStore';
+import { useMapStyleStore } from '../useMapStyleStore';
 import { useSearchFiltersStore } from '../useSearchFiltersStore';
 
 const place = {
@@ -28,6 +29,7 @@ describe('clearLocalUserData', () => {
     usePlacesStore.setState({ places: [place], notes: [] });
     useProfileStore.setState({ profile: { id: '1', name: 'Ada', avatarUri: 'file:///a.jpg' } });
     useSearchFiltersStore.setState({ query: 'sushi' });
+    useMapStyleStore.setState({ styleId: 'satellite' });
     useRouteStore.setState({
       activeRoute: {
         status: 'success',
@@ -48,6 +50,7 @@ describe('clearLocalUserData', () => {
     expect(usePlacesStore.getState().notes).toEqual([]);
     expect(useProfileStore.getState().profile).toEqual({ id: '1', name: DEFAULT_PROFILE_NAME });
     expect(useSearchFiltersStore.getState().query).toBe('');
+    expect(useMapStyleStore.getState().styleId).toBe('streets');
     expect(useRouteStore.getState().activeRoute).toBeNull();
   });
 });
