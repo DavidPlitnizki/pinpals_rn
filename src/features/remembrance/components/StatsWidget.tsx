@@ -1,19 +1,17 @@
-import React, { useCallback } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { PlaceStats } from '../hooks/useRemembranceScreen';
 
 interface Props {
   stats: PlaceStats;
-  onPlacePress: (placeId: string) => void;
 }
 
-export function StatsWidget({ stats, onPlacePress }: Props) {
-  const handleMostVisitedPress = useCallback(() => {
-    if (stats.mostVisited) onPlacePress(stats.mostVisited.id);
-  }, [onPlacePress, stats.mostVisited]);
-
+// Read-only on purpose: the middle cell used to be "most visited" and opened that place —
+// both a second, invisible way in and a duplicate of the widget right below, which shows the
+// same place by name and photo.
+export function StatsWidget({ stats }: Props) {
   if (stats.total === 0) return null;
 
   return (
@@ -21,12 +19,9 @@ export function StatsWidget({ stats, onPlacePress }: Props) {
       <StatCell value={String(stats.total)} label="total places" accent={Colors.brand.primary} />
       <View style={styles.divider} />
       <StatCell
-        value={stats.mostVisited?.name ?? '—'}
-        label={
-          stats.mostVisited ? `most visited · ${stats.mostVisited.visitCount}×` : 'most visited'
-        }
+        value={String(stats.memories)}
+        label={stats.memories === 1 ? 'memory' : 'memories'}
         accent={Colors.brand.dark}
-        onPress={stats.mostVisited ? handleMostVisitedPress : undefined}
       />
       <View style={styles.divider} />
       <StatCell
@@ -38,30 +33,19 @@ export function StatsWidget({ stats, onPlacePress }: Props) {
   );
 }
 
-function StatCell({
-  value,
-  label,
-  accent,
-  onPress,
-}: {
-  value: string;
-  label: string;
-  accent: string;
-  onPress?: () => void;
-}) {
-  const Container = onPress ? TouchableOpacity : View;
+function StatCell({ value, label, accent }: { value: string; label: string; accent: string }) {
   return (
     // A place name can be far longer than its share of the row, so it truncates with an
     // ellipsis instead of shrinking to an unreadable size — adjustsFontSizeToFit only helps
     // when the overflow is slight.
-    <Container style={styles.cell} onPress={onPress} activeOpacity={0.7}>
+    <View style={styles.cell}>
       <Text style={[styles.value, { color: accent }]} numberOfLines={1} ellipsizeMode="tail">
         {value}
       </Text>
       <Text style={styles.label} numberOfLines={2}>
         {label}
       </Text>
-    </Container>
+    </View>
   );
 }
 

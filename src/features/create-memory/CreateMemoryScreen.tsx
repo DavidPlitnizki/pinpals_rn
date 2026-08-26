@@ -72,7 +72,16 @@ export default function CreateMemoryScreen() {
           <Ionicons name="chevron-back" size={28} color={Colors.brand.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{place.name}</Text>
-        <View style={styles.backBtnPlaceholder} />
+        {/* Skip this step. Every field is optional and can be filled in later by editing the
+            memory, so this is a shortcut past a screen rather than a way to abandon data.
+            Hidden on the last step, where the only thing left to do is save. */}
+        {isLastStep ? (
+          <View style={styles.backBtnPlaceholder} />
+        ) : (
+          <TouchableOpacity onPress={nextStep} style={styles.skipBtn} hitSlop={BACK_HIT_SLOP}>
+            <Ionicons name="chevron-forward" size={28} color={Colors.brand.primary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Progress */}
@@ -344,6 +353,10 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 32,
     alignItems: 'flex-start',
+  },
+  skipBtn: {
+    width: 32,
+    alignItems: 'flex-end',
   },
   backBtnPlaceholder: {
     width: 32,

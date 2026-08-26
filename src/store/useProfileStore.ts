@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile } from '../models/types';
-import { downloadAvatarToAppStorage } from '../shared/photoStorage';
+import { downloadAvatarToAppStorage, reanchorPhotoUri } from '../shared/photoStorage';
 
 // The placeholder a profile starts with, and the marker for "the user never set a name" —
 // adoptProviderProfile only fills in a provider's name while this is still what's stored.
@@ -29,6 +29,14 @@ export const useProfileStore = create<ProfileState>()(
     {
       name: 'pinpals-profile',
       storage: createJSONStorage(() => AsyncStorage),
+      // The avatar is a file in the same photo folder, so it breaks on reinstall the same
+      // way a memory's photos do — see reanchorPhotoUri. onRehydrateStorage rather than
+      // merge: merge runs inside the hydration promise and a store that defines one never
+      // reports hasHydrated, which adoptProviderProfile waits on.
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.profile = { ...state.profile, avatarUri: reanchorPhotoUri(state.profile.avatarUri) };
+      },
     },
   ),
 );

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import React, { useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -7,7 +8,9 @@ import { PinCard } from '../../../design-system/components/PinCard';
 import { PinRatingView } from '../../../design-system/components/PinRatingView';
 import { PlaceFlagBadges } from '../../../design-system/components/PlaceFlags';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
-import { Place } from '../../../models/types';
+import { usePlaceCoverImage } from '../../../hooks/usePlaceCoverImage';
+import { MOOD_CONFIG, Place } from '../../../models/types';
+import { categoryColor, categoryIcon } from '../../../shared/constants';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { InlineTags } from './InlineTags';
 
@@ -21,6 +24,16 @@ interface Props {
 
 export function PlaceRow({ place, onPress, onDelete }: Props) {
   const { addTagToPlace, removeTagFromPlace } = usePlacesStore();
+  const getLatestMoodForPlace = usePlacesStore((s) => s.getLatestMoodForPlace);
+
+  // The same cover the grid cards use, not just the user's own photos: the full cascade also
+  // falls back to a Wikipedia image or a map crop. Using the narrower lookup here meant a
+  // place showed a picture as a grid tile and a blank square as a list row.
+  const cover = usePlaceCoverImage(place);
+  const mood = getLatestMoodForPlace(place.id);
+  const accentColor = mood
+    ? MOOD_CONFIG[mood].color
+    : (place.pinColor ?? categoryColor(place.category));
 
   const handlePress = useCallback(() => onPress(place.id), [onPress, place.id]);
   const handleDelete = useCallback(
@@ -49,6 +62,17 @@ export function PlaceRow({ place, onPress, onDelete }: Props) {
       <TouchableOpacity onPress={handlePress} activeOpacity={0.75}>
         <PinCard style={styles.card}>
           <View style={styles.row}>
+            {/* A thumbnail, not a full-width hero: the row is a scannable list entry, and a
+                place with no picture still needs to occupy the same height as one with. */}
+            {cover.uri ? (
+              <Image source={{ uri: cover.uri }} style={styles.thumb} contentFit="cover" />
+            ) : (
+              <View
+                style={[styles.thumb, styles.thumbEmpty, { backgroundColor: accentColor + '1F' }]}
+              >
+                <Ionicons name={categoryIcon(place.category)} size={20} color={accentColor} />
+              </View>
+            )}
             <View style={styles.info}>
               <View style={styles.titleRow}>
                 <Text style={styles.name} numberOfLines={1}>
@@ -87,7 +111,14 @@ export function PlaceRow({ place, onPress, onDelete }: Props) {
 
 const styles = StyleSheet.create({
   card: { marginBottom: 0 },
-  row: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.s8 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.s12,
+    marginBottom: Spacing.s8,
+  },
+  thumb: { width: 56, height: 56, borderRadius: Radii.sm, backgroundColor: Colors.neutral[100] },
+  thumbEmpty: { alignItems: 'center', justifyContent: 'center' },
   info: { flex: 1 },
   titleRow: {
     flexDirection: 'row',

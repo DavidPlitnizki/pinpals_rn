@@ -77,3 +77,26 @@ export async function downloadAvatarToAppStorage(remoteUrl: string): Promise<str
     return remoteUrl;
   }
 }
+
+// iOS hands the app a new container UUID on every reinstall, and its path is part of every
+// absolute file:// uri we save. The files survive — Documents is preserved — but every stored
+// path points at a directory that no longer exists, so photos silently render as nothing.
+// (In development this fires constantly, since each `expo run:ios` reinstalls.)
+//
+// Rather than store absolute paths and hope, this re-anchors anything under our own photo
+// folder to wherever Documents lives right now. Applied when the store rehydrates, so every
+// render site keeps working with plain uris and none of them has to know about this.
+export function reanchorPhotoUri<T extends string | undefined | null>(uri: T): T {
+  if (!uri) return uri;
+  const marker = `/${PHOTOS_ROOT}/`;
+  const index = uri.indexOf(marker);
+  if (index === -1) return uri;
+
+  const relative = uri.slice(index + 1); // "pinpals-photos/2026-08-26/abc.jpg"
+  const current = new File(Paths.document, relative).uri;
+  return (current === uri ? uri : current) as T;
+}
+
+export function reanchorPhotoUris(uris: string[] | undefined): string[] | undefined {
+  return uris?.map((uri) => reanchorPhotoUri(uri));
+}
