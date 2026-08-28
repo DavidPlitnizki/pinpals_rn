@@ -38,6 +38,14 @@ export function useCreateMemory() {
     if (step < totalSteps - 1) setStep(step + 1);
   }
 
+  // Jumps past every remaining step to the last one, where the memory gets saved — the whole
+  // point of the header arrow, as opposed to the Next button that walks one screen at a time.
+  // It stops at the last step rather than saving outright: the date is worth a glance before
+  // committing, and saving from a header chevron would be a destructive-feeling surprise.
+  function skipToEnd() {
+    setStep(totalSteps - 1);
+  }
+
   function prevStep() {
     if (step > 0) setStep(step - 1);
     else router.back();
@@ -146,6 +154,7 @@ export function useCreateMemory() {
     canGoNext,
     isLastStep,
     nextStep,
+    skipToEnd,
     prevStep,
     pickPhotos,
     removePhoto,
