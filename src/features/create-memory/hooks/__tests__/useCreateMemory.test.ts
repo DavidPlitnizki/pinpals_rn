@@ -217,3 +217,21 @@ describe('handleSave', () => {
     expect(mockAddNote).toHaveBeenCalledWith(expect.objectContaining({ mood: 'nostalgic' }));
   });
 });
+
+describe('skipToEnd', () => {
+  it('jumps straight to the last step from the first', () => {
+    const { result } = renderCreateMemory();
+    act(() => result.current.skipToEnd());
+    expect(result.current.step).toBe(4);
+    expect(result.current.isLastStep).toBe(true);
+  });
+
+  it('leaves anything already filled in untouched', () => {
+    const { result } = renderCreateMemory();
+    act(() => result.current.setMood('happy'));
+    act(() => result.current.addCompanion('Ada'));
+    act(() => result.current.skipToEnd());
+    expect(result.current.mood).toBe('happy');
+    expect(result.current.companions).toEqual(['Ada']);
+  });
+});

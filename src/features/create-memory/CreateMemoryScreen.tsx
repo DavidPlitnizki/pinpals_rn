@@ -42,6 +42,7 @@ export default function CreateMemoryScreen() {
     canGoNext,
     isLastStep,
     nextStep,
+    skipToEnd,
     prevStep,
     pickPhotos,
     removePhoto,
@@ -72,13 +73,14 @@ export default function CreateMemoryScreen() {
           <Ionicons name="chevron-back" size={28} color={Colors.brand.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{place.name}</Text>
-        {/* Skip this step. Every field is optional and can be filled in later by editing the
-            memory, so this is a shortcut past a screen rather than a way to abandon data.
-            Hidden on the last step, where the only thing left to do is save. */}
+        {/* Skips every remaining step and lands on the last one, ready to save. Every field is
+            optional and can be filled in later by editing the memory, so this abandons nothing
+            — it's the shortcut for "just save it", while the Next button below still walks the
+            screens one at a time. Hidden on the last step, where there is nothing left to skip. */}
         {isLastStep ? (
           <View style={styles.backBtnPlaceholder} />
         ) : (
-          <TouchableOpacity onPress={nextStep} style={styles.skipBtn} hitSlop={BACK_HIT_SLOP}>
+          <TouchableOpacity onPress={skipToEnd} style={styles.skipBtn} hitSlop={BACK_HIT_SLOP}>
             <Ionicons name="chevron-forward" size={28} color={Colors.brand.primary} />
           </TouchableOpacity>
         )}
