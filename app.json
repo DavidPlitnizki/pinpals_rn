@@ -44,7 +44,7 @@
           "locationAlwaysAndWhenInUsePermission": false,
           "locationAlwaysPermission": false,
           "isIosBackgroundLocationEnabled": false,
-          "motionUsagePermission": false
+          "motionUsagePermission": "Pinpals uses motion data to improve the accuracy of your location while you're getting directions."
         }
       ],
       [
