@@ -207,18 +207,23 @@ const styles = StyleSheet.create({
     borderColor: Colors.neutral[900],
   },
   calloutImageWrap: {
+    alignSelf: 'stretch',
+    height: 140,
+    borderRadius: Radii.sm,
+    backgroundColor: Colors.neutral[100],
     alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: Spacing.s8,
+    marginTop: Spacing.s4,
+    overflow: 'hidden',
   },
   calloutImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: '100%',
+    height: '100%',
   },
   calloutImagePlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: Colors.neutral[100],
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -314,7 +319,7 @@ export function SearchResultCallout({
           </>
         ) : (
           <View style={styles.calloutImagePlaceholder}>
-            <Ionicons name={iconForMaki(marker.maki)} size={26} color={Colors.neutral[400]} />
+            <Ionicons name={iconForMaki(marker.maki)} size={36} color={Colors.neutral[400]} />
           </View>
         )}
       </View>
