@@ -352,6 +352,23 @@ export default function MapScreen() {
     // markers disappearing perfectly well.
   }, [handleClearSearchResultMarkers, quickSearch, search]);
 
+  // Confirming a route is a decision to go there — the category filter and search pins that
+  // helped find the destination just clutter the map next to the route line once it's drawn.
+  // The destination itself doesn't disappear: routeWaypoints (above) stops excluding it the
+  // moment it's no longer in searchResultMarkers, so RouteDestinationMarker picks it up.
+  //
+  // Keyed on isRouteActive alone, via a ref: onClearSearchResults is a fresh function every
+  // render (quickSearch/search aren't referentially stable), so depending on it directly
+  // re-ran this effect every render while a route was active — each run cleared state that
+  // was already clear, which still triggers a re-render, which recreates the callback again,
+  // forever. "Maximum update depth exceeded."
+  const onClearSearchResultsRef = useRef(onClearSearchResults);
+  onClearSearchResultsRef.current = onClearSearchResults;
+  useEffect(() => {
+    if (!isRouteActive) return;
+    onClearSearchResultsRef.current();
+  }, [isRouteActive]);
+
   const onPlaceDirections = useCallback(
     (place: Place) => {
       route.openModePicker(place.coordinates, place.name);
