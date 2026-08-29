@@ -49,4 +49,5 @@ jest.mock('expo-location', () => ({
   getCurrentPositionAsync: jest.fn(() =>
     Promise.resolve({ coords: { latitude: 0, longitude: 0 } })
   ),
+  hasServicesEnabledAsync: jest.fn(() => Promise.resolve(true)),
 }));

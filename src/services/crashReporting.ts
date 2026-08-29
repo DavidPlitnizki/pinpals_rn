@@ -5,6 +5,32 @@ import {
   setAttributes,
   setUserId as setCrashlyticsUserId,
 } from '@react-native-firebase/crashlytics';
+import { Alert } from 'react-native';
+
+// React Native's fetch throws a bare TypeError ("Network request failed") when the device has
+// no route to the host at all — DNS failure, no signal, airplane mode. An HTTP error status
+// (404, 500, ...) means the server was reached, and every call site here constructs that as a
+// plain Error itself, never a TypeError — so this only fires for genuine connectivity loss,
+// not "the API returned an error". AbortError (a request we cancelled ourselves, e.g. closing
+// a search sheet mid-request) is excluded too — that's not a connectivity problem.
+function isConnectivityFailure(error: unknown): boolean {
+  if (error instanceof Error && error.name === 'AbortError') return false;
+  return error instanceof TypeError;
+}
+
+// Several requests (map search, weather, wikipedia) can fail within the same moment once the
+// connection drops — one alert for that, not one per request.
+let connectivityAlertShowing = false;
+
+function showConnectivityAlert(): void {
+  if (connectivityAlertShowing) return;
+  connectivityAlertShowing = true;
+  Alert.alert(
+    'No internet connection',
+    "Check your connection and try again. Anything you've already saved still works offline.",
+    [{ text: 'OK', onPress: () => (connectivityAlertShowing = false) }],
+  );
+}
 
 // A network failure is the single most common source of "why did this screen just show
 // nothing" reports, and console.log (what every catch block here used before) is invisible
@@ -14,6 +40,9 @@ export function reportNetworkError(source: string, error: unknown, context?: str
   const err = error instanceof Error ? error : new Error(String(error));
   crashlyticsLog(getCrashlytics(), `[${source}] ${context ?? 'request failed'}`);
   recordError(getCrashlytics(), err, source);
+  if (isConnectivityFailure(error)) {
+    showConnectivityAlert();
+  }
 }
 
 // For failures outside a network call (storage, auth, native module calls) that are still

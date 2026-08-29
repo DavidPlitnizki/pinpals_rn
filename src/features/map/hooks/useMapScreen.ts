@@ -164,7 +164,18 @@ export function useMapScreen() {
       });
       applyLocation(loc.coords.latitude, loc.coords.longitude);
     } catch {
-      showToast('Could not get location', false);
+      // Permission was granted above, so a failure here almost always means Location
+      // Services is off system-wide (Settings, not the per-app toggle) — a toast for that
+      // reads as a fleeting glitch when it's actually a switch the user needs to go flip.
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        Alert.alert(
+          'Location Services is off',
+          'Turn on Location Services in Settings to see your position on the map and get directions.',
+        );
+      } else {
+        showToast('Could not get location', false);
+      }
       fallbackToKnownLocation();
     }
   }, [applyLocation, showToast, fallbackToKnownLocation]);
@@ -218,8 +229,17 @@ export function useMapScreen() {
     }
   }, []);
 
-  const handleCenterGPS = useCallback(() => {
-    if (!gpsCoords) return;
+  const handleCenterGPS = useCallback(async () => {
+    if (!gpsCoords) {
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        Alert.alert(
+          'Location Services is off',
+          'Turn on Location Services in Settings to see your position on the map.',
+        );
+      }
+      return;
+    }
     cameraRef.current?.setCamera({
       centerCoordinate: [gpsCoords.longitude, gpsCoords.latitude],
       zoomLevel: currentZoom.current,

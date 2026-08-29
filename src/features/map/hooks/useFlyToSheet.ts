@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { Coordinates } from '../../../models/types';
 import { MapboxSearchResult, searchMapboxPlaces } from '../../../services/mapboxSearch';
@@ -9,6 +9,9 @@ export function useFlyToSheet(onConfirm: (coordinates: Coordinates, label: strin
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<MapboxSearchResult[]>([]);
+  // Aborted on close so a slow request that outlives the sheet can't land its result (or its
+  // "search failed" error) after the user has already walked away from it.
+  const abortRef = useRef<AbortController | null>(null);
 
   const open = useCallback(() => {
     setVisible(true);
@@ -16,10 +19,13 @@ export function useFlyToSheet(onConfirm: (coordinates: Coordinates, label: strin
   }, []);
 
   const close = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
     setVisible(false);
     setQuery('');
     setError(null);
     setResults([]);
+    setLoading(false);
   }, []);
 
   // Deliberately does NOT fly anywhere on its own: geocoding "<city> <street> <number>" can
@@ -29,20 +35,24 @@ export function useFlyToSheet(onConfirm: (coordinates: Coordinates, label: strin
     const trimmed = query.trim();
     if (!trimmed) return;
 
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setError(null);
     setResults([]);
     try {
-      const found = await searchMapboxPlaces(trimmed, null);
+      const found = await searchMapboxPlaces(trimmed, null, { signal: controller.signal });
+      if (controller.signal.aborted) return;
       if (found.length === 0) {
         setError('Location not found. Try a city, a street with a number, or a full address.');
         return;
       }
       setResults(found);
     } catch {
+      if (controller.signal.aborted) return;
       setError('Search failed. Check your connection and try again.');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }, [query]);
 
