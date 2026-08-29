@@ -142,7 +142,7 @@ export async function searchMapboxPlaces(
 
   let response: Response;
   try {
-    response = await fetch(url);
+    response = await fetch(url, options?.signal ? { signal: options.signal } : undefined);
   } catch (err) {
     reportNetworkError('mapboxSearch', err, 'forward search request failed');
     throw err;
