@@ -54,6 +54,6 @@ describe('clearLocalUserData', () => {
     expect(useSearchFiltersStore.getState().query).toBe('');
     expect(useMapStyleStore.getState().styleId).toBe('streets');
     expect(useRouteStore.getState().activeRoute).toBeNull();
-    expect(useOnboardingStore.getState().stage).toBe('map-tip');
+    expect(useOnboardingStore.getState().stage).toBe('welcome');
   });
 });

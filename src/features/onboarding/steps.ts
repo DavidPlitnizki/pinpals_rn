@@ -10,6 +10,19 @@ export const ONBOARDING_LABEL = 'Getting started';
 export const MAP_TIP_STEP = 'map-long-press';
 export const SAVE_TIP_STEP = 'quick-add-save';
 
+// How many hints the tour has after the welcome screen, and each one's place in that count —
+// printed as "n/n" on every card so it reads as a sequence with a known end rather than an
+// open-ended stream of pop-ups. The welcome screen itself is not counted: it is a full screen,
+// not a card, and does not carry this counter.
+export const ONBOARDING_TOTAL_STEPS = 5;
+export const ONBOARDING_STEP_NUMBERS: Record<string, number> = {
+  [MAP_TIP_STEP]: 1,
+  [SAVE_TIP_STEP]: 2,
+  // The two in-form hints and the last one are not copilot steps (see QuickAddPlaceSheet and
+  // RemembranceTip for why), so they are not looked up here — their callers pass the number
+  // straight to OnboardingLabel instead.
+};
+
 export const MAP_TIP_TITLE = 'Save a memory';
 export const MAP_TIP_TEXT =
   'Press anywhere on the map, or on a place already marked on it, to see what is there.';

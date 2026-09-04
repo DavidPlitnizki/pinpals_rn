@@ -395,7 +395,7 @@ export function QuickAddPlaceSheet({
                   <OnboardingArrow direction="up" size={28} />
                 </View>
                 <View style={styles.hintTextCol}>
-                  <OnboardingLabel />
+                  <OnboardingLabel step={4} />
                   <Text style={styles.hintText}>{SAVE_PIN_TIP_TEXT}</Text>
                 </View>
               </View>
@@ -573,7 +573,7 @@ export function QuickAddPlaceSheet({
                     and one bare arrow. */}
                 {highlightMemory && !memory && (
                   <View style={styles.memoryHint} pointerEvents="none">
-                    <OnboardingLabel />
+                    <OnboardingLabel step={3} />
                     <Text style={styles.hintText}>{MEMORY_TIP_TEXT}</Text>
                     <OnboardingArrow />
                   </View>

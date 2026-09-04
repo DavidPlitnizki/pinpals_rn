@@ -61,6 +61,8 @@ describe('QuickAddPlaceSheet memory hint', () => {
     // Closing the form instead of saving throws the memory away with it — worth a sentence.
     expect(screen.getByText(SAVE_PIN_TIP_TEXT)).toBeTruthy();
     expect(screen.getByText(ONBOARDING_LABEL.toUpperCase())).toBeTruthy();
+    // Fourth of the tour's five hints — the memory hint before it is the third.
+    expect(screen.getByText('4/5')).toBeTruthy();
   });
 
   it('shows only one of the two form hints at a time, each captioned the same way', () => {
@@ -71,6 +73,7 @@ describe('QuickAddPlaceSheet memory hint', () => {
     // One explained hint and one bare arrow would read as an accident.
     expect(screen.getByText(MEMORY_TIP_TEXT)).toBeTruthy();
     expect(screen.getByText(ONBOARDING_LABEL.toUpperCase())).toBeTruthy();
+    expect(screen.getByText('3/5')).toBeTruthy();
   });
 
   it('puts the arrow over the button only while the hint is running', () => {

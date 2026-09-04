@@ -1,17 +1,21 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { render, screen } from '@testing-library/react-native';
 import React from 'react';
 
 const mockStop = jest.fn(() => Promise.resolve());
 const mockGoToNext = jest.fn(() => Promise.resolve());
-const mockCopilot: { currentStep: { name: string; text: string } | undefined } = {
+const mockCopilot: {
+  currentStep: { name: string; text: string } | undefined;
+  isLastStep: boolean;
+} = {
   currentStep: undefined,
+  isLastStep: true,
 };
 
 jest.mock('react-native-copilot', () => ({
   useCopilot: () => ({
     currentStep: mockCopilot.currentStep,
     goToNext: mockGoToNext,
-    isLastStep: true,
+    isLastStep: mockCopilot.isLastStep,
     stop: mockStop,
   }),
 }));
@@ -20,19 +24,18 @@ jest.mock('react-native-copilot', () => ({
 import { OnboardingTooltip } from '../OnboardingTooltip';
 // eslint-disable-next-line import/first
 import { MAP_TIP_STEP, ONBOARDING_LABEL, SAVE_TIP_STEP } from '../../steps';
-// eslint-disable-next-line import/first
-import { useOnboardingStore } from '../../../../store/useOnboardingStore';
 
 const LABELS = { finish: 'Got it', skip: 'Skip', next: 'Next', previous: 'Back' };
 
-function renderTooltip(stepName: string) {
+function renderTooltip(stepName: string, isLastStep = true) {
   mockCopilot.currentStep = { name: stepName, text: 'Body copy' };
+  mockCopilot.isLastStep = isLastStep;
   return render(<OnboardingTooltip labels={LABELS} />);
 }
 
 beforeEach(() => {
   mockStop.mockClear();
-  useOnboardingStore.setState({ stage: 'map-tip', hydrated: true });
+  mockGoToNext.mockClear();
 });
 
 describe('OnboardingTooltip', () => {
@@ -43,23 +46,26 @@ describe('OnboardingTooltip', () => {
     expect(screen.getByText(ONBOARDING_LABEL.toUpperCase())).toBeTruthy();
   });
 
-  it('offers a way out of the whole tour on the very first hint', () => {
+  it('offers no way to skip the whole tour — that lives on the welcome screen now', () => {
     renderTooltip(MAP_TIP_STEP);
 
-    fireEvent.press(screen.getByText('Skip'));
-
-    // Copilot's own cursor knows nothing about the later steps, which live in the stage — so
-    // skipping has to end them all, not just close this one.
-    expect(useOnboardingStore.getState().stage).toBe('done');
-    expect(mockStop).toHaveBeenCalled();
-  });
-
-  it('does not offer to skip once the user is already following along', () => {
-    renderTooltip(SAVE_TIP_STEP);
-
-    // By this point the user has opened a card of their own accord; "skip the tour" is no
-    // longer the question being asked.
+    // A stray Skip here would need to reach into the persisted stage the same way the old one
+    // did; simplest is to not offer it a second time at all.
     expect(screen.queryByText('Skip')).toBeNull();
     expect(screen.getByText('Got it')).toBeTruthy();
+  });
+
+  it('shows the map hint as the first of five', () => {
+    renderTooltip(MAP_TIP_STEP);
+
+    expect(screen.getByText('1/5')).toBeTruthy();
+  });
+
+  it('shows the save hint as the second of five', () => {
+    renderTooltip(SAVE_TIP_STEP, false);
+
+    expect(screen.getByText('2/5')).toBeTruthy();
+    // Not the last step, so the primary button reads "Next", not "Got it".
+    expect(screen.getByText('Next')).toBeTruthy();
   });
 });

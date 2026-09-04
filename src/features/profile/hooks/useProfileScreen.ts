@@ -6,7 +6,9 @@ import { Alert } from 'react-native';
 
 import { useAuth } from '../../../contexts/AuthContext';
 import { promptPhotoSource } from '../../../shared/photoSourcePrompt';
+import { logRateUsPrompted } from '../../../services/analytics';
 import { setCrashReportingUserContext } from '../../../services/crashReporting';
+import { requestStoreReview } from '../../../services/storeReview';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { clearLocalUserData } from '../../../store/clearLocalUserData';
 import { useOnboardingStore } from '../../../store/useOnboardingStore';
@@ -171,13 +173,21 @@ export function useProfileScreen() {
     );
   }
 
-  // The tour lives on the map screen and starts from the persisted stage, so replaying it is
-  // "rewind the stage, then go where it runs" — there is nothing to trigger from here.
+  // resetOnboarding() rewinds all the way to the welcome screen — replaying "the tour" means
+  // starting where a fresh install would, not jumping back into the middle of it.
   const handleReplayOnboarding = useCallback(() => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     resetOnboarding();
-    router.navigate('/(tabs)/map');
+    router.navigate('/welcome');
   }, [resetOnboarding, router]);
+
+  // A direct ask, unlike the one that rides along after onboarding — someone who came looking
+  // for this in settings has already decided to rate, so there's nothing to lead up to first.
+  const handleRateUs = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    logRateUsPrompted('profile');
+    void requestStoreReview();
+  }, []);
 
   return {
     profile: displayProfile,
@@ -203,5 +213,6 @@ export function useProfileScreen() {
     handleLogout,
     handleDeleteAccount,
     handleReplayOnboarding,
+    handleRateUs,
   };
 }

@@ -81,11 +81,18 @@ jest.mock('expo-contacts', () => ({
   ContactsSortOrder: { GivenName: 'givenName' },
   Contact: { getAllDetails: jest.fn(() => Promise.resolve([])) },
   requestPermissionsAsync: jest.fn(() =>
-    Promise.resolve({ granted: false, canAskAgain: true, status: 'denied' })
+    Promise.resolve({ granted: false, canAskAgain: true, status: 'denied' }),
   ),
   getPermissionsAsync: jest.fn(() =>
-    Promise.resolve({ granted: false, canAskAgain: true, status: 'undetermined' })
+    Promise.resolve({ granted: false, canAskAgain: true, status: 'undetermined' }),
   ),
+}));
+
+// The App Store rating prompt has no counterpart in the Jest environment. Defaults to
+// available, so requestStoreReview's happy path is what most tests exercise without setup.
+jest.mock('expo-store-review', () => ({
+  isAvailableAsync: jest.fn(() => Promise.resolve(true)),
+  requestReview: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('expo-location', () => ({
