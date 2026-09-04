@@ -5,14 +5,27 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-09-04
+
 ### Onboarding
 - A five-step tour for a first run, driven by a persisted stage rather than a session
   cursor — it survives a cold start and picks up wherever it left off
+- A full-screen welcome step opens the tour right after signing in, with a big Start
+  button and a circled X to skip the whole thing — Skip moved here from the first hint,
+  so it's offered exactly once
+- Every hint shows its position as a step count (1/5 … 5/5)
 - Points in turn at: pressing the map, saving a spot from the card, writing a memory on
   the place form, committing the form, and where the saved place ends up
-- Skip on the first hint ends the whole tour; Finish on the last one closes it
+- Finish on the last hint closes the tour
 - "Show the tour again" on Profile replays it from the beginning
 - Signing out clears the stage, so whoever signs in next gets the tour like a fresh install
+
+### Feedback
+- After the tour ends, however it ends, a one-tap question asks where you heard about
+  Pinpals — Facebook, Instagram, X, Telegram, friends, or something else — with a circled
+  X to skip it too
+- The App Store rating prompt follows right after that question, and "Rate Pinpals" in
+  Profile asks for it directly at any time
 
 ### Map
 - A long press now opens the same three-action card a tap does — browser, directions,
@@ -28,10 +41,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 - A memory can be written on the place form, before the place exists — note, photos, mood
   and companions. Saving the place saves both; backing out discards both
 - The attached memory shows its own photos on the form rather than a count of them
-- Companions can be picked from the phone's address book instead of typed one at a time —
-  searchable, multi-select, and it skips anyone already on the memory. Only names are read,
-  never numbers or emails, and they never leave the device. Refusing the permission changes
-  nothing: the field works exactly as it did before
+- Companions can be picked from the phone's address book — one field searches as you
+  type, and a tap adds a match; anyone already on the memory shows as done instead of
+  being offered twice. Only names are read, never numbers or emails, and they never leave
+  the device. Refusing the permission changes nothing: typing still works exactly as before
 
 ### Fixes
 - Map cards no longer clip their own contents. A card's address, phone and website arrive
@@ -41,6 +54,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
   no longer lose their shadow or their close and share buttons to their own rounded corners
 - A slow lookup from an abandoned long press can no longer reopen a dismissed card or
   replace the card a later tap opened
+- Opening the companion picker before its permission had been decided could crash instead
+  of showing the system prompt
 
 ### Accessibility
 - The icon-only action buttons in every map callout are now labelled for screen readers
@@ -50,6 +65,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
   writing a memory no longer re-renders the entire map
 - Reverse-geocode results are shared between the card and the form it opens, rather than
   bought from Mapbox twice for the same point
+- The address book is read from the device once per session instead of on every reopen
+  of the companion picker
 
 ## [1.0.0] — 2026-08-22
 

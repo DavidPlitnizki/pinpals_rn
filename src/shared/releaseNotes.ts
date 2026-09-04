@@ -15,6 +15,17 @@ export interface ReleaseNote {
 // the dev-time check below catches a forgotten entry, but only in a dev build console.
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '1.1.0',
+    date: '2026-09-04',
+    features: [
+      'A five-step guided tour on first launch, with its own welcome screen',
+      'Long-press the map for a quick save, directions, or browser card',
+      'Write a memory — note, photos, mood, companions — right on the place form before saving',
+      'Pick a memory companion from your contacts, or type a name by hand',
+      'A quick question about where you heard about Pinpals, and a way to rate the app from Profile',
+    ],
+  },
+  {
     version: '1.0.0',
     date: '2026-08-22',
     features: [
