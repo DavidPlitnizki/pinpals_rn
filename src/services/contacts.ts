@@ -101,14 +101,16 @@ export async function getContactsAccess(): Promise<ContactsAccess> {
 // `Contact.getAllDetails(fields)` rather than the legacy `getContactsAsync`: the legacy call
 // still type-checks in expo-contacts 57 but is a stub that throws at runtime. The field list
 // is enforced by the return type here, so widening the read cannot happen by accident.
+//
+// No `sortOrder` requested here — the list below is sorted by display name anyway (given-name
+// order isn't guaranteed to match it), so asking the native side to sort first would just be
+// work that gets thrown away.
 export async function loadContactNames(): Promise<PhoneContact[]> {
   const contacts = loadContacts();
   if (!contacts) return [];
 
   try {
-    const details = await contacts.Contact.getAllDetails([contacts.ContactField.FULL_NAME], {
-      sortOrder: contacts.ContactsSortOrder.GivenName,
-    });
+    const details = await contacts.Contact.getAllDetails([contacts.ContactField.FULL_NAME]);
 
     const seen = new Set<string>();
     const named: PhoneContact[] = [];

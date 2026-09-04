@@ -7,56 +7,40 @@ const noop = () => {};
 const NO_COMPANIONS: string[] = [];
 
 describe('CompanionInput', () => {
-  it('still takes a typed name, address book or no address book', () => {
-    const onAdd = jest.fn();
-    render(<CompanionInput companions={NO_COMPANIONS} onAdd={onAdd} onRemove={noop} />);
+  it('opens the picker on press — it is a button dressed as a field, not a text input', () => {
+    const onOpenPicker = jest.fn();
+    render(
+      <CompanionInput companions={NO_COMPANIONS} onRemove={noop} onOpenPicker={onOpenPicker} />,
+    );
 
-    const field = screen.getByPlaceholderText('Name...');
-    fireEvent.changeText(field, '  Grace  ');
-    fireEvent(field, 'submitEditing');
+    fireEvent.press(screen.getByLabelText('Add someone you were with'));
 
-    expect(onAdd).toHaveBeenCalledWith('Grace');
+    expect(onOpenPicker).toHaveBeenCalledTimes(1);
   });
 
-  it('offers no address book when the caller has none to give', () => {
-    // A build without expo-contacts linked, or a screen with nowhere to put the picker. A
-    // button that can only apologise is worse than no button — this is the field exactly as
-    // it was before contacts existed.
-    render(<CompanionInput companions={NO_COMPANIONS} onAdd={noop} onRemove={noop} />);
-
-    expect(screen.queryByLabelText('Pick from contacts')).toBeNull();
-    expect(screen.getByPlaceholderText('Name...')).toBeTruthy();
-  });
-
-  it('hands the address book button back to the caller', () => {
-    const onPickFromContacts = jest.fn();
+  it('shows every companion already added, each removable on its own', () => {
+    const onRemove = jest.fn();
     render(
       <CompanionInput
-        companions={NO_COMPANIONS}
-        onAdd={noop}
-        onRemove={noop}
-        onPickFromContacts={onPickFromContacts}
+        companions={['Ada Lovelace', 'Grace Hopper']}
+        onRemove={onRemove}
+        onOpenPicker={noop}
       />,
     );
 
-    fireEvent.press(screen.getByLabelText('Pick from contacts'));
+    expect(screen.getByText('Ada Lovelace')).toBeTruthy();
+    expect(screen.getByText('Grace Hopper')).toBeTruthy();
 
-    expect(onPickFromContacts).toHaveBeenCalledTimes(1);
+    fireEvent.press(screen.getAllByText('✕')[0]);
+    expect(onRemove).toHaveBeenCalledWith('Ada Lovelace');
   });
 
-  it('gives the row back to "+" the moment a name is being typed', () => {
-    render(
-      <CompanionInput
-        companions={NO_COMPANIONS}
-        onAdd={noop}
-        onRemove={noop}
-        onPickFromContacts={noop}
-      />,
-    );
+  it('does nothing when there is nowhere to open a picker to', () => {
+    // No onOpenPicker: the field still renders (so the chips stay visible) but presses are
+    // inert rather than throwing on an undefined handler.
+    render(<CompanionInput companions={NO_COMPANIONS} onRemove={noop} />);
 
-    fireEvent.changeText(screen.getByPlaceholderText('Name...'), 'Ada');
-
-    // One control, not two: typing a name still leads to the same button it always did.
-    expect(screen.queryByLabelText('Pick from contacts')).toBeNull();
+    fireEvent.press(screen.getByLabelText('Add someone you were with'));
+    // Nothing to assert beyond "did not throw" — there is no picker to have opened.
   });
 });

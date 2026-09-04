@@ -46,25 +46,18 @@ export function QuickAddMemoryPanel({ draft, onDone, onRemove, onCancel }: Props
     setPhotoUris((prev) => prev.filter((u) => u !== uri));
   }, []);
 
-  const handleAddCompanion = useCallback((name: string) => {
-    setCompanions((prev) => (prev.includes(name) ? prev : [...prev, name]));
-  }, []);
-
   const handleRemoveCompanion = useCallback((name: string) => {
     setCompanions((prev) => prev.filter((c) => c !== name));
   }, []);
 
   const contactPicker = useContactPicker();
 
-  const handleContactsPicked = useCallback(
-    (names: string[]) => {
-      contactPicker.close();
-      // The picker greys out anyone already here, but a hand-typed name can collide with one
-      // from the address book — the last guard against a duplicate chip.
-      setCompanions((prev) => [...prev, ...names.filter((name) => !prev.includes(name))]);
-    },
-    [contactPicker],
-  );
+  // The only way a name reaches this memory now — typed or picked, both land here. Guards
+  // against a duplicate chip: the sheet's own dedupe only covers names already picked, not one
+  // typed by hand that happens to match a contact already added.
+  const handleContactAdded = useCallback((name: string) => {
+    setCompanions((prev) => (prev.includes(name) ? prev : [...prev, name]));
+  }, []);
 
   const handleSelectMood = useCallback((selected: MemoryMood) => {
     setMood((prev) => (prev === selected ? undefined : selected));
@@ -117,9 +110,8 @@ export function QuickAddMemoryPanel({ draft, onDone, onRemove, onCancel }: Props
         <Text style={styles.fieldLabel}>Who was with you?</Text>
         <CompanionInput
           companions={companions}
-          onAdd={handleAddCompanion}
           onRemove={handleRemoveCompanion}
-          onPickFromContacts={contactPicker.available ? contactPicker.open : undefined}
+          onOpenPicker={contactPicker.open}
         />
 
         <Text style={styles.fieldLabel}>Photos</Text>
@@ -146,11 +138,12 @@ export function QuickAddMemoryPanel({ draft, onDone, onRemove, onCancel }: Props
           Not a Modal: this panel already lives inside the quick-add sheet's Modal. */}
       {contactPicker.visible && (
         <ContactPickerSheet
+          access={contactPicker.access}
           contacts={contactPicker.contacts}
           loading={contactPicker.loading}
           alreadyAdded={companions}
-          onDone={handleContactsPicked}
-          onCancel={contactPicker.close}
+          onAdd={handleContactAdded}
+          onClose={contactPicker.close}
         />
       )}
     </View>
