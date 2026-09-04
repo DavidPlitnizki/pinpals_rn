@@ -15,9 +15,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnalogClock } from '../../design-system/components/AnalogClock';
 import { CompanionInput } from '../../design-system/components/CompanionInput';
+import { ContactPickerSheet } from '../../design-system/components/ContactPickerSheet';
 import { MoodPicker } from '../../design-system/components/MoodPicker';
 import { PinButton } from '../../design-system/components/PinButton';
 import { Colors, Radii, Spacing, Typography } from '../../design-system/tokens';
+import { useContactPicker } from '../../hooks/useContactPicker';
 import { useCreateMemory } from './hooks/useCreateMemory';
 
 const STEP_TITLES = ['Photo', 'Mood', 'Companions', 'Note', 'Date & time'];
@@ -53,6 +55,20 @@ export default function CreateMemoryScreen() {
     setDate,
     handleSave,
   } = useCreateMemory();
+
+  const contactPicker = useContactPicker();
+
+  const handleContactsPicked = useCallback(
+    (names: string[]) => {
+      contactPicker.close();
+      // The picker greys out anyone already here, but a hand-typed name can collide with one
+      // from the address book — the last guard against a duplicate chip.
+      for (const name of names) {
+        if (!companions.includes(name)) addCompanion(name);
+      }
+    },
+    [contactPicker, companions, addCompanion],
+  );
 
   if (!place) {
     return (
@@ -106,7 +122,12 @@ export default function CreateMemoryScreen() {
         )}
         {step === 1 && <MoodStep mood={mood} onSelect={setMood} />}
         {step === 2 && (
-          <CompanionStep companions={companions} onAdd={addCompanion} onRemove={removeCompanion} />
+          <CompanionStep
+            companions={companions}
+            onAdd={addCompanion}
+            onRemove={removeCompanion}
+            onPickFromContacts={contactPicker.available ? contactPicker.open : undefined}
+          />
         )}
         {step === 3 && <NoteStep text={text} onChangeText={setText} />}
         {step === 4 && <DateStep date={date} onChangeDate={setDate} />}
@@ -131,6 +152,18 @@ export default function CreateMemoryScreen() {
           />
         )}
       </View>
+
+      {/* Fills the screen from the root, not from inside the step — the picker is an overlay
+          rather than a Modal, so it needs a full-screen box to cover. */}
+      {contactPicker.visible && (
+        <ContactPickerSheet
+          contacts={contactPicker.contacts}
+          loading={contactPicker.loading}
+          alreadyAdded={companions}
+          onDone={handleContactsPicked}
+          onCancel={contactPicker.close}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -201,10 +234,12 @@ function CompanionStep({
   companions,
   onAdd,
   onRemove,
+  onPickFromContacts,
 }: {
   companions: string[];
   onAdd: (name: string) => void;
   onRemove: (name: string) => void;
+  onPickFromContacts?: () => void;
 }) {
   return (
     <View style={styles.stepContent}>
@@ -214,6 +249,7 @@ function CompanionStep({
         onAdd={onAdd}
         onRemove={onRemove}
         placeholder="Friend's name..."
+        onPickFromContacts={onPickFromContacts}
       />
     </View>
   );

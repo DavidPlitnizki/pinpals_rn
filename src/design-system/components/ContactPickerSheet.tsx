@@ -4,14 +4,12 @@ import {
   ActivityIndicator,
   FlatList,
   ListRenderItemInfo,
-  Modal,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PhoneContact } from '../../services/contacts';
 import { Colors, Radii, Spacing, Typography } from '../tokens';
@@ -19,7 +17,6 @@ import { Colors, Radii, Spacing, Typography } from '../tokens';
 const HIT_SLOP_8 = { top: 8, bottom: 8, left: 8, right: 8 };
 
 interface Props {
-  visible: boolean;
   contacts: PhoneContact[];
   loading: boolean;
   // Names already on the memory. Shown ticked and inert — removing one belongs to the chip it
@@ -72,26 +69,17 @@ const UNCHECKED = { checked: false };
 
 // Picking who you were with, from the device address book. Only names ever reach this — see
 // services/contacts.ts — so there is nothing else to show in a row.
-export function ContactPickerSheet({
-  visible,
-  contacts,
-  loading,
-  alreadyAdded,
-  onDone,
-  onCancel,
-}: Props) {
+//
+// An absolutely-positioned overlay, deliberately not a Modal. On the map the companion field
+// lives inside the quick-add sheet, which is already a native Modal, and a second one on top
+// of it leaves iOS's touch-responder chain broken after both dismiss — the map underneath
+// stops responding entirely. It fills its nearest positioned ancestor instead, so whoever
+// renders it must give it a full-screen box.
+//
+// Mounted only while open, so the search box and the ticks start clean on every visit.
+export function ContactPickerSheet({ contacts, loading, alreadyAdded, onDone, onCancel }: Props) {
   const [query, setQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-  // Reset on each open rather than in an effect: the sheet stays mounted between openings, and
-  // an effect would run a frame after the list is already on screen wearing the last visit's
-  // ticks. Same adjust-during-render pattern the quick-add sheet uses.
-  const wasVisibleRef = React.useRef(visible);
-  if (visible && !wasVisibleRef.current) {
-    setQuery('');
-    setSelectedIds([]);
-  }
-  wasVisibleRef.current = visible;
 
   const addedKeys = useMemo(
     () => new Set(alreadyAdded.map((name) => name.toLocaleLowerCase())),
@@ -130,63 +118,62 @@ export function ContactPickerSheet({
   const keyExtractor = useCallback((item: PhoneContact) => item.id, []);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onCancel}>
-      <SafeAreaView style={styles.sheet} edges={SAFE_EDGES}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onCancel} hitSlop={HIT_SLOP_8}>
-            <Text style={styles.cancel}>Cancel</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Who was with you?</Text>
-          <TouchableOpacity
-            onPress={handleDone}
-            hitSlop={HIT_SLOP_8}
-            disabled={!selectedIds.length}
-          >
-            <Text style={selectedIds.length ? styles.done : styles.doneDisabled}>Done</Text>
-          </TouchableOpacity>
-        </View>
+    <View style={styles.sheet}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onCancel} hitSlop={HIT_SLOP_8}>
+          <Text style={styles.cancel}>Cancel</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>Who was with you?</Text>
+        <TouchableOpacity onPress={handleDone} hitSlop={HIT_SLOP_8} disabled={!selectedIds.length}>
+          <Text style={selectedIds.length ? styles.done : styles.doneDisabled}>Done</Text>
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.searchRow}>
-          <Ionicons name="search" size={18} color={Colors.text.secondary} />
-          <TextInput
-            style={styles.search}
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search contacts"
-            placeholderTextColor={Colors.text.secondary}
-            autoCorrect={false}
-            autoCapitalize="none"
-            returnKeyType="search"
-          />
-        </View>
+      <View style={styles.searchRow}>
+        <Ionicons name="search" size={18} color={Colors.text.secondary} />
+        <TextInput
+          style={styles.search}
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search contacts"
+          placeholderTextColor={Colors.text.secondary}
+          autoCorrect={false}
+          autoCapitalize="none"
+          returnKeyType="search"
+        />
+      </View>
 
-        {loading ? (
-          <ActivityIndicator style={styles.loading} color={Colors.brand.primary} />
-        ) : (
-          <FlatList
-            data={filtered}
-            renderItem={renderItem}
-            keyExtractor={keyExtractor}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={
-              <Text style={styles.empty}>
-                {contacts.length === 0
-                  ? 'No named contacts on this device.'
-                  : 'No contact matches that.'}
-              </Text>
-            }
-          />
-        )}
-      </SafeAreaView>
-    </Modal>
+      {loading ? (
+        <ActivityIndicator style={styles.loading} color={Colors.brand.primary} />
+      ) : (
+        <FlatList
+          data={filtered}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <Text style={styles.empty}>
+              {contacts.length === 0
+                ? 'No named contacts on this device.'
+                : 'No contact matches that.'}
+            </Text>
+          }
+        />
+      )}
+    </View>
   );
 }
 
-const SAFE_EDGES = ['top', 'bottom'] as const;
-
 const styles = StyleSheet.create({
-  sheet: { flex: 1, backgroundColor: Colors.white },
+  sheet: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colors.white,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
