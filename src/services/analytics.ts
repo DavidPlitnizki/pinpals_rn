@@ -63,6 +63,22 @@ export function logMapboxUsage(unit: MapboxBillableUnit): void {
   void logEvent(getAnalytics(), 'mapbox_usage', { unit });
 }
 
+// How the address-book prompt actually lands, so the share of people who say no — or who
+// never see a prompt at all because the native module is missing from the build — is visible
+// without waiting for someone to report it.
+export type ContactsOutcome =
+  | 'granted'
+  | 'denied'
+  | 'blocked'
+  // The module is not in this build. Should be zero in production; anything above it means a
+  // binary shipped without expo-contacts linked.
+  | 'unavailable'
+  | 'failed';
+
+export function logContactsPermission(outcome: ContactsOutcome): void {
+  void logEvent(getAnalytics(), 'contacts_permission', { outcome });
+}
+
 export type SearchSource = 'map_pin' | 'search_result' | 'native_poi';
 
 export function logExternalSearchOpened(source: SearchSource): void {

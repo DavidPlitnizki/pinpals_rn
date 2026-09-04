@@ -73,17 +73,19 @@ jest.mock('expo-image-picker', () => ({
   MediaTypeOptions: { Images: 'Images' },
 }));
 
-// The address book has no counterpart in the Jest environment. Defaults to "refused", which
-// is the path the companion field has to keep working on.
+// The address book has no counterpart in the Jest environment. Defaults to "refused", which is
+// the path the companion field has to keep working on. Shaped like expo-contacts 57's current
+// API — `Contact.getAllDetails`, not the legacy `getContactsAsync`, which is a stub that throws.
 jest.mock('expo-contacts', () => ({
-  Fields: { Name: 'name' },
+  ContactField: { FULL_NAME: 'fullName' },
+  ContactsSortOrder: { GivenName: 'givenName' },
+  Contact: { getAllDetails: jest.fn(() => Promise.resolve([])) },
   requestPermissionsAsync: jest.fn(() =>
     Promise.resolve({ granted: false, canAskAgain: true, status: 'denied' })
   ),
   getPermissionsAsync: jest.fn(() =>
     Promise.resolve({ granted: false, canAskAgain: true, status: 'undetermined' })
   ),
-  getContactsAsync: jest.fn(() => Promise.resolve({ data: [] })),
 }));
 
 jest.mock('expo-location', () => ({

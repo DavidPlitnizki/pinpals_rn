@@ -4,9 +4,11 @@ import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { CompanionInput } from '../../../design-system/components/CompanionInput';
+import { ContactPickerSheet } from '../../../design-system/components/ContactPickerSheet';
 import { MoodPicker } from '../../../design-system/components/MoodPicker';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { MemoryMood, MOOD_CONFIG } from '../../../models/types';
+import { useContactPicker } from '../../../hooks/useContactPicker';
 import { pickPhotos } from '../../../shared/pickPhotos';
 import { HIT_SLOP_8 } from '../constants';
 import { QuickAddMemoryDraft } from '../hooks/useMapScreen';
@@ -51,6 +53,18 @@ export function QuickAddMemoryPanel({ draft, onDone, onRemove, onCancel }: Props
   const handleRemoveCompanion = useCallback((name: string) => {
     setCompanions((prev) => prev.filter((c) => c !== name));
   }, []);
+
+  const contactPicker = useContactPicker();
+
+  const handleContactsPicked = useCallback(
+    (names: string[]) => {
+      contactPicker.close();
+      // The picker greys out anyone already here, but a hand-typed name can collide with one
+      // from the address book — the last guard against a duplicate chip.
+      setCompanions((prev) => [...prev, ...names.filter((name) => !prev.includes(name))]);
+    },
+    [contactPicker],
+  );
 
   const handleSelectMood = useCallback((selected: MemoryMood) => {
     setMood((prev) => (prev === selected ? undefined : selected));
@@ -105,6 +119,7 @@ export function QuickAddMemoryPanel({ draft, onDone, onRemove, onCancel }: Props
           companions={companions}
           onAdd={handleAddCompanion}
           onRemove={handleRemoveCompanion}
+          onPickFromContacts={contactPicker.available ? contactPicker.open : undefined}
         />
 
         <Text style={styles.fieldLabel}>Photos</Text>
@@ -126,6 +141,18 @@ export function QuickAddMemoryPanel({ draft, onDone, onRemove, onCancel }: Props
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      {/* Outside the ScrollView, so it fills the panel rather than scrolling with the form.
+          Not a Modal: this panel already lives inside the quick-add sheet's Modal. */}
+      {contactPicker.visible && (
+        <ContactPickerSheet
+          contacts={contactPicker.contacts}
+          loading={contactPicker.loading}
+          alreadyAdded={companions}
+          onDone={handleContactsPicked}
+          onCancel={contactPicker.close}
+        />
+      )}
     </View>
   );
 }
