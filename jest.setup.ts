@@ -31,9 +31,13 @@ jest.mock('@react-native-firebase/crashlytics', () => ({
   setUserId: jest.fn(),
 }));
 
-jest.mock('react-native/Libraries/Alert/Alert', () => ({
-  alert: jest.fn(),
-}));
+// Both shapes on purpose. React Native's index reaches this module through `.default`, so a
+// mock with only the named export leaves `Alert` itself undefined for anything importing it
+// from 'react-native' — and every component that calls `Alert.alert` then throws in tests.
+jest.mock('react-native/Libraries/Alert/Alert', () => {
+  const alert = jest.fn();
+  return { alert, default: { alert } };
+});
 
 // Component tests render pieces of screens rather than whole trees, so there is no provider
 // above them to report real insets. Individual tests override this when the inset values
@@ -67,6 +71,19 @@ jest.mock('expo-image', () => {
 jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn(() => Promise.resolve({ canceled: true, assets: [] })),
   MediaTypeOptions: { Images: 'Images' },
+}));
+
+// The address book has no counterpart in the Jest environment. Defaults to "refused", which
+// is the path the companion field has to keep working on.
+jest.mock('expo-contacts', () => ({
+  Fields: { Name: 'name' },
+  requestPermissionsAsync: jest.fn(() =>
+    Promise.resolve({ granted: false, canAskAgain: true, status: 'denied' })
+  ),
+  getPermissionsAsync: jest.fn(() =>
+    Promise.resolve({ granted: false, canAskAgain: true, status: 'undetermined' })
+  ),
+  getContactsAsync: jest.fn(() => Promise.resolve({ data: [] })),
 }));
 
 jest.mock('expo-location', () => ({

@@ -28,6 +28,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 - A memory can be written on the place form, before the place exists — note, photos, mood
   and companions. Saving the place saves both; backing out discards both
 - The attached memory shows its own photos on the form rather than a count of them
+- Companions can be picked from the phone's address book instead of typed one at a time —
+  searchable, multi-select, and it skips anyone already on the memory. Only names are read,
+  never numbers or emails, and they never leave the device. Refusing the permission changes
+  nothing: the field works exactly as it did before
 
 ### Fixes
 - Map cards no longer clip their own contents. A card's address, phone and website arrive
