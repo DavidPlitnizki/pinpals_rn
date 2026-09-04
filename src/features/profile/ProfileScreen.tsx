@@ -82,6 +82,7 @@ export default function ProfileScreen() {
     handleLogout,
     handleDeleteAccount,
     handleReplayOnboarding,
+    handleRateUs,
   } = useProfileScreen();
 
   const providerBadge = PROVIDER_BADGE[authData?.providerId ?? 'anonymous'];
@@ -261,6 +262,21 @@ export default function ProfileScreen() {
                     Walks you through saving a place and keeping a memory of it
                   </Text>
                 </View>
+                <Ionicons name="chevron-forward" size={18} color={Colors.neutral[300]} />
+              </TouchableOpacity>
+              <View style={styles.accountDivider} />
+              <TouchableOpacity
+                style={styles.accountRow}
+                onPress={handleRateUs}
+                accessibilityLabel="Rate Pinpals"
+              >
+                <Ionicons
+                  name="star-outline"
+                  size={20}
+                  color={Colors.neutral[700]}
+                  style={styles.accountIcon}
+                />
+                <Text style={styles.accountRowText}>Rate Pinpals</Text>
                 <Ionicons name="chevron-forward" size={18} color={Colors.neutral[300]} />
               </TouchableOpacity>
             </PinCard>

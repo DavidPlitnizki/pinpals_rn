@@ -109,6 +109,37 @@ export function logLogin(method: LoginMethod): void {
   void logEvent(getAnalytics(), 'login', { method });
 }
 
+// ── Acquisition source ("what made them install this") ─────────────────────────
+
+export type AttributionSource =
+  | 'facebook'
+  | 'instagram'
+  | 'twitter'
+  | 'telegram'
+  | 'friends'
+  | 'other'
+  // Closed the prompt without picking anything — still worth knowing the share of "won't say".
+  | 'skipped';
+
+// Fired once per install, right after onboarding ends (finished or skipped) — see
+// AttributionScreen. Also set as a user property so every other event can be segmented by
+// acquisition channel, not just this one.
+export function logAttributionSource(source: AttributionSource): void {
+  void logEvent(getAnalytics(), 'attribution_source_selected', { source });
+  void setUserProperty(getAnalytics(), 'attribution_source', source);
+}
+
+// ── App Store rating prompt ─────────────────────────────────────────────────────
+
+export type RateUsTrigger = 'onboarding' | 'profile';
+
+// Marks intent, not outcome — Apple's SKStoreReviewController deliberately never reports back
+// whether it actually displayed (it's throttled to a handful of times a year per device), so
+// this is "we asked", not "they rated".
+export function logRateUsPrompted(trigger: RateUsTrigger): void {
+  void logEvent(getAnalytics(), 'rate_us_prompted', { trigger });
+}
+
 // ── Return frequency ("how often do they come back") ───────────────────────────
 
 const SESSION_COUNT_KEY = 'pinpals-analytics-session-count';

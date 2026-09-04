@@ -13,6 +13,8 @@ describe('RemembranceTip', () => {
 
     expect(screen.getByText('Your memories live here')).toBeTruthy();
     expect(screen.getByText(ONBOARDING_LABEL.toUpperCase())).toBeTruthy();
+    // The last of the tour's five hints.
+    expect(screen.getByText('5/5')).toBeTruthy();
     expect(screen.UNSAFE_queryAllByProps({ name: 'arrow-down' })).toHaveLength(1);
   });
 

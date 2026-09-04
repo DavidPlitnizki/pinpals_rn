@@ -13,6 +13,7 @@ import {
   installGlobalCrashHandlers,
   setCrashReportingUserContext,
 } from '../services/crashReporting';
+import { useOnboardingStore } from '../store/useOnboardingStore';
 import { useProfileStore } from '../store/useProfileStore';
 
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '');
@@ -24,11 +25,17 @@ const APP_BACKGROUND = '#FAF8F4';
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuth, isGuest, isLoading } = useAuth();
+  const onboardingStage = useOnboardingStore((state) => state.stage);
+  const onboardingHydrated = useOnboardingStore((state) => state.hydrated);
+  const attributionCompleted = useOnboardingStore((state) => state.attributionCompleted);
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading) return;
+    // Both have to be known before any redirect decision is made — deciding on the default
+    // 'welcome' stage before the real one has loaded from disk would send a returning user
+    // through the intro screen again, every cold start.
+    if (isLoading || !onboardingHydrated) return;
 
     SplashScreen.setOptions({ duration: 400, fade: true });
     SplashScreen.hideAsync();
@@ -43,16 +50,49 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
     const inAuthGroup = segments[0] === '(auth)';
     const canAccess = isAuth || isGuest;
+    const needsWelcome = onboardingStage === 'welcome';
+    // The tour is over (finished or skipped) but the one-time "where did you hear about us"
+    // question hasn't been answered or dismissed yet.
+    const needsAttribution = onboardingStage === 'done' && !attributionCompleted;
 
     if (!canAccess && !inAuthGroup) {
       router.replace('/(auth)/login');
-    } else if (canAccess && inAuthGroup) {
-      router.replace('/(tabs)/map');
+      return;
+    }
+
+    if (canAccess && inAuthGroup) {
+      router.replace(needsWelcome ? '/welcome' : needsAttribution ? '/attribution' : '/(tabs)/map');
+      return;
+    }
+
+    // Covers a fresh sign-in interrupted before Start or Skip was pressed — the app killed on
+    // the welcome screen, say. Without this the next launch's index redirect (see
+    // app/index.tsx) lands straight on the map, `inAuthGroup` is already false by then, and
+    // the branch above never runs again — the welcome screen would be skipped for good and
+    // the whole tour after it would never start, stuck forever on a stage nothing advances.
+    if (canAccess && needsWelcome && segments[0] !== 'welcome') {
+      router.replace('/welcome');
+      return;
+    }
+
+    // The tour can end from deep inside the tabs (the last hint's Finish, or abandoning the
+    // place form mid-tour) — nothing in either of those call sites navigates anywhere, so this
+    // is what actually gets the attribution screen on screen once `stage` flips to 'done'.
+    if (canAccess && needsAttribution && segments[0] !== 'attribution') {
+      router.replace('/attribution');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuth, isGuest, isLoading, segments]);
+  }, [
+    isAuth,
+    isGuest,
+    isLoading,
+    onboardingStage,
+    onboardingHydrated,
+    attributionCompleted,
+    segments,
+  ]);
 
-  if (isLoading) return <View style={styles.loading} />;
+  if (isLoading || !onboardingHydrated) return <View style={styles.loading} />;
 
   return <>{children}</>;
 }
@@ -93,6 +133,11 @@ export default function RootLayout() {
             }}
           >
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="welcome" options={{ headerShown: false, gestureEnabled: false }} />
+            <Stack.Screen
+              name="attribution"
+              options={{ headerShown: false, gestureEnabled: false }}
+            />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="place/[id]" options={{ title: 'Place Details' }} />
             <Stack.Screen

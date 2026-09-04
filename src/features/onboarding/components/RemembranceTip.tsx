@@ -33,7 +33,7 @@ export function RemembranceTip({ onFinish }: Props) {
     <View style={wrapStyle} pointerEvents="box-none">
       <View style={styles.bubble}>
         <View style={styles.labelRow}>
-          <OnboardingLabel />
+          <OnboardingLabel step={5} />
         </View>
         <Text style={styles.title}>Your memories live here</Text>
         <Text style={styles.text}>Every place you keep comes back as a story worth rereading.</Text>
