@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Dimensions,
+  LayoutChangeEvent,
   Modal,
   ScrollView,
   StyleSheet,
@@ -24,15 +23,20 @@ import { MapDataAttribution } from '../../../design-system/components/MapDataAtt
 import { useCoverImage } from '../../../hooks/usePlaceCoverImage';
 import { useReverseGeocodedAddress } from '../../../hooks/useReverseGeocodedAddress';
 import { MoodPicker } from '../../../design-system/components/MoodPicker';
+import { PinButton } from '../../../design-system/components/PinButton';
 import { PinColorPicker } from '../../../design-system/components/PinColorPicker';
 import { PinRatingView } from '../../../design-system/components/PinRatingView';
 import { TagPicker } from '../../../design-system/components/TagPicker';
 import { Colors, Radii, Spacing, Typography } from '../../../design-system/tokens';
 import { Coordinates, MemoryMood, MOOD_CONFIG } from '../../../models/types';
 import { PRESET_TAGS } from '../../../shared/constants';
-import { promptPhotoSource } from '../../../shared/photoSourcePrompt';
+import { pickPhotos } from '../../../shared/pickPhotos';
 import { HIT_SLOP_8 } from '../constants';
-import { QuickAddSaveData } from '../hooks/useMapScreen';
+import { QuickAddMemoryDraft, QuickAddSaveData } from '../hooks/useMapScreen';
+import { OnboardingArrow } from '../../onboarding/components/OnboardingArrow';
+import { OnboardingLabel } from '../../onboarding/components/OnboardingLabel';
+import { MEMORY_TIP_TEXT, SAVE_PIN_TIP_TEXT } from '../../onboarding/steps';
+import { QuickAddMemoryPanel, QuickAddMemorySummary } from './QuickAddMemoryPanel';
 
 const WINDOW_HEIGHT = Dimensions.get('window').height;
 const SHEET_HEIGHT = WINDOW_HEIGHT * 0.78;
@@ -45,6 +49,14 @@ const GOLD = '#D4AF37';
 // The cover hook needs a coordinate even while the sheet is closed (hooks can't be skipped);
 // its result isn't rendered in that state.
 const FALLBACK_COORDS = { latitude: 0, longitude: 0 };
+
+// Same button as the one on a saved place's screen, down to the icon: adding a memory here
+// and adding one there are the same act, and the tour teaches it once.
+const ADD_MEMORY_ICON = <Ionicons name="add-circle-outline" size={20} color={Colors.white} />;
+
+// How far above the Memory field the auto-scroll stops, so the label and the field above it
+// stay visible and the button does not read as the top of the form.
+const MEMORY_SCROLL_OFFSET = 24;
 
 interface Props {
   visible: boolean;
@@ -61,6 +73,16 @@ interface Props {
   onSave: (data: QuickAddSaveData) => void;
   onClose: () => void;
   onDirections: (name: string) => void;
+  // Onboarding, last step: scroll the form down to Add Memory and put an arrow over it. The
+  // form is long and the button sits well below the fold, so pointing at it is not enough —
+  // the tour has to bring it into view first. Decided by the map screen, which owns the stage.
+  highlightMemory?: boolean;
+  // Fired once the hint has done its job: the button was pressed, or the form is going away.
+  onMemoryHighlightDone?: () => void;
+  // Onboarding, the step after: point at the tick that commits the place. Everything on this
+  // form — the memory included — is thrown away if it is closed instead, so this is the one
+  // control the tour cannot afford to leave the user hunting for.
+  highlightSave?: boolean;
 }
 
 const PhotoThumb = React.memo(function PhotoThumb({
@@ -109,6 +131,9 @@ export function QuickAddPlaceSheet({
   onSave,
   onClose,
   onDirections,
+  highlightMemory = false,
+  onMemoryHighlightDone,
+  highlightSave = false,
 }: Props) {
   const insets = useSafeAreaInsets();
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -128,6 +153,10 @@ export function QuickAddPlaceSheet({
   const [mood, setMood] = useState<MemoryMood | undefined>(undefined);
   const [rating, setRating] = useState(DEFAULT_RATING);
   const [moodPickerOpen, setMoodPickerOpen] = useState(false);
+  // The memory lives here and nowhere else until the place is saved, so backing out of the
+  // sheet takes it with it.
+  const [memory, setMemory] = useState<QuickAddMemoryDraft | null>(null);
+  const [memoryPanelOpen, setMemoryPanelOpen] = useState(false);
   const [favorite, setFavorite] = useState(false);
   const [wantToVisit, setWantToVisit] = useState(false);
   const [pinColor, setPinColor] = useState<string | undefined>(undefined);
@@ -157,6 +186,8 @@ export function QuickAddPlaceSheet({
     setMood(undefined);
     setRating(DEFAULT_RATING);
     setMoodPickerOpen(false);
+    setMemory(null);
+    setMemoryPanelOpen(false);
     setFavorite(false);
     setWantToVisit(false);
     setPinColor(undefined);
@@ -211,6 +242,47 @@ export function QuickAddPlaceSheet({
     animateOut(onClose);
   }, [animateOut, onClose]);
 
+  // Where the Memory field sits inside the scrolling form, filled in by its own onLayout. The
+  // form is built from variable-height pickers, so this cannot be a constant.
+  const scrollRef = useRef<ScrollView>(null);
+  const memoryOffsetRef = useRef(0);
+  const handleMemoryLayout = useCallback((event: LayoutChangeEvent) => {
+    memoryOffsetRef.current = event.nativeEvent.layout.y;
+  }, []);
+
+  // Runs once per time the hint turns on, after the sheet's own slide-up: scrolling while the
+  // sheet is still moving lands somewhere else, and scrolling on a form that has not been laid
+  // out yet scrolls to zero.
+  useEffect(() => {
+    if (!highlightMemory || !visible) return;
+
+    const timer = setTimeout(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, memoryOffsetRef.current - MEMORY_SCROLL_OFFSET),
+        animated: true,
+      });
+    }, ANIMATION_DURATION + 80);
+
+    return () => clearTimeout(timer);
+  }, [highlightMemory, visible]);
+
+  const handleOpenMemoryPanel = useCallback(() => {
+    // Pressing it is the hint's whole purpose — it has nothing left to say afterwards.
+    onMemoryHighlightDone?.();
+    setMemoryPanelOpen(true);
+  }, [onMemoryHighlightDone]);
+  const handleCancelMemoryPanel = useCallback(() => setMemoryPanelOpen(false), []);
+
+  const handleMemoryDone = useCallback((draft: QuickAddMemoryDraft) => {
+    setMemory(draft);
+    setMemoryPanelOpen(false);
+  }, []);
+
+  const handleMemoryRemove = useCallback(() => {
+    setMemory(null);
+    setMemoryPanelOpen(false);
+  }, []);
+
   const handleSavePress = useCallback(() => {
     onSave({
       name,
@@ -224,6 +296,7 @@ export function QuickAddPlaceSheet({
       mainPhotoUri,
       tags,
       phone: phone.trim() || undefined,
+      memory: memory ?? undefined,
     });
   }, [
     onSave,
@@ -238,6 +311,7 @@ export function QuickAddPlaceSheet({
     mainPhotoUri,
     tags,
     phone,
+    memory,
   ]);
 
   const handleDirectionsPress = useCallback(() => {
@@ -267,40 +341,9 @@ export function QuickAddPlaceSheet({
   }, []);
 
   const handlePickPhotos = useCallback(async () => {
-    const remaining = MAX_PHOTOS - photoUris.length;
-    if (remaining <= 0) return;
-
-    const source = await promptPhotoSource();
-    if (!source) return;
-
-    if (source === 'camera') {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow access to the camera.');
-        return;
-      }
-      const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
-      if (!result.canceled && result.assets.length > 0) {
-        setPhotoUris((prev) => [...prev, result.assets[0].uri].slice(0, MAX_PHOTOS));
-      }
-      return;
-    }
-
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to the photo library.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      selectionLimit: remaining,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      const newUris = result.assets.map((a) => a.uri);
-      setPhotoUris((prev) => [...prev, ...newUris].slice(0, MAX_PHOTOS));
-    }
+    const picked = await pickPhotos(MAX_PHOTOS - photoUris.length);
+    if (picked.length === 0) return;
+    setPhotoUris((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));
   }, [photoUris.length]);
 
   const handleRemovePhoto = useCallback((uri: string) => {
@@ -344,7 +387,22 @@ export function QuickAddPlaceSheet({
               <CircleCloseButton onPress={handleClose} />
             </View>
 
+            {/* Under the header pointing up, not over it: the tick is the top-left corner of
+                the sheet and there is nothing above it to hang an arrow from. */}
+            {highlightSave && (
+              <View style={styles.saveHintRow} pointerEvents="none">
+                <View style={styles.saveHintArrow}>
+                  <OnboardingArrow direction="up" size={28} />
+                </View>
+                <View style={styles.hintTextCol}>
+                  <OnboardingLabel />
+                  <Text style={styles.hintText}>{SAVE_PIN_TIP_TEXT}</Text>
+                </View>
+              </View>
+            )}
+
             <ScrollView
+              ref={scrollRef}
               style={styles.content}
               contentContainerStyle={styles.contentContainer}
               keyboardShouldPersistTaps="handled"
@@ -506,6 +564,32 @@ export function QuickAddPlaceSheet({
                 </View>
               </View>
 
+              <View style={styles.fieldGroup} onLayout={handleMemoryLayout}>
+                <Text style={styles.fieldLabel}>Memory</Text>
+                {/* Only over the button, never over the summary: once a memory is attached
+                    there is nothing left to point at. */}
+                {/* Captioned like the save hint below it, so the two steps of the tour that
+                    live on this form read as the same thing rather than as one explained hint
+                    and one bare arrow. */}
+                {highlightMemory && !memory && (
+                  <View style={styles.memoryHint} pointerEvents="none">
+                    <OnboardingLabel />
+                    <Text style={styles.hintText}>{MEMORY_TIP_TEXT}</Text>
+                    <OnboardingArrow />
+                  </View>
+                )}
+                {memory ? (
+                  <QuickAddMemorySummary draft={memory} onEdit={handleOpenMemoryPanel} />
+                ) : (
+                  <PinButton
+                    title="Add Memory"
+                    onPress={handleOpenMemoryPanel}
+                    fullWidth
+                    leftIcon={ADD_MEMORY_ICON}
+                  />
+                )}
+              </View>
+
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>Rating</Text>
                 <PinRatingView rating={rating} onRatingChange={setRating} size={28} />
@@ -521,6 +605,17 @@ export function QuickAddPlaceSheet({
                 <TagPicker tags={tags} options={PRESET_TAGS} onToggle={handleToggleTag} />
               </View>
             </ScrollView>
+
+            {/* Covers the form rather than replacing it: the sheet stays mounted, so closing
+                this lands back on the half-filled place exactly as it was. */}
+            {memoryPanelOpen && (
+              <QuickAddMemoryPanel
+                draft={memory}
+                onDone={handleMemoryDone}
+                onRemove={handleMemoryRemove}
+                onCancel={handleCancelMemoryPanel}
+              />
+            )}
           </View>
         </Animated.View>
       </View>
@@ -529,6 +624,19 @@ export function QuickAddPlaceSheet({
 }
 
 const styles = StyleSheet.create({
+  saveHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.s8,
+    paddingHorizontal: Spacing.s20,
+    paddingTop: Spacing.s8,
+  },
+  // Sized to the save button above it, so the arrow lands under the tick rather than under
+  // the text beside it.
+  saveHintArrow: { width: 32, alignItems: 'center' },
+  hintTextCol: { flex: 1 },
+  hintText: { ...Typography.footnote, color: Colors.accent.primary },
+  memoryHint: { alignItems: 'center', gap: Spacing.s2, paddingBottom: Spacing.s2 },
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',

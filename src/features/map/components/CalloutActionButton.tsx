@@ -14,6 +14,12 @@ interface Props {
   iconColor: string;
   backgroundColor: string;
   borderColor: string;
+  // Greys nothing out on its own — the caller already colours a disabled button — it only
+  // stops the press and drops the button out of the accessibility order.
+  disabled?: boolean;
+  // Required because most of these buttons are icon-only: without it a screen reader reads
+  // nothing at all where a globe, an arrow or a plus is.
+  accessibilityLabel: string;
   onPress: () => void;
 }
 
@@ -28,12 +34,17 @@ export function CalloutActionButton({
   iconColor,
   backgroundColor,
   borderColor,
+  disabled = false,
+  accessibilityLabel,
   onPress,
 }: Props) {
   return (
     <TouchableOpacity
       style={[styles.button, { backgroundColor, borderColor }]}
       onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       hitSlop={HIT_SLOP_8}
       activeOpacity={0.75}
     >

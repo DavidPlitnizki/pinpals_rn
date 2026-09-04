@@ -7,6 +7,13 @@ module.exports = {
       'expo|' +
       'expo-router|' +
       'expo-constants|' +
+      // Component tests pull in the icon set, which reaches expo-font and expo-asset; both
+      // ship untranspiled ESM.
+      'expo-font|' +
+      'expo-asset|' +
+      'expo-web-browser|' +
+      'expo-linking|' +
+      'expo-clipboard|' +
       'expo-image-picker|' +
       'expo-file-system|' +
       'expo-location|' +
@@ -18,7 +25,7 @@ module.exports = {
       '@rnmapbox|' +
       'zustand|' +
       '@react-native-firebase' +
-    ')/)',
+      ')/)',
   ],
   moduleNameMapper: {
     '^@react-native-async-storage/async-storage$':

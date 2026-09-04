@@ -6,6 +6,11 @@ import { Colors } from '../tokens';
 
 const PILL_HEIGHT = 56;
 const SIDE_PADDING = 16;
+const BORDER_WIDTH = 1;
+
+// How tall the bar is above the safe area. Exported so anything that has to float clear of it
+// — the onboarding hint that points down at a tab — does not have to guess.
+export const TAB_BAR_HEIGHT = PILL_HEIGHT + BORDER_WIDTH;
 
 const ICONS: Record<string, { active: string; inactive: string }> = {
   map: { active: 'map', inactive: 'map-outline' },
@@ -100,7 +105,7 @@ export default function AnimatedTabBar(props: AnimatedTabBarProps) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.white,
-    borderTopWidth: 1,
+    borderTopWidth: BORDER_WIDTH,
     borderTopColor: Colors.neutral[200],
     alignItems: 'center',
     shadowColor: '#000',

@@ -12,6 +12,14 @@ function cacheKey(coords: Coordinates): string {
   return `${coords.latitude.toFixed(5)},${coords.longitude.toFixed(5)}`;
 }
 
+// Fills the cache from a lookup someone else already did — the long press that opens the POI
+// card reverse-geocodes the point on its way there, and without this the quick-add sheet it
+// leads to would buy the very same answer from Mapbox a second time, seconds later.
+// `null` is a real answer here: "asked, and there is no address at this point".
+export function primeReverseGeocodedAddress(coords: Coordinates, address: string | null): void {
+  addressCache.set(cacheKey(coords), address);
+}
+
 // Street address for a bare map point. A POI or search result already carries one, so callers
 // pass what they have as `known` and this only looks up the gap — a long-pressed spot on a
 // street, where coordinates alone tell the user nothing about where they tapped.

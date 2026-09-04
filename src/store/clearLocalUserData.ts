@@ -3,6 +3,7 @@ import { DEFAULT_PROFILE_NAME, useProfileStore } from './useProfileStore';
 import { usePlacesStore } from './usePlacesStore';
 import { useRouteStore } from './useRouteStore';
 import { useMapStyleStore } from './useMapStyleStore';
+import { useOnboardingStore } from './useOnboardingStore';
 import { useSearchFiltersStore } from './useSearchFiltersStore';
 
 // Wipes everything the signed-in person put into the app, in one place so a new persisted
@@ -20,4 +21,6 @@ export function clearLocalUserData(): void {
   useRouteStore.getState().clearRoute();
   useSearchFiltersStore.getState().resetFilters();
   useMapStyleStore.getState().setStyleId(DEFAULT_MAP_STYLE);
+  // Whoever signs in next is new to this device and gets the tour, same as a fresh install.
+  useOnboardingStore.getState().resetOnboarding();
 }

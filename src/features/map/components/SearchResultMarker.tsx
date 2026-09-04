@@ -348,6 +348,7 @@ export function SearchResultCallout({
             iconColor={Colors.neutral[600]}
             backgroundColor={Colors.neutral[100]}
             borderColor={Colors.neutral[400]}
+            accessibilityLabel="Search the web for this place"
             onPress={onSearchPress}
           />
           <CalloutActionButton
@@ -356,6 +357,7 @@ export function SearchResultCallout({
             iconColor={Colors.brand.primary}
             backgroundColor={Colors.brand.light}
             borderColor={Colors.brand.primary}
+            accessibilityLabel="Directions to this place"
             onPress={onDirectionsPress}
           />
           <CalloutActionButton
@@ -364,6 +366,7 @@ export function SearchResultCallout({
             iconColor={Colors.accent.primary}
             backgroundColor={Colors.accent.light}
             borderColor={Colors.accent.primary}
+            accessibilityLabel="Save this place"
             onPress={onConfirmPress}
           />
         </View>

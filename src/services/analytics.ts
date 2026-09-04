@@ -52,7 +52,12 @@ export function logFilterUsed(filterType: FilterType, value?: string): void {
 // a total on the Mapbox invoice — that's the difference between "we're over budget" and
 // "we're over budget because of this behaviour".
 export type MapboxBillableUnit =
-  'search_session' | 'search_forward' | 'geocode_reverse' | 'static_image';
+  | 'search_session'
+  | 'search_forward'
+  // Search Box /reverse — billed per request like /forward, not per session.
+  | 'search_reverse_poi'
+  | 'geocode_reverse'
+  | 'static_image';
 
 export function logMapboxUsage(unit: MapboxBillableUnit): void {
   void logEvent(getAnalytics(), 'mapbox_usage', { unit });

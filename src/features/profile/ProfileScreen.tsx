@@ -81,6 +81,7 @@ export default function ProfileScreen() {
     handleCancelEdit,
     handleLogout,
     handleDeleteAccount,
+    handleReplayOnboarding,
   } = useProfileScreen();
 
   const providerBadge = PROVIDER_BADGE[authData?.providerId ?? 'anonymous'];
@@ -241,6 +242,26 @@ export default function ProfileScreen() {
                   <Text style={styles.infoValue}>{APP_VERSION}</Text>
                   <Ionicons name="chevron-forward" size={14} color={Colors.neutral[300]} />
                 </View>
+              </TouchableOpacity>
+              <View style={styles.accountDivider} />
+              <TouchableOpacity
+                style={styles.accountRow}
+                onPress={handleReplayOnboarding}
+                accessibilityLabel="Show the tour again"
+              >
+                <Ionicons
+                  name="compass-outline"
+                  size={20}
+                  color={Colors.neutral[700]}
+                  style={styles.accountIcon}
+                />
+                <View style={styles.accountRowTextCol}>
+                  <Text style={styles.accountRowTitle}>Show the tour again</Text>
+                  <Text style={styles.accountRowSubtext}>
+                    Walks you through saving a place and keeping a memory of it
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={Colors.neutral[300]} />
               </TouchableOpacity>
             </PinCard>
 
@@ -411,5 +432,14 @@ const styles = StyleSheet.create({
   accountIcon: { marginRight: Spacing.s12 },
   accountDivider: { height: 1, backgroundColor: Colors.neutral[100] },
   accountRowText: { ...Typography.body, color: Colors.neutral[700], flex: 1 },
+  // The two-line variant: the column takes the flex, so the title must not also claim it —
+  // a flexed Text inside a column stretches and pushes the subtitle off its baseline.
+  accountRowTextCol: { flex: 1 },
+  accountRowTitle: { ...Typography.body, color: Colors.neutral[700] },
+  accountRowSubtext: {
+    ...Typography.footnote,
+    color: Colors.text.secondary,
+    marginTop: Spacing.s2,
+  },
   accountRowTextDanger: { ...Typography.body, color: Colors.error, flex: 1 },
 });
