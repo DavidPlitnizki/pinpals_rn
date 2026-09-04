@@ -252,6 +252,7 @@ export function MarkerCallout({
           iconColor={Colors.neutral[600]}
           backgroundColor={Colors.neutral[100]}
           borderColor={Colors.neutral[400]}
+          accessibilityLabel="Search the web for this place"
           onPress={handleSearchPress}
         />
         <CalloutActionButton
@@ -260,6 +261,7 @@ export function MarkerCallout({
           iconColor={Colors.brand.primary}
           backgroundColor={Colors.brand.light}
           borderColor={Colors.brand.primary}
+          accessibilityLabel="Directions to this place"
           onPress={onDirectionsPress}
         />
         <CalloutActionButton
@@ -268,6 +270,7 @@ export function MarkerCallout({
           iconColor={Colors.error}
           backgroundColor="#FBE9E7"
           borderColor={Colors.error}
+          accessibilityLabel="Delete this place"
           onPress={onDeletePress}
         />
       </View>

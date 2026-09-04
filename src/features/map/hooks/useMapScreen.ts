@@ -6,13 +6,35 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Animated } from 'react-native';
 
 import { Coordinates, MemoryMood } from '../../../models/types';
-import { MapboxSearchResult, reverseGeocodeAddress } from '../../../services/mapboxSearch';
+import {
+  MapboxSearchResult,
+  reverseGeocodeAddress,
+  reverseGeocodePoi,
+} from '../../../services/mapboxSearch';
+import { primeReverseGeocodedAddress } from '../../../hooks/useReverseGeocodedAddress';
 import { copyPhotosToAppStorage } from '../../../shared/photoStorage';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { useProfileStore } from '../../../store/useProfileStore';
 import { isNullIsland } from '../../../shared/geo';
 import { DEFAULT_CENTER, DEFAULT_ZOOM, WORLD_ZOOM } from '../constants';
 import { NativePoiMarker, PendingSearchMarker } from '../types';
+
+// Shown on the card for the moment between a long press and its reverse lookup answering.
+const PENDING_PIN_NAME = 'Looking up this spot…';
+
+// Shared so a card that resolved to nothing keeps a stable `resolvedDetails` identity across
+// re-renders — the callout hands it straight to a dependency array.
+const EMPTY_RESOLVED_DETAILS = {} as const;
+
+// A memory composed on the place form, before the place it belongs to exists. Held only in
+// the sheet's state: closing the sheet without saving discards it along with everything else,
+// which is the whole point — nothing is written until the place is.
+export interface QuickAddMemoryDraft {
+  text: string;
+  photoUris: string[];
+  mood?: MemoryMood;
+  companions: string[];
+}
 
 export interface QuickAddSaveData {
   name: string;
@@ -26,6 +48,7 @@ export interface QuickAddSaveData {
   mainPhotoUri?: string;
   tags: string[];
   phone?: string;
+  memory?: QuickAddMemoryDraft;
 }
 
 type ScreenPointFeature = GeoJSON.Feature<
@@ -43,8 +66,28 @@ export function useMapScreen() {
   const cameraRef = useRef<Camera>(null);
   const mapViewRef = useRef<MapView>(null);
   const annotationTapRef = useRef(false);
-  const { places, addPlace, deletePlace, addNote } = usePlacesStore();
-  const { profile } = useProfileStore();
+  // A long press starts one or two reverse lookups that outlive the gesture. Anything that
+  // decides what card is on screen — another press, a tap, closing the card, opening the save
+  // form — has to disown the one in flight, or its answer lands seconds later and overwrites
+  // what the user actually chose. The counter is what makes the late answer a no-op; the
+  // controller stops the request itself so a dead lookup does not hold the connection.
+  const poiLookupIdRef = useRef(0);
+  const poiLookupAbortRef = useRef<AbortController | null>(null);
+  const cancelPoiLookup = useCallback(() => {
+    poiLookupIdRef.current += 1;
+    poiLookupAbortRef.current?.abort();
+    poiLookupAbortRef.current = null;
+  }, []);
+
+  // Field selectors rather than the whole store: the map screen reads `places` and never
+  // `notes`, and pulling the store wholesale re-rendered the entire map — markers, cards and
+  // all — every time a memory was written. The memory composer on the place form made that a
+  // routine event rather than a rare one. Zustand actions are stable, so those never re-render.
+  const places = usePlacesStore((state) => state.places);
+  const addPlace = usePlacesStore((state) => state.addPlace);
+  const deletePlace = usePlacesStore((state) => state.deletePlace);
+  const addNote = usePlacesStore((state) => state.addNote);
+  const profile = useProfileStore((state) => state.profile);
 
   const currentCenter = useRef<[number, number]>(DEFAULT_CENTER);
   const currentZoom = useRef<number>(DEFAULT_ZOOM);
@@ -247,25 +290,82 @@ export function useMapScreen() {
     });
   }, [gpsCoords]);
 
+  // A long press and a light tap now do the same thing: open the card with the three
+  // actions. Dropping straight into the save form skipped the choice — from a bare point on
+  // the map you may well want directions or a web search instead, and there was no way back
+  // to those without cancelling the form first.
   const handleLongPress = useCallback(
     (feature: { geometry: { coordinates: [number, number] } }) => {
       const [longitude, latitude] = feature.geometry.coordinates;
+      const coords = { latitude, longitude };
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      // Instant, not a 600ms animation: the sheet opens at full height and covers the map
-      // anyway, so the animation bought nothing while flooding the native map with camera
-      // work (and onCameraChanged callbacks) exactly as the form was mounting.
       cameraRef.current?.setCamera({
         centerCoordinate: [longitude, latitude],
         zoomLevel: currentZoom.current,
         animationDuration: 0,
       });
-      setPendingPlaceCoords({ latitude, longitude });
-      // A bare map point carries no name/address of its own — must not inherit the previous
-      // pending place's metadata.
-      setPendingPlaceMeta(null);
-      setShowQuickAddSheet(true);
+      // Whatever else was open belongs to a different point, including any lookup still
+      // running for the last one.
+      cancelPoiLookup();
+      setDismissSignal((n) => n + 1);
+
+      // On screen straight away, under a placeholder name. The lookups below are one or two
+      // network round trips, and waiting them out before showing anything made a long press
+      // look like it had simply been ignored. The card keeps this id while its name and
+      // address fill in, so it updates in place instead of remounting.
+      const cardId = `pin-${longitude}-${latitude}-${Date.now()}`;
+      setNativePoiMarker({
+        id: cardId,
+        name: PENDING_PIN_NAME,
+        coordinates: coords,
+        resolvedDetails: EMPTY_RESOLVED_DETAILS,
+        pending: true,
+      });
+
+      const requestId = poiLookupIdRef.current;
+      const abort = new AbortController();
+      poiLookupAbortRef.current = abort;
+
+      void (async () => {
+        // A press that landed on a venue the basemap knows should name it, so the card reads
+        // the same as it would from a tap — and the Search Box answer already carries the
+        // address, phone and website, so the callout never has to buy them a second time.
+        // Only then fall back to naming the point by its street address, and to a plain label
+        // when even that is unavailable (open country, water).
+        const poi = await reverseGeocodePoi(coords, abort.signal);
+        if (requestId !== poiLookupIdRef.current) return;
+
+        if (poi) {
+          // Whatever the sheet would look up next is already in hand — hand it over rather
+          // than let it buy the same answer again.
+          primeReverseGeocodedAddress(poi.coordinates, poi.address ?? null);
+          setNativePoiMarker({
+            id: cardId,
+            name: poi.name,
+            maki: poi.maki,
+            coordinates: poi.coordinates,
+            resolvedDetails: {
+              address: poi.address,
+              phone: poi.phone,
+              website: poi.website,
+            },
+          });
+          return;
+        }
+
+        const address = await reverseGeocodeAddress(coords, abort.signal);
+        if (requestId !== poiLookupIdRef.current) return;
+        primeReverseGeocodedAddress(coords, address);
+
+        setNativePoiMarker({
+          id: cardId,
+          name: address ?? 'Dropped pin',
+          coordinates: coords,
+          resolvedDetails: address ? { address } : EMPTY_RESOLVED_DETAILS,
+        });
+      })();
     },
-    [],
+    [cancelPoiLookup],
   );
 
   // Closes whichever map card is open — the marker components watch dismissSignal and clear
@@ -279,63 +379,77 @@ export function useMapScreen() {
     }, ANNOTATION_TAP_GUARD_MS);
   }, []);
 
-  const handleMapPress = useCallback(async (feature: ScreenPointFeature) => {
-    if (annotationTapRef.current) return;
-    const { screenPointX, screenPointY } = feature.properties;
-    if (screenPointX == null || screenPointY == null) return;
+  const handleMapPress = useCallback(
+    async (feature: ScreenPointFeature) => {
+      if (annotationTapRef.current) return;
+      const { screenPointX, screenPointY } = feature.properties;
+      if (screenPointX == null || screenPointY == null) return;
 
-    let collection;
-    try {
-      collection = await mapViewRef.current?.queryRenderedFeaturesAtPoint([
-        screenPointX,
-        screenPointY,
-      ]);
-    } catch {
-      // Native query can fail transiently (e.g. style still loading) — a tap that
-      // can't be resolved to a POI should just be a no-op, not an unhandled rejection.
-      return;
-    }
+      // This tap decides what card is open from here on. Disowns a long-press lookup still in
+      // flight, which would otherwise land a moment later and replace whatever this tap opened
+      // — or reopen the card this tap dismissed.
+      cancelPoiLookup();
 
-    // A tap on one of our own annotations may have landed while the native query was
-    // in flight — don't surface a native-POI card on top of/instead of it.
-    if (annotationTapRef.current) return;
+      let collection;
+      try {
+        collection = await mapViewRef.current?.queryRenderedFeaturesAtPoint([
+          screenPointX,
+          screenPointY,
+        ]);
+      } catch {
+        // Native query can fail transiently (e.g. style still loading) — a tap that
+        // can't be resolved to a POI should just be a no-op, not an unhandled rejection.
+        return;
+      }
 
-    const poiFeature = collection?.features.find(
-      (f) => typeof f.properties?.name === 'string' && f.properties.name.trim().length > 0,
-    );
+      // A tap on one of our own annotations may have landed while the native query was
+      // in flight — don't surface a native-POI card on top of/instead of it.
+      if (annotationTapRef.current) return;
 
-    // The tap didn't land on one of our own markers (already ruled out above) — whatever
-    // callout is currently open (My Places pin, search result) should close, same as
-    // tapping a different annotation would. Only one popup makes sense at a time.
-    setDismissSignal((n) => n + 1);
+      const poiFeature = collection?.features.find(
+        (f) => typeof f.properties?.name === 'string' && f.properties.name.trim().length > 0,
+      );
 
-    if (!poiFeature) {
-      setNativePoiMarker(null);
-      return;
-    }
+      // The tap didn't land on one of our own markers (already ruled out above) — whatever
+      // callout is currently open (My Places pin, search result) should close, same as
+      // tapping a different annotation would. Only one popup makes sense at a time.
+      setDismissSignal((n) => n + 1);
 
-    const [longitude, latitude] =
-      poiFeature.geometry.type === 'Point'
-        ? (poiFeature.geometry.coordinates as [number, number])
-        : feature.geometry.coordinates;
+      if (!poiFeature) {
+        setNativePoiMarker(null);
+        return;
+      }
 
-    setNativePoiMarker({
-      id: `poi-${longitude}-${latitude}-${Date.now()}`,
-      name: poiFeature.properties!.name as string,
-      maki:
-        typeof poiFeature.properties?.maki === 'string' ? poiFeature.properties.maki : undefined,
-      category:
-        typeof poiFeature.properties?.class === 'string' ? poiFeature.properties.class : undefined,
-      coordinates: { latitude, longitude },
-    });
-  }, []);
+      const [longitude, latitude] =
+        poiFeature.geometry.type === 'Point'
+          ? (poiFeature.geometry.coordinates as [number, number])
+          : feature.geometry.coordinates;
+
+      setNativePoiMarker({
+        id: `poi-${longitude}-${latitude}-${Date.now()}`,
+        name: poiFeature.properties!.name as string,
+        maki:
+          typeof poiFeature.properties?.maki === 'string' ? poiFeature.properties.maki : undefined,
+        category:
+          typeof poiFeature.properties?.class === 'string'
+            ? poiFeature.properties.class
+            : undefined,
+        coordinates: { latitude, longitude },
+      });
+    },
+    [cancelPoiLookup],
+  );
 
   const handleCloseNativePoiMarker = useCallback(() => {
+    // Without this, a slow answer arriving after the user dismissed the card would put it
+    // straight back on screen.
+    cancelPoiLookup();
     setNativePoiMarker(null);
-  }, []);
+  }, [cancelPoiLookup]);
 
   const handleConfirmNativePoiMarker = useCallback(
     (marker: NativePoiMarker, details?: { address?: string; phone?: string; website?: string }) => {
+      cancelPoiLookup();
       setPendingPlaceCoords(marker.coordinates);
       // The basemap already knows what this place is called — seed the form with it rather
       // than making the user retype a name that's printed right there on the map. The callout
@@ -344,22 +458,27 @@ export function useMapScreen() {
       setNativePoiMarker(null);
       setShowQuickAddSheet(true);
     },
-    [],
+    [cancelPoiLookup],
   );
 
   const handleCloseQuickAddSheet = useCallback(() => {
+    cancelPoiLookup();
     setShowQuickAddSheet(false);
     setPendingPlaceCoords(null);
     setPendingPlaceMeta(null);
-  }, []);
+  }, [cancelPoiLookup]);
 
   // Opens the quick-add sheet at a route waypoint's coordinates — used by "Save this point"
   // in the RouteDestinationMarker callout, same as confirming a search result or POI.
-  const handleSaveWaypointAsPlace = useCallback((coordinates: Coordinates) => {
-    setPendingPlaceCoords(coordinates);
-    setPendingPlaceMeta(null);
-    setShowQuickAddSheet(true);
-  }, []);
+  const handleSaveWaypointAsPlace = useCallback(
+    (coordinates: Coordinates) => {
+      cancelPoiLookup();
+      setPendingPlaceCoords(coordinates);
+      setPendingPlaceMeta(null);
+      setShowQuickAddSheet(true);
+    },
+    [cancelPoiLookup],
+  );
 
   const handleSaveQuickAddPlace = useCallback(
     async (data: QuickAddSaveData) => {
@@ -397,7 +516,21 @@ export function useMapScreen() {
         website: pendingPlaceMeta?.website,
       });
 
-      if (description || photoUris.length > 0 || data.mood) {
+      // A memory composed on the form wins: it is an explicit entry about a visit, with its
+      // own photos, mood and companions. Without one the place's own note/photos/mood still
+      // become a note, exactly as before — that is what every place saved so far has done.
+      if (data.memory) {
+        const memoryPhotoUris = await copyPhotosToAppStorage(data.memory.photoUris);
+        addNote({
+          placeId,
+          text: data.memory.text,
+          photoUri: memoryPhotoUris[0],
+          photoUris: memoryPhotoUris.length > 0 ? memoryPhotoUris : undefined,
+          mood: data.memory.mood,
+          companions: data.memory.companions,
+          createdAt: new Date().toISOString(),
+        });
+      } else if (description || photoUris.length > 0 || data.mood) {
         addNote({
           placeId,
           text: description,
@@ -409,11 +542,12 @@ export function useMapScreen() {
         });
       }
 
+      cancelPoiLookup();
       setShowQuickAddSheet(false);
       setPendingPlaceCoords(null);
       setPendingPlaceMeta(null);
     },
-    [pendingPlaceCoords, pendingPlaceMeta, addPlace, addNote],
+    [pendingPlaceCoords, pendingPlaceMeta, addPlace, addNote, cancelPoiLookup],
   );
 
   const handleSelectSearchResult = useCallback((result: MapboxSearchResult) => {
@@ -433,31 +567,23 @@ export function useMapScreen() {
     setSearchResultMarkers([]);
   }, []);
 
-  const handleConfirmSearchResultMarker = useCallback((marker: PendingSearchMarker) => {
-    setPendingPlaceCoords(marker.coordinates);
-    setPendingPlaceMeta({
-      name: marker.name,
-      address: marker.fullAddress,
-      phone: marker.phone,
-      website: marker.website,
-      imageUrl: marker.imageUrl,
-      maki: marker.maki,
-    });
-    setSearchResultMarkers((prev) => prev.filter((m) => m.id !== marker.id));
-    setShowQuickAddSheet(true);
-  }, []);
-
-  // The "+" button has no map point to work from, so it falls back to the user's current
-  // position (or the map centre).
-  const handleAddAtCurrentLocation = useCallback(() => {
-    const coords = gpsCoords ?? {
-      latitude: currentCenter.current[1],
-      longitude: currentCenter.current[0],
-    };
-    setPendingPlaceCoords(coords);
-    setPendingPlaceMeta(null);
-    setShowQuickAddSheet(true);
-  }, [gpsCoords]);
+  const handleConfirmSearchResultMarker = useCallback(
+    (marker: PendingSearchMarker) => {
+      cancelPoiLookup();
+      setPendingPlaceCoords(marker.coordinates);
+      setPendingPlaceMeta({
+        name: marker.name,
+        address: marker.fullAddress,
+        phone: marker.phone,
+        website: marker.website,
+        imageUrl: marker.imageUrl,
+        maki: marker.maki,
+      });
+      setSearchResultMarkers((prev) => prev.filter((m) => m.id !== marker.id));
+      setShowQuickAddSheet(true);
+    },
+    [cancelPoiLookup],
+  );
 
   const handleMarkerPress = useCallback(
     (placeId: string) => {
@@ -510,7 +636,6 @@ export function useMapScreen() {
     dismissCallouts,
     handleCloseNativePoiMarker,
     handleConfirmNativePoiMarker,
-    handleAddAtCurrentLocation,
     handleCloseQuickAddSheet,
     handleSaveWaypointAsPlace,
     handleSaveQuickAddPlace,

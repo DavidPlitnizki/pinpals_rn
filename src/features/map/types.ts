@@ -12,6 +12,14 @@ export interface NativePoiMarker {
   maki?: string;
   category?: string;
   coordinates: Coordinates;
+  // Set for a point the user long-pressed: everything the reverse lookup could find was
+  // resolved on the way to building this marker, so the callout must not look anything up
+  // again — an absent field here means "known to be unavailable", not "not asked yet". A
+  // basemap POI tapped from the map leaves this undefined and the callout does its own lookup.
+  resolvedDetails?: { address?: string; phone?: string; website?: string };
+  // True while the reverse lookup behind a long press is still in flight. The card is on
+  // screen already — showing it immediately is the point — but its name is a placeholder.
+  pending?: boolean;
 }
 
 export type RouteProfile = 'walking' | 'driving' | 'cycling';

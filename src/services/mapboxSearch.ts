@@ -324,31 +324,55 @@ export async function retrieveMapboxPlace(
 // Street address for a raw coordinate — used when a place is saved from a point that carried
 // no address of its own (a long-press on the map, a route waypoint), so its card still shows
 // where it is rather than just a pair of numbers.
-export async function reverseGeocodeAddress(coords: Coordinates): Promise<string | null> {
+// Most specific first. A long press away from mapped street addresses (a park, a beach, open
+// country) returns no `address` feature at all, and filtering the request down to that type
+// left the sheet showing bare coordinates — so ask for the whole ladder and take the most
+// specific rung that came back.
+const REVERSE_TYPE_RANK = ['address', 'street', 'neighborhood', 'place', 'region', 'country'];
+
+export async function reverseGeocodeAddress(
+  coords: Coordinates,
+  signal?: AbortSignal,
+): Promise<string | null> {
   const token = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
   if (!token) return null;
 
   const params = new URLSearchParams({
     longitude: String(coords.longitude),
     latitude: String(coords.latitude),
-    types: 'address',
+    types: REVERSE_TYPE_RANK.join(','),
     access_token: token,
   });
 
   logMapboxUsage('geocode_reverse');
   try {
-    const response = await fetch(`${GEOCODE_REVERSE_URL}?${params.toString()}`);
+    const response = await fetch(
+      `${GEOCODE_REVERSE_URL}?${params.toString()}`,
+      signal ? { signal } : undefined,
+    );
     if (!response.ok) return null;
 
     const data = (await response.json()) as {
-      features?: { properties?: { full_address?: string; name?: string } }[];
+      features?: { properties?: { feature_type?: string; full_address?: string; name?: string } }[];
     };
-    const properties = data.features?.[0]?.properties;
+    const features = data.features ?? [];
+    // Mapbox orders reverse results most-specific-first already, but it is not contractual —
+    // rank explicitly so a `place` never wins over the `address` sitting behind it.
+    const best = features
+      .slice()
+      .sort((a, b) => rankOf(a.properties?.feature_type) - rankOf(b.properties?.feature_type))[0];
+    const properties = best?.properties;
     return properties?.full_address ?? properties?.name ?? null;
   } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') return null;
     reportNetworkError('mapboxSearch', err, 'reverse address request failed');
     return null;
   }
+}
+
+function rankOf(featureType?: string): number {
+  const index = REVERSE_TYPE_RANK.indexOf(featureType ?? '');
+  return index === -1 ? REVERSE_TYPE_RANK.length : index;
 }
 
 // City/country for a raw coordinate — the weather screen's default location label (before the
@@ -392,6 +416,102 @@ export async function reverseGeocodePlace(coords: Coordinates): Promise<string |
     return [city, country].filter(Boolean).join(', ');
   } catch (err) {
     reportNetworkError('mapboxSearch', err, 'reverse geocode request failed');
+    return null;
+  }
+}
+
+// ── Nearest POI under a long-pressed point ───────────────────────────────────
+//
+// The geocoder (v6 reverse) only ever answers with address/street/place/region/country — it
+// has no POI layer, so it can name the street a long press landed on but never the café
+// standing on it. The Search Box reverse endpoint does return POIs, ordered nearest-first.
+//
+// Distance is the whole game here: a long press on an empty pavement is a few metres from a
+// restaurant across the road, and silently prefilling "New Pin" with that restaurant's name
+// is worse than leaving the field empty. Only a POI essentially under the finger counts.
+
+const SEARCH_BOX_REVERSE_URL = 'https://api.mapbox.com/search/searchbox/v1/reverse';
+const POI_MATCH_RADIUS_METERS = 40;
+
+export interface ReverseGeocodedPoi {
+  name: string;
+  address?: string;
+  maki?: string;
+  imageUrl?: string;
+  website?: string;
+  phone?: string;
+  coordinates: Coordinates;
+  distanceMeters: number;
+}
+
+function distanceMeters(a: Coordinates, b: Coordinates): number {
+  const EARTH_RADIUS_M = 6_371_000;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLon = toRad(b.longitude - a.longitude);
+  const lat1 = toRad(a.latitude);
+  const lat2 = toRad(b.latitude);
+  const h = Math.sin(dLat / 2) ** 2 + Math.sin(dLon / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
+}
+
+export async function reverseGeocodePoi(
+  coords: Coordinates,
+  signal?: AbortSignal,
+): Promise<ReverseGeocodedPoi | null> {
+  const token = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
+  if (!token) return null;
+
+  const params = new URLSearchParams({
+    longitude: String(coords.longitude),
+    latitude: String(coords.latitude),
+    types: 'poi',
+    limit: '5',
+    access_token: token,
+  });
+
+  const url = `${SEARCH_BOX_REVERSE_URL}?${params.toString()}`;
+  debugLog('[mapboxSearch] reverse poi →', url.replace(token, '***'));
+  logMapboxUsage('search_reverse_poi');
+
+  try {
+    const response = await fetch(url, signal ? { signal } : undefined);
+    if (!response.ok) {
+      debugLog('[mapboxSearch] reverse poi ← error', response.status);
+      return null;
+    }
+
+    const data = (await response.json()) as { features?: MapboxFeature[] };
+    const candidates = (data.features ?? [])
+      .map((feature) => {
+        const featureCoords = {
+          longitude: feature.geometry.coordinates[0],
+          latitude: feature.geometry.coordinates[1],
+        };
+        return { feature, featureCoords, meters: distanceMeters(coords, featureCoords) };
+      })
+      .filter(
+        ({ feature, meters }) => feature.properties?.name && meters <= POI_MATCH_RADIUS_METERS,
+      )
+      .sort((a, b) => a.meters - b.meters);
+
+    const nearest = candidates[0];
+    if (!nearest) return null;
+
+    return {
+      name: nearest.feature.properties!.name!,
+      address:
+        nearest.feature.properties?.full_address ?? nearest.feature.properties?.place_formatted,
+      maki: nearest.feature.properties?.maki,
+      imageUrl: extractImageUrl(nearest.feature),
+      website: getOwnWebsite(nearest.feature),
+      phone: nearest.feature.properties?.metadata?.phone,
+      coordinates: nearest.featureCoords,
+      distanceMeters: nearest.meters,
+    };
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') return null;
+    reportNetworkError('mapboxSearch', err, 'reverse poi request failed');
     return null;
   }
 }

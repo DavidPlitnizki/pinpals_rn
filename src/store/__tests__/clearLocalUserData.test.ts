@@ -5,6 +5,7 @@ import { usePlacesStore } from '../usePlacesStore';
 import { DEFAULT_PROFILE_NAME, useProfileStore } from '../useProfileStore';
 import { useRouteStore } from '../useRouteStore';
 import { useMapStyleStore } from '../useMapStyleStore';
+import { useOnboardingStore } from '../useOnboardingStore';
 import { useSearchFiltersStore } from '../useSearchFiltersStore';
 
 const place = {
@@ -30,6 +31,7 @@ describe('clearLocalUserData', () => {
     useProfileStore.setState({ profile: { id: '1', name: 'Ada', avatarUri: 'file:///a.jpg' } });
     useSearchFiltersStore.setState({ query: 'sushi' });
     useMapStyleStore.setState({ styleId: 'satellite' });
+    useOnboardingStore.setState({ stage: 'done' });
     useRouteStore.setState({
       activeRoute: {
         status: 'success',
@@ -52,5 +54,6 @@ describe('clearLocalUserData', () => {
     expect(useSearchFiltersStore.getState().query).toBe('');
     expect(useMapStyleStore.getState().styleId).toBe('streets');
     expect(useRouteStore.getState().activeRoute).toBeNull();
+    expect(useOnboardingStore.getState().stage).toBe('map-tip');
   });
 });

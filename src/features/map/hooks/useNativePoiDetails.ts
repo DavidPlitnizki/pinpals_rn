@@ -27,6 +27,9 @@ export function useNativePoiDetails(
   id: string | undefined,
   name: string | undefined,
   coordinates: Coordinates | undefined,
+  // Skips both lookups. A long-pressed point arrives with its address already resolved, and
+  // searching Mapbox for a name like "Dropped pin" would be a billed request for nothing.
+  known?: NativePoiDetails,
 ): NativePoiDetails {
   // The cache is the render-time source of truth; this counter only schedules a re-render
   // once an in-flight lookup has filled it in (setting state directly in the effect would
@@ -38,6 +41,7 @@ export function useNativePoiDetails(
   const cached = id ? detailsCache.get(id) : undefined;
 
   useEffect(() => {
+    if (known) return;
     if (!id || !name || latitude === undefined || longitude === undefined) return;
     if (detailsCache.has(id)) return;
 
@@ -71,7 +75,7 @@ export function useNativePoiDetails(
     return () => {
       cancelled = true;
     };
-  }, [id, name, latitude, longitude]);
+  }, [known, id, name, latitude, longitude]);
 
-  return cached ?? EMPTY_DETAILS;
+  return known ?? cached ?? EMPTY_DETAILS;
 }

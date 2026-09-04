@@ -1,4 +1,5 @@
 import { Camera, MapView, UserLocation } from '@rnmapbox/maps';
+import { CopilotProvider, CopilotStep, walkthroughable } from 'react-native-copilot';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -42,9 +43,20 @@ import { Coordinates, Place } from '../../models/types';
 import { logPlaceShared, logRouteShared } from '../../services/analytics';
 import { MapboxSearchResult, MapboxSuggestion } from '../../services/mapboxSearch';
 import { buildGoogleMapsDirectionsUrl, buildGoogleMapsSearchUrl } from '../../shared/mapLinks';
+import {
+  MAP_TIP_STEP,
+  MAP_TIP_TEXT,
+  ONBOARDING_COPILOT_OPTIONS,
+  SAVE_TIP_STEP,
+} from '../onboarding/constants';
+import { useOnboardingTour } from '../onboarding/hooks/useOnboardingTour';
+import { useOnboardingStore } from '../../store/useOnboardingStore';
 
 // Stable empty list — a fresh `[]` each render would remount every annotation in MapMarkers.
 const EMPTY_PLACES: Place[] = [];
+
+// copilot measures its target through a ref, which a plain <View> does not forward.
+const WalkthroughView = walkthroughable(View);
 
 function isSameCoordinates(a: Coordinates, b: Coordinates): boolean {
   return a.latitude === b.latitude && a.longitude === b.longitude;
@@ -52,7 +64,19 @@ function isSameCoordinates(a: Coordinates, b: Coordinates): boolean {
 
 const ACTIVE_ROUTE_KEEP_AWAKE_TAG = 'pinpals-active-route';
 
+// The provider has to sit above the screen rather than inside it, so that its overlay covers
+// the whole map. Only the first two hints are copilot steps: the third lives inside the place
+// form, which is a native Modal and renders above this provider's overlay, so it points at its
+// own button rather than being highlighted from here.
 export default function MapScreen() {
+  return (
+    <CopilotProvider {...ONBOARDING_COPILOT_OPTIONS}>
+      <MapScreenContent />
+    </CopilotProvider>
+  );
+}
+
+function MapScreenContent() {
   const {
     cameraRef,
     mapViewRef,
@@ -81,7 +105,6 @@ export default function MapScreen() {
     dismissCallouts,
     handleCloseNativePoiMarker,
     handleConfirmNativePoiMarker,
-    handleAddAtCurrentLocation,
     handleCloseQuickAddSheet,
     handleSaveWaypointAsPlace,
     handleSaveQuickAddPlace,
@@ -505,6 +528,90 @@ export default function MapScreen() {
     void Share.share({ message: `${destination.label}: ${url}`, url });
   }, [route]);
 
+  // ── Onboarding, first half ────────────────────────────────────────────────
+  const onboardingStage = useOnboardingStore((state) => state.stage);
+  const onboardingHydrated = useOnboardingStore((state) => state.hydrated);
+  const completeMapTip = useOnboardingStore((state) => state.completeMapTip);
+
+  // Held back until the store has actually read AsyncStorage: the default stage is
+  // 'map-tip', so starting on it unhydrated would re-run the tour on every cold start for
+  // someone who finished it long ago. Any sheet being open means the map is covered and the
+  // hint would point at nothing the user can see.
+  const mapTipActive =
+    onboardingHydrated &&
+    onboardingStage === 'map-tip' &&
+    !showQuickAddSheet &&
+    !search.visible &&
+    !route.pickerVisible;
+
+  useOnboardingTour({
+    active: mapTipActive,
+    stepName: MAP_TIP_STEP,
+    onFinish: completeMapTip,
+  });
+
+  // Second half: the "add" action in the basemap-POI card, which only exists while that card
+  // is open. Same provider as the map hint — the card is an ordinary sibling on this screen,
+  // not a native Modal, so nothing has to be nested.
+  const completeSaveTip = useOnboardingStore((state) => state.completeSaveTip);
+  // Held back until the card has finished sliding in, so the tour follows the card rather
+  // than arriving on top of it. Reset during render on each new card — an effect would run a
+  // frame late, and the previous card's "settled" would briefly apply to the new one.
+  const [poiCardSettled, setPoiCardSettled] = useState(false);
+  const settledCardIdRef = useRef<string | null>(null);
+  if (settledCardIdRef.current !== (nativePoiMarker?.id ?? null)) {
+    settledCardIdRef.current = nativePoiMarker?.id ?? null;
+    if (poiCardSettled) setPoiCardSettled(false);
+  }
+  const handlePoiCardEntered = useCallback(() => setPoiCardSettled(true), []);
+
+  const saveTipActive =
+    onboardingHydrated &&
+    onboardingStage === 'save-tip' &&
+    nativePoiMarker != null &&
+    // A long-pressed point holds its Save button shut until its name is resolved. Pointing at
+    // a button that does nothing yet teaches the wrong thing about it.
+    !nativePoiMarker.pending &&
+    poiCardSettled;
+
+  useOnboardingTour({
+    active: saveTipActive,
+    stepName: SAVE_TIP_STEP,
+    onFinish: completeSaveTip,
+  });
+
+  // ── Onboarding, the form's two hints ──────────────────────────────────────
+  // No copilot steps here, and deliberately: the place form is a native Modal, which renders
+  // above this screen's overlay, so a cut-out drawn from here would land underneath it. The
+  // form does the pointing itself, with the same arrow the card uses — which is all these
+  // steps need, the two hints before them having already explained what the tour is. The last
+  // hint of all lives in the tab layout, above whichever screen is showing.
+  const completeMemoryTip = useOnboardingStore((state) => state.completeMemoryTip);
+  const completePlaceSaved = useOnboardingStore((state) => state.completePlaceSaved);
+  const abandonPlaceForm = useOnboardingStore((state) => state.abandonPlaceForm);
+
+  const memoryTipActive =
+    onboardingHydrated && onboardingStage === 'memory-tip' && showQuickAddSheet;
+  // Straight after the memory is written: nothing on this form exists yet, and closing it
+  // instead of saving throws the memory away with everything else.
+  const savePinTipActive =
+    onboardingHydrated && onboardingStage === 'save-pin-tip' && showQuickAddSheet;
+
+  // Closed without saving: there is no place, so the hint that points at where places go has
+  // nothing to point at. The tour stops rather than waiting on a step that cannot happen.
+  const handleQuickAddClose = useCallback(() => {
+    abandonPlaceForm();
+    handleCloseQuickAddSheet();
+  }, [abandonPlaceForm, handleCloseQuickAddSheet]);
+
+  const handleQuickAddSave = useCallback(
+    (data: Parameters<typeof handleSaveQuickAddPlace>[0]) => {
+      completePlaceSaved();
+      return handleSaveQuickAddPlace(data);
+    },
+    [completePlaceSaved, handleSaveQuickAddPlace],
+  );
+
   return (
     <View style={styles.container}>
       <MapView
@@ -575,6 +682,19 @@ export default function MapScreen() {
         )}
       </MapView>
 
+      {/* A transparent patch in the middle of the map, there only to give the tour something
+          to measure — the hint is about the map as a whole, and copilot has no way to
+          highlight "nothing in particular". Non-interactive, so it never eats a long press.
+          `collapsable={false}` is load-bearing: an empty View with no background is exactly
+          what the renderer flattens away, and copilot measures this through a ref — a
+          flattened view has no node to measure, and the tour then waits on a promise that
+          never settles, showing nothing and reporting no error. */}
+      {mapTipActive && (
+        <CopilotStep name={MAP_TIP_STEP} order={1} text={MAP_TIP_TEXT}>
+          <WalkthroughView style={styles.mapTipTarget} pointerEvents="none" collapsable={false} />
+        </CopilotStep>
+      )}
+
       {landingSignal > 0 && <FlyToLandingMarker signal={landingSignal} onDone={onLandingDone} />}
 
       <MapToast toastAnim={toastAnim} toastMsg={toastMsg} toastGPS={toastGPS} />
@@ -642,7 +762,6 @@ export default function MapScreen() {
       <MapControls
         gpsCoords={gpsCoords}
         onCenterGPS={handleCenterGPS}
-        onAdd={handleAddAtCurrentLocation}
         onFlyTo={flyTo.open}
         onOpenStyles={openStyleSheet}
       />
@@ -657,12 +776,13 @@ export default function MapScreen() {
       {/* Last of the map chrome on purpose: rendering after MapSearchBar and MapControls is
           what puts the card above them. */}
       {nativePoiMarker && (
-        <MapCardSheet>
+        <MapCardSheet onEntered={handlePoiCardEntered}>
           <NativePoiCallout
             marker={nativePoiMarker}
             onClose={handleCloseNativePoiMarker}
             onDirections={onNativePoiDirections}
             onAddPlace={handleConfirmNativePoiMarker}
+            highlightAdd={saveTipActive}
           />
         </MapCardSheet>
       )}
@@ -714,9 +834,12 @@ export default function MapScreen() {
         suggestedPhone={pendingPlaceMeta?.phone}
         suggestedImageUrl={pendingPlaceMeta?.imageUrl}
         address={pendingPlaceMeta?.address}
-        onSave={handleSaveQuickAddPlace}
-        onClose={handleCloseQuickAddSheet}
+        onSave={handleQuickAddSave}
+        onClose={handleQuickAddClose}
         onDirections={onQuickAddDirections}
+        highlightMemory={memoryTipActive}
+        onMemoryHighlightDone={completeMemoryTip}
+        highlightSave={savePinTipActive}
       />
 
       <RouteModePicker
@@ -773,5 +896,13 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
+  },
+  mapTipTarget: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '30%',
+    width: '76%',
+    height: 300,
+    borderRadius: 16,
   },
 });

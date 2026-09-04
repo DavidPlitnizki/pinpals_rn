@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 
@@ -8,6 +9,7 @@ import { promptPhotoSource } from '../../../shared/photoSourcePrompt';
 import { setCrashReportingUserContext } from '../../../services/crashReporting';
 import { usePlacesStore } from '../../../store/usePlacesStore';
 import { clearLocalUserData } from '../../../store/clearLocalUserData';
+import { useOnboardingStore } from '../../../store/useOnboardingStore';
 import { useProfileStore } from '../../../store/useProfileStore';
 
 interface AvatarDraft {
@@ -16,7 +18,9 @@ interface AvatarDraft {
 }
 
 export function useProfileScreen() {
+  const router = useRouter();
   const { profile, updateProfile } = useProfileStore();
+  const resetOnboarding = useOnboardingStore((state) => state.resetOnboarding);
   const { places } = usePlacesStore();
   const { logout, deleteAccount, isGuest, authData } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -167,6 +171,14 @@ export function useProfileScreen() {
     );
   }
 
+  // The tour lives on the map screen and starts from the persisted stage, so replaying it is
+  // "rewind the stage, then go where it runs" — there is nothing to trigger from here.
+  const handleReplayOnboarding = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    resetOnboarding();
+    router.navigate('/(tabs)/map');
+  }, [resetOnboarding, router]);
+
   return {
     profile: displayProfile,
     isGuest,
@@ -190,5 +202,6 @@ export function useProfileScreen() {
     handleCancelEdit,
     handleLogout,
     handleDeleteAccount,
+    handleReplayOnboarding,
   };
 }

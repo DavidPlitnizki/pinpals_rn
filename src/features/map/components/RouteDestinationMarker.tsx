@@ -253,6 +253,7 @@ export function RouteWaypointCallout({
           iconColor={Colors.accent.primary}
           backgroundColor={Colors.accent.light}
           borderColor={Colors.accent.primary}
+          accessibilityLabel="Save this point as a place"
           onPress={onSavePointPress}
         />
         <CalloutActionButton
@@ -261,6 +262,7 @@ export function RouteWaypointCallout({
           iconColor={Colors.neutral[600]}
           backgroundColor={Colors.neutral[100]}
           borderColor={Colors.neutral[400]}
+          accessibilityLabel="Share this point"
           onPress={onSharePress}
         />
       </View>
