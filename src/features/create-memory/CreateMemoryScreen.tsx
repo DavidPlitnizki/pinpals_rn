@@ -58,16 +58,14 @@ export default function CreateMemoryScreen() {
 
   const contactPicker = useContactPicker();
 
-  const handleContactsPicked = useCallback(
-    (names: string[]) => {
-      contactPicker.close();
-      // The picker greys out anyone already here, but a hand-typed name can collide with one
-      // from the address book — the last guard against a duplicate chip.
-      for (const name of names) {
-        if (!companions.includes(name)) addCompanion(name);
-      }
+  // The only way a name reaches this memory now — typed or picked, both land here. The sheet
+  // greys out anyone already added, but a hand-typed name can still collide with one already
+  // on the memory — the last guard against a duplicate chip.
+  const handleContactAdded = useCallback(
+    (name: string) => {
+      if (!companions.includes(name)) addCompanion(name);
     },
-    [contactPicker, companions, addCompanion],
+    [companions, addCompanion],
   );
 
   if (!place) {
@@ -124,9 +122,8 @@ export default function CreateMemoryScreen() {
         {step === 2 && (
           <CompanionStep
             companions={companions}
-            onAdd={addCompanion}
             onRemove={removeCompanion}
-            onPickFromContacts={contactPicker.available ? contactPicker.open : undefined}
+            onOpenPicker={contactPicker.open}
           />
         )}
         {step === 3 && <NoteStep text={text} onChangeText={setText} />}
@@ -157,11 +154,12 @@ export default function CreateMemoryScreen() {
           rather than a Modal, so it needs a full-screen box to cover. */}
       {contactPicker.visible && (
         <ContactPickerSheet
+          access={contactPicker.access}
           contacts={contactPicker.contacts}
           loading={contactPicker.loading}
           alreadyAdded={companions}
-          onDone={handleContactsPicked}
-          onCancel={contactPicker.close}
+          onAdd={handleContactAdded}
+          onClose={contactPicker.close}
         />
       )}
     </SafeAreaView>
@@ -232,24 +230,21 @@ function MoodStep({
 
 function CompanionStep({
   companions,
-  onAdd,
   onRemove,
-  onPickFromContacts,
+  onOpenPicker,
 }: {
   companions: string[];
-  onAdd: (name: string) => void;
   onRemove: (name: string) => void;
-  onPickFromContacts?: () => void;
+  onOpenPicker: () => void;
 }) {
   return (
     <View style={styles.stepContent}>
       <Text style={styles.stepHint}>Who were you with?</Text>
       <CompanionInput
         companions={companions}
-        onAdd={onAdd}
         onRemove={onRemove}
         placeholder="Friend's name..."
-        onPickFromContacts={onPickFromContacts}
+        onOpenPicker={onOpenPicker}
       />
     </View>
   );

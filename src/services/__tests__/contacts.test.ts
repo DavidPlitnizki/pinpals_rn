@@ -90,9 +90,7 @@ describe('loadContactNames', () => {
 
     // The permission string promises numbers and emails are never read. This is that promise:
     // the field list is the whole of what the native side is asked to return.
-    expect(mockGetAllDetails).toHaveBeenCalledWith([Contacts.ContactField.FULL_NAME], {
-      sortOrder: Contacts.ContactsSortOrder.GivenName,
-    });
+    expect(mockGetAllDetails).toHaveBeenCalledWith([Contacts.ContactField.FULL_NAME]);
   });
 
   it('drops the nameless, folds duplicates and sorts what is left', async () => {

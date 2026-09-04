@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '../tokens';
 
@@ -8,15 +8,11 @@ const HIT_SLOP_8 = { top: 8, bottom: 8, left: 8, right: 8 };
 
 interface CompanionInputProps {
   companions: string[];
-  onAdd: (name: string) => void;
   onRemove: (name: string) => void;
   placeholder?: string;
-  // Opens the address book picker. Omitted when there is none to offer — a build without
-  // expo-contacts linked, or a caller with nowhere to put the picker — and the field is then
-  // exactly what it was before contacts existed. The picker itself belongs to the caller: it
-  // cannot be a Modal (see ContactPickerSheet) so it needs a full-screen box this field has no
-  // way to provide from inside a form.
-  onPickFromContacts?: () => void;
+  // Opens the picker, which is where names are actually entered — from the address book or by
+  // hand. Omitted only when a caller has nowhere to put the picker; the chips then still work.
+  onOpenPicker?: () => void;
 }
 
 interface CompanionChipProps {
@@ -37,22 +33,19 @@ const CompanionChip = React.memo(function CompanionChip({ name, onRemove }: Comp
   );
 });
 
+// Who you were with: the chips already added, and one control to add more.
+//
+// That control looks like a text field but is a button. Typing used to happen here, with a
+// separate button beside it for the address book — two ways in, one of which could not search
+// anything. Now both live in the picker: you type, the address book filters as you go, and a
+// name it does not know is simply the one you typed. Nothing is lost when contacts are
+// refused, because the same field is still there to type into.
 export function CompanionInput({
   companions,
-  onAdd,
   onRemove,
   placeholder = 'Name...',
-  onPickFromContacts,
+  onOpenPicker,
 }: CompanionInputProps) {
-  const [text, setText] = useState('');
-  const handleSubmit = useCallback(() => {
-    const name = text.trim();
-    if (name && !companions.includes(name)) {
-      onAdd(name);
-      setText('');
-    }
-  }, [text, companions, onAdd]);
-
   return (
     <View style={styles.container}>
       <View style={styles.chips}>
@@ -60,31 +53,17 @@ export function CompanionInput({
           <CompanionChip key={name} name={name} onRemove={onRemove} />
         ))}
       </View>
-      <View style={styles.inputRow}>
-        <TextInput
-          style={styles.input}
-          value={text}
-          onChangeText={setText}
-          placeholder={placeholder}
-          placeholderTextColor={Colors.text.secondary}
-          returnKeyType="done"
-          onSubmitEditing={handleSubmit}
-        />
-        {text.trim() ? (
-          <TouchableOpacity style={styles.addBtn} onPress={handleSubmit}>
-            <Text style={styles.addBtnText}>+</Text>
-          </TouchableOpacity>
-        ) : onPickFromContacts ? (
-          <TouchableOpacity
-            style={styles.contactsBtn}
-            onPress={onPickFromContacts}
-            accessibilityRole="button"
-            accessibilityLabel="Pick from contacts"
-          >
-            <Ionicons name="person-add-outline" size={20} color={Colors.brand.primary} />
-          </TouchableOpacity>
-        ) : null}
-      </View>
+
+      <TouchableOpacity
+        style={styles.field}
+        onPress={onOpenPicker}
+        disabled={!onOpenPicker}
+        accessibilityRole="button"
+        accessibilityLabel="Add someone you were with"
+      >
+        <Text style={styles.fieldPlaceholder}>{placeholder}</Text>
+        <Ionicons name="person-add-outline" size={20} color={Colors.brand.primary} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -117,43 +96,19 @@ const styles = StyleSheet.create({
     color: Colors.brand.dark,
     fontWeight: '700',
   },
-  inputRow: {
+  // Dressed as the text field it replaces, so it still reads as "type a name here".
+  field: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.s8,
-  },
-  input: {
-    flex: 1,
+    justifyContent: 'space-between',
     height: 44,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    borderRadius: Radii.md,
     paddingHorizontal: Spacing.s12,
-    ...Typography.body,
-    color: Colors.text.primary,
-  },
-  addBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: Radii.md,
-    backgroundColor: Colors.brand.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addBtnText: {
-    color: Colors.white,
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  // Takes the add button's place while the field is empty, so the row never grows a third
-  // control and typing a name still leads to the same "+" it always did.
-  contactsBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: Radii.md,
     borderWidth: 1,
     borderColor: Colors.neutral[200],
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: Radii.md,
+  },
+  fieldPlaceholder: {
+    ...Typography.body,
+    color: Colors.text.secondary,
   },
 });
